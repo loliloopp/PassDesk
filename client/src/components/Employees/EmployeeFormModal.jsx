@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, message } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Switch } from 'antd';
 import { counterpartyService } from '../../services/counterpartyService';
 import { citizenshipService } from '../../services/citizenshipService';
 import dayjs from 'dayjs';
@@ -24,9 +24,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
           passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
           patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+          isActive: employee.isActive !== undefined ? employee.isActive : true,
         });
       } else {
         form.resetFields();
+        // Устанавливаем статус "Активен" по умолчанию для новых сотрудников
+        form.setFieldsValue({ isActive: true });
       }
     }
   }, [visible, employee]);
@@ -98,14 +101,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       open={visible}
       onOk={handleSubmit}
       onCancel={onCancel}
-      width={900}
+      width={1200}
       okText={employee ? 'Сохранить' : 'Добавить'}
       cancelText="Отмена"
       confirmLoading={loading}
     >
       <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+        {/* Основная информация - 4 столбца */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={6}>
             <Form.Item
               name="lastName"
               label="Фамилия"
@@ -114,7 +118,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               <Input />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={6}>
             <Form.Item
               name="firstName"
               label="Имя"
@@ -123,15 +127,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               <Input />
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
+          <Col span={6}>
             <Form.Item name="middleName" label="Отчество">
               <Input />
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={6}>
             <Form.Item
               name="position"
               label="Должность"
@@ -142,6 +143,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           </Col>
         </Row>
 
+        {/* Контрагент и гражданство - 2 столбца */}
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="counterpartyId" label="Контрагент">
@@ -189,8 +191,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           </Col>
         </Row>
 
+        {/* Личные данные - 4 столбца */}
         <Row gutter={16}>
-          <Col span={8}>
+          <Col span={6}>
             <Form.Item name="birthDate" label="Дата рождения">
               <DatePicker
                 style={{ width: '100%' }}
@@ -199,26 +202,50 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               />
             </Form.Item>
           </Col>
-          <Col span={8}>
-            <Form.Item name="inn" label="ИНН">
+          <Col span={6}>
+            <Form.Item 
+              name="inn" 
+              label="ИНН"
+              rules={[
+                {
+                  pattern: /^\d{10}$|^\d{12}$/,
+                  message: 'ИНН должен содержать 10 или 12 цифр'
+                }
+              ]}
+            >
               <Input maxLength={12} placeholder="10 или 12 цифр" />
             </Form.Item>
           </Col>
-          <Col span={8}>
-            <Form.Item name="snils" label="СНИЛС">
-              <Input placeholder="XXX-XXX-XXX XX" />
+          <Col span={6}>
+            <Form.Item 
+              name="snils" 
+              label="СНИЛС"
+              rules={[
+                {
+                  pattern: /^\d{3}-\d{3}-\d{3}\s\d{2}$/,
+                  message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX (например: 123-456-789 00)'
+                }
+              ]}
+            >
+              <Input maxLength={14} placeholder="123-456-789 00" />
+            </Form.Item>
+          </Col>
+          <Col span={6}>
+            <Form.Item name="kig" label="КИГ">
+              <Input placeholder="КИГ" />
             </Form.Item>
           </Col>
         </Row>
 
+        {/* Паспортные данные - 4 столбца */}
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={6}>
             <Form.Item name="passportNumber" label="№ паспорта">
               <Input />
             </Form.Item>
           </Col>
-          <Col span={12}>
-            <Form.Item name="passportDate" label="Дата выдачи паспорта">
+          <Col span={6}>
+            <Form.Item name="passportDate" label="Дата паспорта">
               <DatePicker
                 style={{ width: '100%' }}
                 format={DATE_FORMAT}
@@ -226,16 +253,23 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               />
             </Form.Item>
           </Col>
+          <Col span={12}>
+            <Form.Item name="passportIssuer" label="Кем выдан паспорт">
+              <Input />
+            </Form.Item>
+          </Col>
         </Row>
 
-        <Form.Item name="passportIssuer" label="Кем выдан паспорт">
-          <TextArea rows={2} />
-        </Form.Item>
+        {/* Адрес регистрации - 1 столбец */}
+        <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item name="registrationAddress" label="Адрес регистрации">
+              <Input />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item name="registrationAddress" label="Адрес регистрации">
-          <TextArea rows={2} />
-        </Form.Item>
-
+        {/* Патент и бланк - 3 столбца */}
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item name="patentNumber" label="Номер патента">
@@ -258,34 +292,50 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           </Col>
         </Row>
 
+        {/* Контакты и статус - 3 столбца */}
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="kig" label="КИГ">
-              <Input placeholder="Карта иностранного гражданина" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="email"
               label="Email"
-              rules={[{ type: 'email', message: 'Введите корректный email' }]}
+              rules={[
+                { 
+                  type: 'email', 
+                  message: 'Введите корректный email (например: ivanov@example.com)' 
+                }
+              ]}
             >
-              <Input />
+              <Input placeholder="ivanov@example.com" />
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item name="phone" label="Телефон">
-              <Input />
+              <Input placeholder="+7 (999) 123-45-67" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item 
+              name="isActive" 
+              label="Статус" 
+              valuePropName="checked"
+            >
+              <Switch 
+                checkedChildren="Активен" 
+                unCheckedChildren="Неактивен"
+                style={{ width: 100 }}
+              />
             </Form.Item>
           </Col>
         </Row>
 
-        <Form.Item name="notes" label="Примечания">
-          <TextArea rows={2} />
-        </Form.Item>
+        {/* Примечания - 1 столбец */}
+        <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item name="notes" label="Примечания">
+              <TextArea rows={2} />
+            </Form.Item>
+          </Col>
+        </Row>
       </Form>
     </Modal>
   );
