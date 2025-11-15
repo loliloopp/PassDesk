@@ -1,0 +1,446 @@
+# Правила разработки PassDesk
+
+## Описание проекта
+
+Портал для управления пропусками сотрудников с возможностью регистрации, учета и контроля.
+
+- **Цель**: Предоставить удобный инструмент для создания и управления пропусками
+- **Ключевые функции**:
+  - Управление сотрудниками и их данными
+  - Создание и учет пропусков
+  - Хранение файлов на Яндекс.Диск
+  - Система ролей и доступа (admin, manager, user)
+
+## Архитектура
+
+- **Frontend**: React 18.2, Vite 5.0, Ant Design 5.28+
+- **Backend**: Node.js + Express + Sequelize
+- **Database**: Yandex Managed Service for PostgreSQL 17.6
+- **Storage**: Яндекс.Диск API для хранения файлов
+- **Security**: JWT + bcrypt для аутентификации
+- **Architecture Pattern**: Feature-Sliced Design (FSD)
+
+## Стиль кода
+
+- **Максимальный размер файла: 600 строк** - разделять большие файлы
+- Для уменьшения размера страниц разбивать их на отдельные компоненты по функциональным и смысловым блокам
+- Functional React components с хуками
+- Async/await для асинхронных операций
+- ES6+ модули (import/export)
+- Именование: camelCase для переменных, PascalCase для компонентов
+
+## Ключевые принципы
+
+- Ant Design 5 для всех UI компонентов
+- Responsive design для desktop и mobile
+- Все изменения БД через миграции с подтверждением
+- Документация в папке `temp/`, корень проекта должен быть чистым
+- Хранение файлов через Яндекс.Диск API (не S3)
+
+---
+
+## База данных
+
+### ❌ ЗАПРЕЩЕНО:
+
+1. **Автоматическая синхронизация БД при запуске сервера**
+   - НЕ использовать `sequelize.sync()` в `server.js`
+   - НЕ создавать/изменять таблицы автоматически при старте приложения
+
+2. **Программное создание таблиц**
+   - НЕ создавать скрипты типа `db:init` для автоматического создания таблиц
+   - Таблицы создаются ТОЛЬКО вручную через SQL или миграции
+
+3. **Изменения структуры БД без согласования**
+   - НЕ добавлять/удалять столбцы без явного запроса
+   - НЕ изменять типы данных
+   - НЕ добавлять/удалять индексы, триггеры, функции
+   - НЕ изменять constraints
+
+### ✅ РАЗРЕШЕНО:
+
+1. **Все изменения БД - только через миграции**
+   - Создать файл миграции с четким описанием изменений
+   - Показать миграцию разработчику для одобрения
+   - Запустить миграцию только после подтверждения
+
+2. **Проверка подключения к БД**
+   ```bash
+   npm run db:check   # Можно использовать для диагностики
+   ```
+
+## Workflow для изменений в БД:
+
+1. **Обсудить** изменение с разработчиком
+2. **Создать** SQL-миграцию (не запускать!)
+3. **Показать** миграцию для ревью
+4. **Получить подтверждение**
+5. **Запустить** миграцию вручную
+6. **Проверить** результат
+
+## Примеры:
+
+### ❌ Неправильно:
+```javascript
+// В server.js
+await sequelize.sync({ alter: true })  // НЕТ!
+await sequelize.sync({ force: true })  // НЕТ!
+
+// В package.json
+"db:init": "node src/database/init.js"  // НЕТ!
+```
+
+### ✅ Правильно:
+```javascript
+// В server.js
+await sequelize.authenticate()  // Только проверка подключения
+```
+
+```sql
+-- migrations/20241115-add-column.sql
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+```
+
+## Скрипты БД:
+
+- `npm run db:check` - проверить подключение и показать таблицы (безопасно)
+
+## Важно:
+
+> **Разработчик должен иметь полный контроль над структурой БД.**
+> Любые изменения в схеме БД требуют явного одобрения.
+
+---
+
+## Документация
+
+### ❌ ЗАПРЕЩЕНО:
+
+1. **Создавать MD файлы в корне проекта**
+   - НЕ создавать файлы типа `MIGRATION_COMPLETE.md`, `SUCCESS.md` в корне
+   - НЕ засорять корневую директорию временными документами
+
+### ✅ РАЗРЕШЕНО:
+
+1. **Вся документация о выполненных шагах - в папку `temp/`**
+   ```
+   temp/
+     ├── MIGRATION_COMPLETE.md
+     ├── SUCCESS.md
+     └── ...другие MD файлы
+   ```
+
+2. **В корне только основные файлы**
+   - `README.md` - основная документация проекта
+   - `.cursorrules` - правила разработки
+
+## Важно:
+
+> **Папка `temp/` предназначена для временных файлов и документов о выполненных шагах.**
+> Основная документация должна быть в `README.md`.
+
+---
+
+## Структура компонентов
+
+### Правило 600 строк
+
+**КРИТИЧЕСКИ ВАЖНО**: Файлы не должны превышать 600 строк кода.
+
+### ❌ ЗАПРЕЩЕНО:
+
+1. **Создавать файлы больше 600 строк**
+   - Монолитные страницы с большим количеством логики
+   - Множество компонентов в одном файле
+   - Смешивание логики, UI и утилит
+
+### ✅ РАЗРЕШЕНО:
+
+1. **Разделять страницы на компоненты**
+   ```
+   pages/
+   ├── EmployeesPage/
+   │   ├── index.jsx              # Главная страница (< 200 строк)
+   │   ├── EmployeeTable.jsx      # Таблица сотрудников
+   │   ├── EmployeeForm.jsx       # Форма добавления/редактирования
+   │   ├── EmployeeFilters.jsx    # Фильтры и поиск
+   │   └── EmployeeActions.jsx    # Кнопки действий
+   ```
+
+2. **Разделять по функциональным блокам**
+   - Формы в отдельные компоненты
+   - Таблицы в отдельные компоненты
+   - Модальные окна в отдельные компоненты
+   - Фильтры/поиск в отдельные компоненты
+   - Действия (кнопки, меню) в отдельные компоненты
+
+3. **Выносить переиспользуемую логику**
+   - Хуки в папку `hooks/`
+   - Утилиты в папку `utils/`
+   - Константы в отдельные файлы
+   - API сервисы уже в `services/`
+
+### Примеры разделения:
+
+#### ❌ Неправильно:
+```jsx
+// pages/EmployeesPage.jsx (800 строк)
+export const EmployeesPage = () => {
+  // 100 строк state и логики
+  // 200 строк таблица
+  // 200 строк форма
+  // 100 строк фильтры
+  // 200 строк модальные окна
+}
+```
+
+#### ✅ Правильно:
+```jsx
+// pages/EmployeesPage/index.jsx (150 строк)
+import { EmployeeTable } from './EmployeeTable';
+import { EmployeeForm } from './EmployeeForm';
+import { EmployeeFilters } from './EmployeeFilters';
+import { useEmployees } from './useEmployees';
+
+export const EmployeesPage = () => {
+  const { employees, loading } = useEmployees();
+  return (
+    <>
+      <EmployeeFilters />
+      <EmployeeTable data={employees} loading={loading} />
+      <EmployeeForm />
+    </>
+  );
+}
+```
+
+### Feature-Sliced Design (FSD) Структура:
+
+```
+client/src/
+├── app/                  # Инициализация приложения
+│   ├── providers/        # Провайдеры (Router, Theme, Auth)
+│   └── routes/           # Конфигурация роутинга
+├── pages/                # Страницы-роуты
+│   ├── dashboard/        # Главная страница
+│   ├── employees/        # Управление сотрудниками
+│   ├── passes/           # Управление пропусками
+│   ├── users/            # Управление пользователями (admin)
+│   └── login/            # Страница входа
+├── widgets/              # Сложные композитные блоки
+│   ├── employee-table/   # Таблица сотрудников
+│   ├── pass-form/        # Форма создания пропуска
+│   └── stats-cards/      # Карточки статистики
+├── features/             # Бизнес-функции и взаимодействия
+│   ├── auth/             # Аутентификация
+│   ├── employee-filters/ # Фильтры сотрудников
+│   └── pass-create/      # Создание пропуска
+├── entities/             # Бизнес-сущности
+│   ├── employee/         # Сущность сотрудника
+│   │   ├── api/          # API запросы (employeeApi.js)
+│   │   ├── model/        # Типы, схемы, store
+│   │   └── ui/           # UI компоненты (EmployeeCard)
+│   ├── pass/             # Сущность пропуска
+│   ├── user/             # Сущность пользователя
+│   └── file/             # Сущность файла
+├── shared/               # Переиспользуемый код
+│   ├── api/              # Базовая настройка API (axios)
+│   ├── ui/               # UI-kit компоненты
+│   ├── lib/              # Утилиты и хелперы
+│   ├── config/           # Конфигурация
+│   └── types/            # Общие типы
+├── layout/               # Layout компоненты
+│   ├── MainLayout/
+│   ├── Sidebar/
+│   └── Header/
+└── theme/                # Ant Design тема
+```
+
+### Ключевые правила FSD:
+
+#### 1. **Слои и их назначение**
+
+**app/** - Инициализация приложения:
+- Провайдеры (Router, Theme, Auth Context)
+- Глобальные настройки
+- Корневые роуты
+
+**pages/** - Страницы приложения:
+- Каждая страница в своей папке
+- Композиция widgets и features
+- Минимум логики, только сборка компонентов
+- Файл: `index.jsx` или `PageName.jsx`
+
+**widgets/** - Крупные самостоятельные блоки:
+- Таблицы с пагинацией и фильтрами
+- Сложные формы
+- Дашборды с несколькими элементами
+- Композиция features и entities
+
+**features/** - Пользовательские сценарии:
+- Одна фича = одно пользовательское действие
+- Примеры: "создать сотрудника", "экспортировать в Excel"
+- Может использовать entities
+- НЕ может импортировать другие features
+
+**entities/** - Бизнес-сущности:
+- Структура: `api/`, `model/`, `ui/`
+- `api/` - запросы к API
+- `model/` - store, схемы валидации, типы
+- `ui/` - UI компоненты сущности (карточки, списки)
+- НЕ может импортировать features или widgets
+
+**shared/** - Переиспользуемый код:
+- Технический код без бизнес-логики
+- UI-kit компоненты
+- Утилиты, хелперы, константы
+- НЕ может импортировать ничего кроме других shared
+
+#### 2. **Правила импортов**
+
+```javascript
+// ✅ РАЗРЕШЕНО:
+// pages может импортировать: widgets, features, entities, shared
+import { EmployeeTable } from '@/widgets/employee-table';
+import { EmployeeFilters } from '@/features/employee-filters';
+import { EmployeeCard } from '@/entities/employee';
+
+// widgets может импортировать: features, entities, shared
+import { useEmployees } from '@/entities/employee';
+import { Button } from '@/shared/ui';
+
+// features может импортировать: entities, shared
+import { employeeApi } from '@/entities/employee';
+import { formatDate } from '@/shared/lib';
+
+// entities может импортировать: shared
+import { api } from '@/shared/api';
+
+// ❌ ЗАПРЕЩЕНО:
+// features НЕ может импортировать другие features
+import { PassCreate } from '@/features/pass-create'; // ❌
+
+// entities НЕ может импортировать features
+import { EmployeeFilters } from '@/features/employee-filters'; // ❌
+
+// shared НЕ может импортировать ничего выше
+import { EmployeeCard } from '@/entities/employee'; // ❌
+```
+
+#### 3. **Public API (index.js)**
+
+Каждый слайс экспортирует через `index.js`:
+
+```javascript
+// entities/employee/index.js
+export { employeeApi } from './api/employeeApi';
+export { EmployeeCard } from './ui/EmployeeCard';
+export { useEmployeeStore } from './model/store';
+
+// features/employee-filters/index.js
+export { EmployeeFilters } from './EmployeeFilters';
+export { useFilters } from './useFilters';
+
+// widgets/employee-table/index.js
+export { EmployeeTable } from './EmployeeTable';
+```
+
+#### 4. **Path aliases (vite.config.js)**
+
+```javascript
+resolve: {
+  alias: {
+    '@': path.resolve(__dirname, './src'),
+    '@/app': path.resolve(__dirname, './src/app'),
+    '@/pages': path.resolve(__dirname, './src/pages'),
+    '@/widgets': path.resolve(__dirname, './src/widgets'),
+    '@/features': path.resolve(__dirname, './src/features'),
+    '@/entities': path.resolve(__dirname, './src/entities'),
+    '@/shared': path.resolve(__dirname, './src/shared'),
+  }
+}
+```
+
+#### 5. **Пример структуры entity**
+
+```
+entities/employee/
+├── index.js              # Public API
+├── api/
+│   └── employeeApi.js    # API запросы
+├── model/
+│   ├── store.js          # Zustand store (если нужен)
+│   ├── types.js          # Типы
+│   └── schemas.js        # Схемы валидации
+└── ui/
+    ├── EmployeeCard.jsx  # Карточка сотрудника
+    └── EmployeeAvatar.jsx # Аватар сотрудника
+```
+
+#### 6. **Миграция существующего кода**
+
+**Этап 1**: Переместить API сервисы:
+```
+services/employeeService.js → entities/employee/api/employeeApi.js
+services/passService.js     → entities/pass/api/passApi.js
+services/userService.js     → entities/user/api/userApi.js
+services/fileService.js     → entities/file/api/fileApi.js
+```
+
+**Этап 2**: Создать Public API:
+```javascript
+// entities/employee/index.js
+export { employeeApi } from './api/employeeApi';
+```
+
+**Этап 3**: Обновить импорты:
+```javascript
+// Было:
+import { employeeService } from '@/services/employeeService';
+
+// Стало:
+import { employeeApi } from '@/entities/employee';
+```
+
+**Этап 4**: Переместить страницы:
+```
+pages/DashboardPage.jsx → pages/dashboard/index.jsx
+pages/EmployeesPage.jsx → pages/employees/index.jsx
+pages/PassesPage.jsx    → pages/passes/index.jsx
+pages/UsersPage.jsx     → pages/users/index.jsx
+```
+
+**Этап 5**: Вынести store в app:
+```
+store/authStore.js → app/providers/AuthProvider.jsx
+```
+
+**Этап 6**: Переместить Layout:
+```
+components/Layout/ → layout/
+components/Auth/   → features/auth/
+```
+
+### Когда разделять:
+
+- **Файл > 600 строк** - ОБЯЗАТЕЛЬНО разделить
+- **Повторяющийся код** - вынести в отдельный компонент/хук
+
+### Преимущества:
+
+#### FSD архитектуры:
+- ✅ **Явная структура** - понятно где что лежит
+- ✅ **Масштабируемость** - легко добавлять новые фичи
+- ✅ **Изоляция** - изменения в одном слое не влияют на другие
+- ✅ **Переиспользование** - entities и shared используются везде
+- ✅ **Тестируемость** - каждый слой тестируется отдельно
+- ✅ **Командная работа** - можно работать параллельно над разными слоями
+
+#### Разделения на компоненты:
+
+- ✅ Легче читать и понимать код
+- ✅ Проще тестировать отдельные компоненты
+- ✅ Удобнее переиспользовать логику
+- ✅ Быстрее находить и исправлять баги
+- ✅ Лучше работает с Git (меньше конфликтов)
+

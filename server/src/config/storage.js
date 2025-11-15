@@ -1,19 +1,23 @@
-import AWS from 'aws-sdk';
+import axios from 'axios';
+import FormData from 'form-data';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Настройка S3-совместимого клиента для Yandex Object Storage
-const s3Client = new AWS.S3({
-  endpoint: process.env.YC_STORAGE_ENDPOINT || 'https://storage.yandexcloud.net',
-  accessKeyId: process.env.YC_STORAGE_ACCESS_KEY,
-  secretAccessKey: process.env.YC_STORAGE_SECRET_KEY,
-  region: process.env.YC_STORAGE_REGION || 'ru-central1',
-  s3ForcePathStyle: true,
-  signatureVersion: 'v4'
+// Конфигурация для работы с Яндекс.Диск API
+const YANDEX_DISK_API_URL = 'https://cloud-api.yandex.net/v1/disk';
+
+// Создаем axios клиент с настройками для Яндекс.Диска
+const yandexDiskClient = axios.create({
+  baseURL: YANDEX_DISK_API_URL,
+  headers: {
+    'Authorization': `OAuth ${process.env.YANDEX_DISK_TOKEN}`,
+    'Content-Type': 'application/json'
+  }
 });
 
-export const bucketName = process.env.YC_STORAGE_BUCKET || 'passdesk-files';
+// Базовая папка для хранения файлов на Яндекс.Диске
+export const basePath = process.env.YANDEX_DISK_BASE_PATH || '/PassDesk';
 
-export default s3Client;
+export default yandexDiskClient;
 

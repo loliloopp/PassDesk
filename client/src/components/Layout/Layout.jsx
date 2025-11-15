@@ -1,26 +1,22 @@
 import { Outlet } from 'react-router-dom'
+import { Layout as AntLayout } from 'antd'
 import Sidebar from './Sidebar'
 import Header from './Header'
 
+const { Content } = AntLayout
+
 const Layout = () => {
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+    <AntLayout style={{ minHeight: '100vh' }}>
       <Sidebar />
-      
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <AntLayout>
         <Header />
-        
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-    </div>
+        <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', borderRadius: 8 }}>
+          <Outlet />
+        </Content>
+      </AntLayout>
+    </AntLayout>
   )
 }
 
 export default Layout
-

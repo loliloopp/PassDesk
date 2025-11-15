@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Прямоугольник пропуска -->
+  <rect x="3" y="4" width="18" height="16" rx="2" ry="2" fill="url(#grad)" stroke="#1e40af" stroke-width="1.5"/>
+  
+  <!-- Линии текста -->
+  <line x1="6" y1="8" x2="18" y2="8" stroke="white" stroke-width="1.2" opacity="0.9"/>
+  <line x1="6" y1="11" x2="15" y2="11" stroke="white" stroke-width="1" opacity="0.7"/>
+  <line x1="6" y1="14" x2="16" y2="14" stroke="white" stroke-width="1" opacity="0.7"/>
+  
+  <!-- Иконка пользователя -->
+  <circle cx="18" cy="16" r="2.5" fill="white" opacity="0.9"/>
+  <circle cx="18" cy="15.5" r="0.8" fill="#2563eb"/>
+  <path d="M 16.5 17.5 Q 18 16.8 19.5 17.5" stroke="#2563eb" stroke-width="0.8" fill="none"/>
+  
+  <!-- Галочка одобрения -->
+  <circle cx="8" cy="17" r="2" fill="#10b981" opacity="0.9"/>
+  <path d="M 7 17 L 7.7 17.7 L 9 16.3" stroke="white" stroke-width="0.8" fill="none"/>
+</svg>
+

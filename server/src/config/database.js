@@ -1,7 +1,17 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Проверяем наличие SSL сертификата
+const certPath = path.join(__dirname, '../../cert/root.crt');
+const hasCertificate = fs.existsSync(certPath);
 
 const config = {
   host: process.env.DB_HOST,
@@ -13,7 +23,8 @@ const config = {
   dialectOptions: {
     ssl: process.env.DB_SSL === 'true' ? {
       require: true,
-      rejectUnauthorized: false
+      rejectUnauthorized: hasCertificate,
+      ...(hasCertificate && { ca: fs.readFileSync(certPath).toString() })
     } : false
   },
   logging: process.env.NODE_ENV === 'development' ? console.log : false,

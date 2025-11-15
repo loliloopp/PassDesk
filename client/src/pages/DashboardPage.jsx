@@ -1,57 +1,101 @@
-import { Users, FileText, AlertCircle, TrendingUp } from 'lucide-react'
+import { Row, Col, Card, Statistic, Typography } from 'antd'
+import {
+  UserOutlined,
+  IdcardOutlined,
+  ClockCircleOutlined,
+  RiseOutlined,
+} from '@ant-design/icons'
 
-const stats = [
-  { name: 'Всего сотрудников', value: '0', icon: Users, color: 'bg-blue-500' },
-  { name: 'Активных пропусков', value: '0', icon: FileText, color: 'bg-green-500' },
-  { name: 'Истекающих', value: '0', icon: AlertCircle, color: 'bg-yellow-500' },
-  { name: 'За этот месяц', value: '0', icon: TrendingUp, color: 'bg-purple-500' },
-]
+const { Title } = Typography
 
 const DashboardPage = () => {
+  const stats = [
+    {
+      title: 'Всего сотрудников',
+      value: 5,
+      icon: <UserOutlined style={{ fontSize: 24, color: '#3b82f6' }} />,
+      color: '#3b82f6',
+      bgColor: '#eff6ff',
+    },
+    {
+      title: 'Активных пропусков',
+      value: 4,
+      icon: <IdcardOutlined style={{ fontSize: 24, color: '#10b981' }} />,
+      color: '#10b981',
+      bgColor: '#f0fdf4',
+    },
+    {
+      title: 'Истекающих',
+      value: 1,
+      icon: <ClockCircleOutlined style={{ fontSize: 24, color: '#f59e0b' }} />,
+      color: '#f59e0b',
+      bgColor: '#fffbeb',
+    },
+    {
+      title: 'За этот месяц',
+      value: 5,
+      icon: <RiseOutlined style={{ fontSize: 24, color: '#8b5cf6' }} />,
+      color: '#8b5cf6',
+      bgColor: '#f5f3ff',
+    },
+  ]
+
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Дашборд</h1>
-        <p className="text-gray-600 mt-1">Обзор системы управления пропусками</p>
-      </div>
+    <div>
+      <Title level={2} style={{ marginBottom: 24 }}>
+        Дашборд
+      </Title>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div key={stat.name} className="card">
-            <div className="flex items-center">
-              <div className={`${stat.color} p-3 rounded-lg`}>
-                <stat.icon className="h-6 w-6 text-white" />
+      <Row gutter={[16, 16]}>
+        {stats.map((stat, index) => (
+          <Col xs={24} sm={12} lg={6} key={index}>
+            <Card>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: stat.bgColor,
+                    borderRadius: 12,
+                  }}
+                >
+                  {stat.icon}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <Statistic
+                    title={stat.title}
+                    value={stat.value}
+                    valueStyle={{ color: stat.color, fontSize: 28, fontWeight: 600 }}
+                  />
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            </div>
-          </div>
+            </Card>
+          </Col>
         ))}
-      </div>
+      </Row>
 
-      {/* Recent activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Последние сотрудники</h2>
-          <div className="text-center py-8 text-gray-500">
-            <p>Нет данных</p>
-          </div>
-        </div>
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+        <Col xs={24} lg={12}>
+          <Card title="Последние сотрудники" style={{ height: '100%' }}>
+            <p style={{ textAlign: 'center', color: '#999', padding: '60px 0' }}>
+              Нет данных
+            </p>
+          </Card>
+        </Col>
 
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Недавние пропуска</h2>
-          <div className="text-center py-8 text-gray-500">
-            <p>Нет данных</p>
-          </div>
-        </div>
-      </div>
+        <Col xs={24} lg={12}>
+          <Card title="Недавние пропуска" style={{ height: '100%' }}>
+            <p style={{ textAlign: 'center', color: '#999', padding: '60px 0' }}>
+              Нет данных
+            </p>
+          </Card>
+        </Col>
+      </Row>
     </div>
   )
 }
 
 export default DashboardPage
-

@@ -1,76 +1,318 @@
 import { useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import {
+  Table,
+  Button,
+  Input,
+  Space,
+  Typography,
+  Tag,
+  Tooltip,
+  Modal,
+  Form,
+  message,
+} from 'antd'
+import {
+  PlusOutlined,
+  SearchOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
+
+const { Title } = Typography
 
 const EmployeesPage = () => {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchText, setSearchText] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [form] = Form.useForm()
+  const [editingEmployee, setEditingEmployee] = useState(null)
+
+  // Временные данные (позже заменим на реальные из API)
+  const [employees] = useState([
+    {
+      id: 1,
+      firstName: 'Алексей',
+      lastName: 'Смирнов',
+      middleName: 'Иванович',
+      position: 'Менеджер по продажам',
+      department: 'Отдел продаж',
+      email: 'smirnov@company.com',
+      phone: '+7 (999) 123-45-67',
+      isActive: true,
+    },
+    {
+      id: 2,
+      firstName: 'Мария',
+      lastName: 'Петрова',
+      middleName: 'Сергеевна',
+      position: 'Бухгалтер',
+      department: 'Бухгалтерия',
+      email: 'petrova@company.com',
+      phone: '+7 (999) 234-56-78',
+      isActive: true,
+    },
+    {
+      id: 3,
+      firstName: 'Дмитрий',
+      lastName: 'Козлов',
+      middleName: 'Александрович',
+      position: 'Программист',
+      department: 'IT отдел',
+      email: 'kozlov@company.com',
+      phone: '+7 (999) 345-67-89',
+      isActive: true,
+    },
+    {
+      id: 4,
+      firstName: 'Елена',
+      lastName: 'Новикова',
+      position: 'HR менеджер',
+      department: 'Кадры',
+      email: 'novikova@company.com',
+      phone: '+7 (999) 456-78-90',
+      isActive: true,
+    },
+    {
+      id: 5,
+      firstName: 'Сергей',
+      lastName: 'Волков',
+      middleName: 'Петрович',
+      position: 'Охранник',
+      department: 'Безопасность',
+      phone: '+7 (999) 567-89-01',
+      isActive: true,
+    },
+  ])
+
+  const columns = [
+    {
+      title: 'ФИО',
+      key: 'fullName',
+      render: (_, record) => (
+        <Space>
+          <UserOutlined style={{ color: '#2563eb' }} />
+          <span>
+            {record.lastName} {record.firstName} {record.middleName || ''}
+          </span>
+        </Space>
+      ),
+      sorter: (a, b) => a.lastName.localeCompare(b.lastName),
+    },
+    {
+      title: 'Должность',
+      dataIndex: 'position',
+      key: 'position',
+      sorter: (a, b) => a.position.localeCompare(b.position),
+    },
+    {
+      title: 'Отдел',
+      dataIndex: 'department',
+      key: 'department',
+      sorter: (a, b) => a.department.localeCompare(b.department),
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      render: (email) => email || '-',
+    },
+    {
+      title: 'Телефон',
+      dataIndex: 'phone',
+      key: 'phone',
+    },
+    {
+      title: 'Статус',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (isActive) => (
+        <Tag color={isActive ? 'success' : 'default'}>
+          {isActive ? 'Активен' : 'Неактивен'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Действия',
+      key: 'actions',
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Редактировать">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Удалить">
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record)}
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ]
+
+  const handleAdd = () => {
+    setEditingEmployee(null)
+    form.resetFields()
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (employee) => {
+    setEditingEmployee(employee)
+    form.setFieldsValue(employee)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = (employee) => {
+    Modal.confirm({
+      title: 'Удаление сотрудника',
+      content: `Вы уверены, что хотите удалить сотрудника ${employee.firstName} ${employee.lastName}?`,
+      okText: 'Удалить',
+      okType: 'danger',
+      cancelText: 'Отмена',
+      onOk: () => {
+        message.success('Сотрудник удален')
+      },
+    })
+  }
+
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields()
+      console.log('Form values:', values)
+      message.success(
+        editingEmployee ? 'Сотрудник обновлен' : 'Сотрудник добавлен'
+      )
+      setIsModalOpen(false)
+    } catch (error) {
+      console.error('Validation failed:', error)
+    }
+  }
+
+  const handleModalCancel = () => {
+    setIsModalOpen(false)
+    form.resetFields()
+  }
+
+  const filteredEmployees = employees.filter((emp) => {
+    const searchLower = searchText.toLowerCase()
+    return (
+      emp.firstName.toLowerCase().includes(searchLower) ||
+      emp.lastName.toLowerCase().includes(searchLower) ||
+      emp.position.toLowerCase().includes(searchLower) ||
+      emp.department.toLowerCase().includes(searchLower)
+    )
+  })
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Сотрудники</h1>
-          <p className="text-gray-600 mt-1">Управление базой сотрудников</p>
-        </div>
-        <button className="btn-primary">
-          <Plus className="h-5 w-5 mr-2 inline" />
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 24,
+          flexWrap: 'wrap',
+          gap: 16,
+        }}
+      >
+        <Title level={2} style={{ margin: 0 }}>
+          Сотрудники
+        </Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           Добавить сотрудника
-        </button>
+        </Button>
       </div>
 
-      {/* Search and filters */}
-      <div className="card">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Поиск по имени, должности, отделу..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field pl-10"
-            />
-          </div>
-          <button className="btn-outline">Фильтры</button>
-        </div>
-      </div>
+      <Space style={{ marginBottom: 16, width: '100%' }} direction="vertical">
+        <Input
+          placeholder="Поиск по имени, должности, отделу..."
+          prefix={<SearchOutlined />}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          size="large"
+          style={{ maxWidth: 500 }}
+        />
+      </Space>
 
-      {/* Employees table */}
-      <div className="card">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ФИО
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Должность
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Отдел
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Действия
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              <tr>
-                <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                  Нет данных. Добавьте первого сотрудника.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Table
+        columns={columns}
+        dataSource={filteredEmployees}
+        rowKey="id"
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: (total) => `Всего: ${total}`,
+        }}
+      />
+
+      <Modal
+        title={editingEmployee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
+        open={isModalOpen}
+        onOk={handleModalOk}
+        onCancel={handleModalCancel}
+        width={600}
+        okText={editingEmployee ? 'Сохранить' : 'Добавить'}
+        cancelText="Отмена"
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+          <Form.Item
+            name="lastName"
+            label="Фамилия"
+            rules={[{ required: true, message: 'Введите фамилию' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="firstName"
+            label="Имя"
+            rules={[{ required: true, message: 'Введите имя' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item name="middleName" label="Отчество">
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="position"
+            label="Должность"
+            rules={[{ required: true, message: 'Введите должность' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="department"
+            label="Отдел"
+            rules={[{ required: true, message: 'Введите отдел' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[{ type: 'email', message: 'Введите корректный email' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item name="phone" label="Телефон">
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   )
 }
 
 export default EmployeesPage
-

@@ -1,0 +1,484 @@
+import { useState, useEffect } from 'react'
+import {
+  Table,
+  Button,
+  Input,
+  Space,
+  Typography,
+  Tag,
+  Tooltip,
+  Modal,
+  Form,
+  Select,
+  message,
+  Popconfirm,
+  Switch,
+} from 'antd'
+import {
+  PlusOutlined,
+  SearchOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  UserOutlined,
+  LockOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons'
+import { userService } from '@/services/userService'
+import { counterpartyService } from '@/services/counterpartyService'
+import { useAuthStore } from '@/store/authStore'
+
+const { Title } = Typography
+
+const UsersPage = () => {
+  const [users, setUsers] = useState([])
+  const [counterparties, setCounterparties] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [form] = Form.useForm()
+  const [passwordForm] = Form.useForm()
+  const [editingUser, setEditingUser] = useState(null)
+  const { user: currentUser } = useAuthStore()
+
+  useEffect(() => {
+    fetchUsers()
+    fetchCounterparties()
+  }, [])
+
+  const fetchUsers = async () => {
+    setLoading(true)
+    try {
+      const response = await userService.getAll()
+      setUsers(response.data.users)
+    } catch (error) {
+      message.error('Ошибка загрузки пользователей')
+      console.error('Error fetching users:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchCounterparties = async () => {
+    try {
+      const { data } = await counterpartyService.getAll({ limit: 100 })
+      setCounterparties(data.data.counterparties)
+    } catch (error) {
+      console.error('Error loading counterparties:', error)
+    }
+  }
+
+  const roleLabels = {
+    admin: { text: 'Администратор', color: 'red' },
+    manager: { text: 'Менеджер', color: 'blue' },
+    user: { text: 'Пользователь', color: 'default' },
+  }
+
+  const columns = [
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      sorter: (a, b) => a.email.localeCompare(b.email),
+      render: (email) => (
+        <Space>
+          <UserOutlined style={{ color: '#2563eb' }} />
+          <span>{email}</span>
+        </Space>
+      ),
+    },
+    {
+      title: 'ФИО',
+      key: 'fullName',
+      render: (_, record) => (
+        <span>
+          {record.lastName} {record.firstName}
+        </span>
+      ),
+      sorter: (a, b) => a.lastName.localeCompare(b.lastName),
+    },
+    {
+      title: 'Роль',
+      dataIndex: 'role',
+      key: 'role',
+      render: (role) => (
+        <Tag color={roleLabels[role]?.color}>{roleLabels[role]?.text}</Tag>
+      ),
+      filters: Object.entries(roleLabels).map(([key, value]) => ({
+        text: value.text,
+        value: key,
+      })),
+      onFilter: (value, record) => record.role === value,
+    },
+    {
+      title: 'Контрагент',
+      dataIndex: 'counterpartyId',
+      key: 'counterpartyId',
+      render: (counterpartyId) => {
+        const counterparty = counterparties.find(c => c.id === counterpartyId);
+        return counterparty ? counterparty.name : '-';
+      },
+    },
+    {
+      title: 'Статус',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (isActive, record) => {
+        // Для администраторов - Switch, для остальных - Tag
+        if (currentUser?.role === 'admin' && record.id !== currentUser?.id) {
+          return (
+            <Switch
+              checked={isActive}
+              onChange={() => handleToggleStatus(record.id)}
+              checkedChildren="Активен"
+              unCheckedChildren="Неактивен"
+            />
+          );
+        }
+        return (
+          <Tag icon={isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />} color={isActive ? 'success' : 'default'}>
+            {isActive ? 'Активен' : 'Неактивен'}
+          </Tag>
+        );
+      },
+      filters: [
+        { text: 'Активен', value: true },
+        { text: 'Неактивен', value: false },
+      ],
+      onFilter: (value, record) => record.isActive === value,
+    },
+    {
+      title: 'Дата создания',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date) => new Date(date).toLocaleDateString('ru-RU'),
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    },
+    {
+      title: 'Последний вход',
+      dataIndex: 'lastLogin',
+      key: 'lastLogin',
+      render: (date) => (date ? new Date(date).toLocaleString('ru-RU') : '-'),
+    },
+    {
+      title: 'Действия',
+      key: 'actions',
+      width: 200,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Редактировать">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Изменить пароль">
+            <Button
+              type="text"
+              icon={<LockOutlined />}
+              onClick={() => handleChangePassword(record)}
+              disabled={currentUser?.role !== 'admin' && record.id !== currentUser?.id}
+            />
+          </Tooltip>
+          <Tooltip title="Удалить">
+            <Popconfirm
+              title="Удалить пользователя?"
+              description="Это действие нельзя отменить."
+              onConfirm={() => handleDelete(record.id)}
+              okText="Удалить"
+              okType="danger"
+              cancelText="Отмена"
+              disabled={record.id === currentUser?.id || currentUser?.role !== 'admin'}
+            >
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                disabled={record.id === currentUser?.id || currentUser?.role !== 'admin'}
+              />
+            </Popconfirm>
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ]
+
+  const handleAdd = () => {
+    setEditingUser(null)
+    form.resetFields()
+    setIsModalOpen(true)
+  }
+
+  const handleEdit = (user) => {
+    setEditingUser(user)
+    form.setFieldsValue(user)
+    setIsModalOpen(true)
+  }
+
+  const handleChangePassword = (user) => {
+    setEditingUser(user)
+    passwordForm.resetFields()
+    setIsPasswordModalOpen(true)
+  }
+
+  const handleToggleStatus = async (id) => {
+    try {
+      await userService.toggleStatus(id)
+      message.success('Статус пользователя изменен')
+      fetchUsers()
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Ошибка изменения статуса')
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await userService.delete(id)
+      message.success('Пользователь удален')
+      fetchUsers()
+    } catch (error) {
+      message.error(error.response?.data?.message || 'Ошибка удаления пользователя')
+    }
+  }
+
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields()
+      
+      if (editingUser) {
+        await userService.update(editingUser.id, values)
+        message.success('Пользователь обновлен')
+      } else {
+        await userService.create(values)
+        message.success('Пользователь создан')
+      }
+      
+      setIsModalOpen(false)
+      fetchUsers()
+    } catch (error) {
+      if (error.errorFields) {
+        // Validation error
+        return
+      }
+      message.error(error.response?.data?.message || 'Ошибка сохранения пользователя')
+    }
+  }
+
+  const handlePasswordModalOk = async () => {
+    try {
+      const values = await passwordForm.validateFields()
+      
+      await userService.updatePassword(editingUser.id, values)
+      message.success('Пароль обновлен')
+      
+      setIsPasswordModalOpen(false)
+      passwordForm.resetFields()
+    } catch (error) {
+      if (error.errorFields) {
+        return
+      }
+      message.error(error.response?.data?.message || 'Ошибка обновления пароля')
+    }
+  }
+
+  const handleModalCancel = () => {
+    setIsModalOpen(false)
+    form.resetFields()
+  }
+
+  const handlePasswordModalCancel = () => {
+    setIsPasswordModalOpen(false)
+    passwordForm.resetFields()
+  }
+
+  const filteredUsers = users.filter((user) => {
+    const searchLower = searchText.toLowerCase()
+    return (
+      user.email.toLowerCase().includes(searchLower) ||
+      user.firstName.toLowerCase().includes(searchLower) ||
+      user.lastName.toLowerCase().includes(searchLower)
+    )
+  })
+
+  return (
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 24,
+          flexWrap: 'wrap',
+          gap: 16,
+        }}
+      >
+        <Title level={2} style={{ margin: 0 }}>
+          Пользователи
+        </Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+          Добавить пользователя
+        </Button>
+      </div>
+
+      <Space style={{ marginBottom: 16, width: '100%' }} direction="vertical">
+        <Input
+          placeholder="Поиск по email или ФИО..."
+          prefix={<SearchOutlined />}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          size="large"
+          style={{ maxWidth: 500 }}
+        />
+      </Space>
+
+      <Table
+        columns={columns}
+        dataSource={filteredUsers}
+        rowKey="id"
+        loading={loading}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: (total) => `Всего: ${total}`,
+        }}
+      />
+
+      {/* Modal для создания/редактирования пользователя */}
+      <Modal
+        title={editingUser ? 'Редактировать пользователя' : 'Добавить пользователя'}
+        open={isModalOpen}
+        onOk={handleModalOk}
+        onCancel={handleModalCancel}
+        width={600}
+        okText={editingUser ? 'Сохранить' : 'Добавить'}
+        cancelText="Отмена"
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              { required: true, message: 'Введите email' },
+              { type: 'email', message: 'Введите корректный email' },
+            ]}
+          >
+            <Input prefix={<UserOutlined />} placeholder="user@example.com" />
+          </Form.Item>
+
+          {!editingUser && (
+            <Form.Item
+              name="password"
+              label="Пароль"
+              rules={[
+                { required: true, message: 'Введите пароль' },
+                { min: 6, message: 'Пароль должен содержать минимум 6 символов' },
+              ]}
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
+            </Form.Item>
+          )}
+
+          <Form.Item
+            name="firstName"
+            label="Имя"
+            rules={[{ required: true, message: 'Введите имя' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="lastName"
+            label="Фамилия"
+            rules={[{ required: true, message: 'Введите фамилию' }]}
+          >
+            <Input />
+          </Form.Item>
+
+          <Form.Item
+            name="role"
+            label="Роль"
+            rules={[{ required: true, message: 'Выберите роль' }]}
+            initialValue="user"
+          >
+            <Select>
+              {Object.entries(roleLabels).map(([key, value]) => (
+                <Select.Option key={key} value={key}>
+                  {value.text}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="counterpartyId"
+            label="Контрагент"
+            tooltip="Необязательно. Если указан, пользователь привязан к конкретному контрагенту"
+          >
+            <Select
+              placeholder="Не выбрано"
+              allowClear
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {counterparties.map(c => (
+                <Select.Option key={c.id} value={c.id}>
+                  {c.name} ({c.inn})
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal для изменения пароля */}
+      <Modal
+        title="Изменить пароль"
+        open={isPasswordModalOpen}
+        onOk={handlePasswordModalOk}
+        onCancel={handlePasswordModalCancel}
+        okText="Изменить"
+        cancelText="Отмена"
+      >
+        <Form form={passwordForm} layout="vertical" style={{ marginTop: 24 }}>
+          <Form.Item
+            name="newPassword"
+            label="Новый пароль"
+            rules={[
+              { required: true, message: 'Введите новый пароль' },
+              { min: 6, message: 'Пароль должен содержать минимум 6 символов' },
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
+          </Form.Item>
+
+          <Form.Item
+            name="confirmPassword"
+            label="Подтвердите пароль"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: 'Подтвердите пароль' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('newPassword') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('Пароли не совпадают'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="••••••••" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
+}
+
+export default UsersPage
+

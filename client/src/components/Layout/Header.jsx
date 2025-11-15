@@ -1,44 +1,81 @@
-import { Menu, Bell, User } from 'lucide-react'
+import { Layout as AntLayout, Badge, Avatar, Dropdown, Space, Typography } from 'antd'
+import { BellOutlined, UserOutlined, DownOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
+import { useNavigate } from 'react-router-dom'
+
+const { Header: AntHeader } = AntLayout
+const { Text } = Typography
 
 const Header = () => {
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
+
+  const userMenuItems = [
+    {
+      key: 'profile',
+      label: 'Профиль',
+      icon: <UserOutlined />,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      label: 'Выйти',
+      danger: true,
+      onClick: () => {
+        logout()
+        navigate('/login')
+      },
+    },
+  ]
+
+  const getRoleLabel = (role) => {
+    const roles = {
+      admin: 'Администратор',
+      manager: 'Менеджер',
+      user: 'Пользователь',
+    }
+    return roles[role] || role
+  }
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Mobile menu button */}
-          <button className="md:hidden p-2 rounded-lg hover:bg-gray-100">
-            <Menu className="h-6 w-6" />
-          </button>
+    <AntHeader
+      style={{
+        padding: '0 24px',
+        background: '#fff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        borderBottom: '1px solid #f0f0f0',
+      }}
+    >
+      <Space size="large">
+        <Badge count={0} showZero={false}>
+          <BellOutlined style={{ fontSize: 20, cursor: 'pointer', color: '#666' }} />
+        </Badge>
 
-          {/* Right side */}
-          <div className="ml-auto flex items-center space-x-4">
-            {/* Notifications */}
-            <button className="p-2 rounded-lg hover:bg-gray-100 relative">
-              <Bell className="h-5 w-5 text-gray-600" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
-
-            {/* User menu */}
-            <div className="flex items-center space-x-3">
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium text-gray-900">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-gray-500">{user?.role}</p>
-              </div>
-              <button className="flex items-center justify-center h-10 w-10 rounded-full bg-primary-100 text-primary-600 font-medium">
-                <User className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
+        <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+          <Space style={{ cursor: 'pointer' }}>
+            <Avatar
+              size="default"
+              style={{ backgroundColor: '#2563eb' }}
+              icon={<UserOutlined />}
+            />
+            <Space direction="vertical" size={0}>
+              <Text strong style={{ fontSize: 14 }}>
+                {user?.firstName} {user?.lastName}
+              </Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {getRoleLabel(user?.role)}
+              </Text>
+            </Space>
+            <DownOutlined style={{ fontSize: 12, color: '#666' }} />
+          </Space>
+        </Dropdown>
+      </Space>
+    </AntHeader>
   )
 }
 
 export default Header
-

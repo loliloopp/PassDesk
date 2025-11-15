@@ -57,11 +57,9 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connected successfully');
     
-    // Sync database models (в продакшене используйте миграции)
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: false });
-      console.log('✅ Database models synchronized');
-    }
+    // НЕ синхронизируем модели автоматически!
+    // Таблицы создаются только явно через: npm run db:init
+    // Изменения в БД делаются только через миграции с явным запуском
     
     // Start server
     app.listen(PORT, () => {

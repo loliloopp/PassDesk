@@ -12,6 +12,7 @@ router.use(authenticate);
 router.post('/upload', upload.single('file'), fileController.uploadFile);
 router.post('/upload-multiple', upload.array('files', 5), fileController.uploadMultipleFiles);
 router.get('/:fileKey', fileController.getFile);
+router.get('/:fileKey/public', fileController.getPublicLink);
 router.delete('/:fileKey', fileController.deleteFile);
 
 export default router;

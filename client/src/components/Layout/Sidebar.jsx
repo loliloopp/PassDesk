@@ -1,60 +1,139 @@
-import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, LogOut } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Layout, Menu } from 'antd'
+import {
+  DashboardOutlined,
+  UserOutlined,
+  IdcardOutlined,
+  LogoutOutlined,
+  TeamOutlined,
+  ShopOutlined,
+  BankOutlined,
+  FileTextOutlined
+} from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 
-const navigation = [
-  { name: 'Дашборд', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Сотрудники', href: '/employees', icon: Users },
-  { name: 'Пропуска', href: '/passes', icon: FileText },
-]
+const { Sider } = Layout
 
 const Sidebar = () => {
-  const { logout } = useAuthStore()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { logout, user } = useAuthStore()
+  const [collapsed, setCollapsed] = useState(false)
+
+  const menuItems = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Дашборд',
+    },
+    {
+      key: '/employees',
+      icon: <UserOutlined />,
+      label: 'Сотрудники',
+    },
+    {
+      key: '/passes',
+      icon: <IdcardOutlined />,
+      label: 'Пропуска',
+    },
+    {
+      key: 'references',
+      icon: <BankOutlined />,
+      label: 'Справочники',
+      children: [
+        {
+          key: '/counterparties',
+          icon: <ShopOutlined />,
+          label: 'Контрагенты',
+        },
+        {
+          key: '/construction-sites',
+          icon: <BankOutlined />,
+          label: 'Объекты',
+        },
+        {
+          key: '/contracts',
+          icon: <FileTextOutlined />,
+          label: 'Договора',
+        },
+      ],
+    },
+  ]
+
+  // Добавляем пункт "Пользователи" только для администраторов
+  if (user?.role === 'admin') {
+    menuItems.push({
+      key: '/users',
+      icon: <TeamOutlined />,
+      label: 'Пользователи',
+    })
+  }
+
+  const handleMenuClick = ({ key }) => {
+    if (key === 'logout') {
+      logout()
+      navigate('/login')
+    } else {
+      navigate(key)
+    }
+  }
 
   return (
-    <div className="hidden md:flex md:flex-shrink-0">
-      <div className="flex flex-col w-64">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
-          {/* Logo */}
-          <div className="flex items-center flex-shrink-0 px-4 mb-5">
-            <h1 className="text-2xl font-bold text-primary-600">PassDesk</h1>
-          </div>
-          
-          {/* Navigation */}
-          <nav className="mt-5 flex-1 px-2 space-y-1">
-            {navigation.map((item) => (
-              <NavLink
-                key={item.name}
-                to={item.href}
-                className={({ isActive }) =>
-                  `group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-600'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`
-                }
-              >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
-              </NavLink>
-            ))}
-          </nav>
-
-          {/* Logout button */}
-          <div className="px-2 mt-auto">
-            <button
-              onClick={logout}
-              className="group flex items-center w-full px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Выйти
-            </button>
-          </div>
-        </div>
+    <Sider
+      collapsible
+      collapsed={collapsed}
+      onCollapse={setCollapsed}
+      width={250}
+      style={{
+        overflow: 'auto',
+        height: '100vh',
+        position: 'sticky',
+        left: 0,
+        top: 0,
+        bottom: 0,
+      }}
+    >
+      <div
+        style={{
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: collapsed ? 18 : 24,
+          fontWeight: 700,
+          color: '#2563eb',
+          padding: '0 16px',
+        }}
+      >
+        {collapsed ? 'PD' : 'PassDesk'}
       </div>
-    </div>
+
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        items={menuItems}
+        onClick={handleMenuClick}
+        style={{ border: 'none' }}
+      />
+
+      <div style={{ position: 'absolute', bottom: 16, width: '100%', padding: '0 16px' }}>
+        <Menu
+          mode="inline"
+          items={[
+            {
+              key: 'logout',
+              icon: <LogoutOutlined />,
+              label: 'Выйти',
+              danger: true,
+            },
+          ]}
+          onClick={handleMenuClick}
+          style={{ border: 'none' }}
+        />
+      </div>
+    </Sider>
   )
 }
 
 export default Sidebar
-
