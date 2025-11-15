@@ -51,7 +51,7 @@ const UsersPage = () => {
     setLoading(true)
     try {
       const response = await userService.getAll()
-      setUsers(response.data.users)
+      setUsers(response.data.data.users || []) // Fixed: access nested users array
     } catch (error) {
       message.error('Ошибка загрузки пользователей')
       console.error('Error fetching users:', error)

@@ -83,15 +83,15 @@ const Counterparty = sequelize.define('Counterparty', {
     }
   },
   type: {
-    type: DataTypes.ENUM('customer', 'contractor', 'owner'),
+    type: DataTypes.ENUM('customer', 'contractor', 'general_contractor'),
     allowNull: false,
     validate: {
       isIn: {
-        args: [['customer', 'contractor', 'owner']],
-        msg: 'Тип должен быть: customer, contractor или owner'
+        args: [['customer', 'contractor', 'general_contractor']],
+        msg: 'Тип должен быть: customer, contractor или general_contractor'
       }
     },
-    comment: 'customer - заказчик, contractor - подрядчик, owner - владелец'
+    comment: 'customer - заказчик, contractor - подрядчик, general_contractor - генподрядчик'
   },
   createdBy: {
     type: DataTypes.INTEGER,
@@ -140,7 +140,7 @@ Counterparty.prototype.getTypeDisplay = function() {
   const typeMap = {
     'customer': 'Заказчик',
     'contractor': 'Подрядчик',
-    'owner': 'Владелец'
+    'general_contractor': 'Генподрядчик'
   };
   return typeMap[this.type] || this.type;
 };

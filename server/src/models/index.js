@@ -6,6 +6,9 @@ import File from './File.js';
 import Counterparty from './Counterparty.js';
 import ConstructionSite from './ConstructionSite.js';
 import Contract from './Contract.js';
+import Application from './Application.js';
+import ApplicationEmployeeMapping from './ApplicationEmployee.js';
+import Citizenship from './Citizenship.js';
 
 // Define associations
 
@@ -18,6 +21,10 @@ Employee.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 // Counterparty -> Employee (подрядчик -> сотрудники подрядчика)
 Counterparty.hasMany(Employee, { foreignKey: 'counterparty_id', as: 'employees' });
 Employee.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
+
+// Citizenship -> Employee (гражданство -> сотрудники)
+Citizenship.hasMany(Employee, { foreignKey: 'citizenship_id', as: 'employees' });
+Employee.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship' });
 
 // Counterparty -> User (контрагент -> пользователи контрагента)
 Counterparty.hasMany(User, { foreignKey: 'counterparty_id', as: 'users' });
@@ -65,6 +72,50 @@ User.hasMany(Contract, { foreignKey: 'updated_by', as: 'updatedContracts' });
 Contract.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 Contract.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 
+// Application -> Counterparty
+Counterparty.hasMany(Application, { foreignKey: 'counterparty_id', as: 'applications' });
+Application.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
+
+// Application -> ConstructionSite
+ConstructionSite.hasMany(Application, { foreignKey: 'construction_site_id', as: 'applications' });
+Application.belongsTo(ConstructionSite, { foreignKey: 'construction_site_id', as: 'constructionSite' });
+
+// Application -> Contract (general)
+Contract.hasMany(Application, { foreignKey: 'general_contract_id', as: 'generalApplications' });
+Application.belongsTo(Contract, { foreignKey: 'general_contract_id', as: 'generalContract' });
+
+// Application -> Contract (sub)
+Contract.hasMany(Application, { foreignKey: 'subcontract_id', as: 'subApplications' });
+Application.belongsTo(Contract, { foreignKey: 'subcontract_id', as: 'subcontract' });
+
+// User -> Application (создатель/редактор)
+User.hasMany(Application, { foreignKey: 'created_by', as: 'createdApplications' });
+User.hasMany(Application, { foreignKey: 'updated_by', as: 'updatedApplications' });
+Application.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+Application.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
+// Application <-> Employee (many-to-many через ApplicationEmployeeMapping)
+Application.belongsToMany(Employee, {
+  through: ApplicationEmployeeMapping,
+  foreignKey: 'application_id',
+  otherKey: 'employee_id',
+  as: 'employees'
+});
+
+Employee.belongsToMany(Application, {
+  through: ApplicationEmployeeMapping,
+  foreignKey: 'employee_id',
+  otherKey: 'application_id',
+  as: 'applications'
+});
+
+// Прямые связи для ApplicationEmployeeMapping (если нужно работать с таблицей напрямую)
+Application.hasMany(ApplicationEmployeeMapping, { foreignKey: 'application_id', as: 'applicationEmployeesMapping' });
+ApplicationEmployeeMapping.belongsTo(Application, { foreignKey: 'application_id', as: 'application' });
+
+Employee.hasMany(ApplicationEmployeeMapping, { foreignKey: 'employee_id', as: 'employeeApplicationsMapping' });
+ApplicationEmployeeMapping.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
+
 export {
   sequelize,
   User,
@@ -73,7 +124,10 @@ export {
   File,
   Counterparty,
   ConstructionSite,
-  Contract
+  Contract,
+  Application,
+  ApplicationEmployeeMapping,
+  Citizenship
 };
 
 

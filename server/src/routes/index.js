@@ -7,6 +7,8 @@ import fileRoutes from './file.routes.js';
 import counterpartyRoutes from './counterparty.routes.js';
 import constructionSiteRoutes from './constructionSite.routes.js';
 import contractRoutes from './contract.routes.js';
+import applicationRoutes from './application.routes.js';
+import citizenshipRoutes from './citizenship.routes.js';
 
 const router = express.Router();
 
@@ -19,6 +21,8 @@ router.use('/files', fileRoutes);
 router.use('/counterparties', counterpartyRoutes);
 router.use('/construction-sites', constructionSiteRoutes);
 router.use('/contracts', contractRoutes);
+router.use('/applications', applicationRoutes);
+router.use('/citizenships', citizenshipRoutes);
 
 export default router;
 

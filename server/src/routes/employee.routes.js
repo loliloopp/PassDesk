@@ -15,8 +15,7 @@ const createEmployeeValidation = [
   body('lastName').notEmpty().trim(),
   body('middleName').optional().trim(),
   body('position').notEmpty().trim(),
-  body('department').notEmpty().trim(),
-  body('email').optional().isEmail().normalizeEmail(),
+  body('email').optional().trim(),
   body('phone').optional().trim()
 ];
 
@@ -25,8 +24,7 @@ const updateEmployeeValidation = [
   body('lastName').optional().notEmpty().trim(),
   body('middleName').optional().trim(),
   body('position').optional().notEmpty().trim(),
-  body('department').optional().notEmpty().trim(),
-  body('email').optional().isEmail().normalizeEmail(),
+  body('email').optional().trim(),
   body('phone').optional().trim()
 ];
 

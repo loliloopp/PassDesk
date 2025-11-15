@@ -28,32 +28,128 @@ Employee.init(
       type: DataTypes.STRING,
       allowNull: false
     },
-    department: {
+  counterpartyId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'counterparty_id',
+    references: {
+      model: 'counterparties',
+      key: 'id'
+    }
+  },
+  citizenshipId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'citizenship_id',
+    references: {
+      model: 'citizenships',
+      key: 'id'
+    },
+    comment: 'Гражданство'
+  },
+  birthDate: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'birth_date',
+    comment: 'Дата рождения'
+  },
+  inn: {
+    type: DataTypes.STRING(12),
+    allowNull: true,
+    field: 'inn',
+    validate: {
+      isValidInn(value) {
+        if (value && value.length > 0) {
+          if (value.length !== 10 && value.length !== 12) {
+            throw new Error('ИНН должен содержать 10 или 12 цифр');
+          }
+          if (!/^\d+$/.test(value)) {
+            throw new Error('ИНН должен содержать только цифры');
+          }
+        }
+      }
+    },
+    comment: 'ИНН сотрудника'
+  },
+  snils: {
+    type: DataTypes.STRING(14),
+    allowNull: true,
+    field: 'snils',
+    validate: {
+      isValidSnils(value) {
+        if (value && value.length > 0) {
+          if (!/^\d{3}-\d{3}-\d{3}\s\d{2}$/.test(value)) {
+            throw new Error('СНИЛС должен быть в формате XXX-XXX-XXX XX');
+          }
+        }
+      }
+    },
+    comment: 'СНИЛС сотрудника'
+  },
+  kig: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'kig',
+    comment: 'КИГ (Карта иностранного гражданина)'
+  },
+    passportNumber: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true,
+      field: 'passport_number',
+      comment: 'Номер паспорта'
+    },
+    passportDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'passport_date',
+      comment: 'Дата выдачи паспорта'
+    },
+    passportIssuer: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'passport_issuer',
+      comment: 'Кем выдан паспорт'
+    },
+    registrationAddress: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: 'registration_address',
+      comment: 'Адрес регистрации'
+    },
+    patentNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'patent_number',
+      comment: 'Номер патента'
+    },
+    patentIssueDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'patent_issue_date',
+      comment: 'Дата выдачи патента'
+    },
+    blankNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'blank_number',
+      comment: 'Номер бланка документа'
     },
     email: {
       type: DataTypes.STRING,
+      allowNull: true,
       validate: {
-        isEmail: true
+        isValidEmail(value) {
+          if (value && value.length > 0) {
+            // Простая проверка email
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              throw new Error('Введите корректный email');
+            }
+          }
+        }
       }
     },
     phone: {
       type: DataTypes.STRING
-    },
-    birthDate: {
-      type: DataTypes.DATEONLY,
-      field: 'birth_date'
-    },
-    photoKey: {
-      type: DataTypes.STRING,
-      field: 'photo_key',
-      comment: 'Ключ файла фото на Яндекс.Диске'
-    },
-    photoUrl: {
-      type: DataTypes.STRING,
-      field: 'photo_url',
-      comment: 'URL фото на Яндекс.Диске'
     },
     notes: {
       type: DataTypes.TEXT
@@ -88,14 +184,26 @@ Employee.init(
     underscored: true,
     indexes: [
       {
-        fields: ['department']
-      },
-      {
         fields: ['position']
       },
       {
         fields: ['is_active']
-      }
+      },
+    {
+      fields: ['counterparty_id']
+    },
+    {
+      fields: ['citizenship_id']
+    },
+    {
+      fields: ['inn']
+    },
+    {
+      fields: ['snils']
+    },
+    {
+      fields: ['kig']
+    }
     ]
   }
 );

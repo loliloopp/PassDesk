@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react';
 import {
   Table,
   Button,
@@ -8,81 +8,108 @@ import {
   Tag,
   Tooltip,
   Modal,
-  Form,
   message,
-} from 'antd'
+  Popconfirm,
+} from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
   EditOutlined,
   DeleteOutlined,
   UserOutlined,
-} from '@ant-design/icons'
+} from '@ant-design/icons';
+import { employeeService } from '../services/employeeService';
+import EmployeeFormModal from '../components/Employees/EmployeeFormModal';
+import dayjs from 'dayjs';
 
-const { Title } = Typography
+const { Title } = Typography;
+const DATE_FORMAT = 'DD.MM.YYYY';
 
 const EmployeesPage = () => {
-  const [searchText, setSearchText] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [form] = Form.useForm()
-  const [editingEmployee, setEditingEmployee] = useState(null)
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
 
-  // Временные данные (позже заменим на реальные из API)
-  const [employees] = useState([
-    {
-      id: 1,
-      firstName: 'Алексей',
-      lastName: 'Смирнов',
-      middleName: 'Иванович',
-      position: 'Менеджер по продажам',
-      department: 'Отдел продаж',
-      email: 'smirnov@company.com',
-      phone: '+7 (999) 123-45-67',
-      isActive: true,
-    },
-    {
-      id: 2,
-      firstName: 'Мария',
-      lastName: 'Петрова',
-      middleName: 'Сергеевна',
-      position: 'Бухгалтер',
-      department: 'Бухгалтерия',
-      email: 'petrova@company.com',
-      phone: '+7 (999) 234-56-78',
-      isActive: true,
-    },
-    {
-      id: 3,
-      firstName: 'Дмитрий',
-      lastName: 'Козлов',
-      middleName: 'Александрович',
-      position: 'Программист',
-      department: 'IT отдел',
-      email: 'kozlov@company.com',
-      phone: '+7 (999) 345-67-89',
-      isActive: true,
-    },
-    {
-      id: 4,
-      firstName: 'Елена',
-      lastName: 'Новикова',
-      position: 'HR менеджер',
-      department: 'Кадры',
-      email: 'novikova@company.com',
-      phone: '+7 (999) 456-78-90',
-      isActive: true,
-    },
-    {
-      id: 5,
-      firstName: 'Сергей',
-      lastName: 'Волков',
-      middleName: 'Петрович',
-      position: 'Охранник',
-      department: 'Безопасность',
-      phone: '+7 (999) 567-89-01',
-      isActive: true,
-    },
-  ])
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    try {
+      console.log('=== FETCHING EMPLOYEES ===');
+      const response = await employeeService.getAll();
+      console.log('Full response:', response);
+      console.log('response.data:', response?.data);
+      
+      // Правильный путь: response.data.employees (не response.data.data.employees!)
+      const employees = response?.data?.employees || [];
+      console.log('Extracted employees:', employees);
+      console.log('Employees count:', employees.length);
+      
+      setEmployees(employees);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      setEmployees([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = () => {
+    setEditingEmployee(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (employee) => {
+    setEditingEmployee(employee);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await employeeService.delete(id);
+      message.success('Сотрудник удален');
+      fetchEmployees();
+    } catch (error) {
+      message.error('Ошибка при удалении сотрудника');
+    }
+  };
+
+  const handleFormSuccess = async (values) => {
+    try {
+      if (editingEmployee) {
+        await employeeService.update(editingEmployee.id, values);
+        message.success('Сотрудник обновлен');
+      } else {
+        await employeeService.create(values);
+        message.success('Сотрудник создан');
+      }
+      setIsModalOpen(false);
+      fetchEmployees();
+    } catch (error) {
+      console.error('Error saving employee:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.errors?.map(e => e.message).join(', ') || 
+                          'Ошибка при сохранении';
+      message.error(errorMessage);
+    }
+  };
+
+  const filteredEmployees = employees.filter((employee) => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      employee.firstName?.toLowerCase().includes(searchLower) ||
+      employee.lastName?.toLowerCase().includes(searchLower) ||
+      employee.middleName?.toLowerCase().includes(searchLower) ||
+      employee.position?.toLowerCase().includes(searchLower) ||
+      employee.inn?.toLowerCase().includes(searchLower) ||
+      employee.snils?.toLowerCase().includes(searchLower)
+    );
+  });
 
   const columns = [
     {
@@ -102,24 +129,48 @@ const EmployeesPage = () => {
       title: 'Должность',
       dataIndex: 'position',
       key: 'position',
-      sorter: (a, b) => a.position.localeCompare(b.position),
     },
     {
-      title: 'Отдел',
-      dataIndex: 'department',
-      key: 'department',
-      sorter: (a, b) => a.department.localeCompare(b.department),
+      title: 'Контрагент',
+      dataIndex: ['counterparty', 'name'],
+      key: 'counterparty',
+      render: (name) => name || '-',
     },
     {
-      title: 'Email',
-      dataIndex: 'email',
-      key: 'email',
-      render: (email) => email || '-',
+      title: 'Гражданство',
+      dataIndex: ['citizenship', 'name'],
+      key: 'citizenship',
+      render: (name) => name || '-',
     },
     {
-      title: 'Телефон',
-      dataIndex: 'phone',
-      key: 'phone',
+      title: 'ИНН',
+      dataIndex: 'inn',
+      key: 'inn',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'СНИЛС',
+      dataIndex: 'snils',
+      key: 'snils',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'КИГ',
+      dataIndex: 'kig',
+      key: 'kig',
+      render: (text) => text || '-',
+    },
+    {
+      title: 'Дата рождения',
+      dataIndex: 'birthDate',
+      key: 'birthDate',
+      render: (date) => (date ? dayjs(date).format(DATE_FORMAT) : '-'),
+    },
+    {
+      title: '№ паспорта',
+      dataIndex: 'passportNumber',
+      key: 'passportNumber',
+      render: (text) => text || '-',
     },
     {
       title: 'Статус',
@@ -130,98 +181,42 @@ const EmployeesPage = () => {
           {isActive ? 'Активен' : 'Неактивен'}
         </Tag>
       ),
+      filters: [
+        { text: 'Активен', value: true },
+        { text: 'Неактивен', value: false },
+      ],
+      onFilter: (value, record) => record.isActive === value,
     },
     {
       title: 'Действия',
       key: 'actions',
       width: 120,
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Tooltip title="Редактировать">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
+            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           </Tooltip>
           <Tooltip title="Удалить">
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record)}
-            />
+            <Popconfirm
+              title="Удалить сотрудника?"
+              description="Это действие нельзя отменить."
+              onConfirm={() => handleDelete(record.id)}
+              okText="Удалить"
+              okType="danger"
+              cancelText="Отмена"
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
           </Tooltip>
         </Space>
       ),
     },
-  ]
-
-  const handleAdd = () => {
-    setEditingEmployee(null)
-    form.resetFields()
-    setIsModalOpen(true)
-  }
-
-  const handleEdit = (employee) => {
-    setEditingEmployee(employee)
-    form.setFieldsValue(employee)
-    setIsModalOpen(true)
-  }
-
-  const handleDelete = (employee) => {
-    Modal.confirm({
-      title: 'Удаление сотрудника',
-      content: `Вы уверены, что хотите удалить сотрудника ${employee.firstName} ${employee.lastName}?`,
-      okText: 'Удалить',
-      okType: 'danger',
-      cancelText: 'Отмена',
-      onOk: () => {
-        message.success('Сотрудник удален')
-      },
-    })
-  }
-
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields()
-      console.log('Form values:', values)
-      message.success(
-        editingEmployee ? 'Сотрудник обновлен' : 'Сотрудник добавлен'
-      )
-      setIsModalOpen(false)
-    } catch (error) {
-      console.error('Validation failed:', error)
-    }
-  }
-
-  const handleModalCancel = () => {
-    setIsModalOpen(false)
-    form.resetFields()
-  }
-
-  const filteredEmployees = employees.filter((emp) => {
-    const searchLower = searchText.toLowerCase()
-    return (
-      emp.firstName.toLowerCase().includes(searchLower) ||
-      emp.lastName.toLowerCase().includes(searchLower) ||
-      emp.position.toLowerCase().includes(searchLower) ||
-      emp.department.toLowerCase().includes(searchLower)
-    )
-  })
+  ];
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 24,
-          flexWrap: 'wrap',
-          gap: 16,
-        }}
-      >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <Title level={2} style={{ margin: 0 }}>
           Сотрудники
         </Title>
@@ -232,7 +227,7 @@ const EmployeesPage = () => {
 
       <Space style={{ marginBottom: 16, width: '100%' }} direction="vertical">
         <Input
-          placeholder="Поиск по имени, должности, отделу..."
+          placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -245,6 +240,8 @@ const EmployeesPage = () => {
         columns={columns}
         dataSource={filteredEmployees}
         rowKey="id"
+        loading={loading}
+        scroll={{ x: 1800 }}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -252,67 +249,14 @@ const EmployeesPage = () => {
         }}
       />
 
-      <Modal
-        title={editingEmployee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
-        open={isModalOpen}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        width={600}
-        okText={editingEmployee ? 'Сохранить' : 'Добавить'}
-        cancelText="Отмена"
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-          <Form.Item
-            name="lastName"
-            label="Фамилия"
-            rules={[{ required: true, message: 'Введите фамилию' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="firstName"
-            label="Имя"
-            rules={[{ required: true, message: 'Введите имя' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="middleName" label="Отчество">
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="position"
-            label="Должность"
-            rules={[{ required: true, message: 'Введите должность' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="department"
-            label="Отдел"
-            rules={[{ required: true, message: 'Введите отдел' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[{ type: 'email', message: 'Введите корректный email' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="phone" label="Телефон">
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
+      <EmployeeFormModal
+        visible={isModalOpen}
+        employee={editingEmployee}
+        onCancel={() => setIsModalOpen(false)}
+        onSuccess={handleFormSuccess}
+      />
     </div>
-  )
-}
+  );
+};
 
-export default EmployeesPage
+export default EmployeesPage;

@@ -8,7 +8,7 @@ const { Search } = Input;
 const typeMap = {
   customer: { label: 'Заказчик', color: 'blue' },
   contractor: { label: 'Подрядчик', color: 'green' },
-  owner: { label: 'Владелец', color: 'gold' }
+  general_contractor: { label: 'Генподрядчик', color: 'gold' }
 };
 
 const CounterpartiesPage = () => {
@@ -143,7 +143,7 @@ const CounterpartiesPage = () => {
           >
             <Select.Option value="customer">Заказчик</Select.Option>
             <Select.Option value="contractor">Подрядчик</Select.Option>
-            <Select.Option value="owner">Владелец</Select.Option>
+            <Select.Option value="general_contractor">Генподрядчик</Select.Option>
           </Select>
         </Space>
 
@@ -202,7 +202,7 @@ const CounterpartiesPage = () => {
             <Select>
               <Select.Option value="customer">Заказчик</Select.Option>
               <Select.Option value="contractor">Подрядчик</Select.Option>
-              <Select.Option value="owner">Владелец</Select.Option>
+              <Select.Option value="general_contractor">Генподрядчик</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item name="legalAddress" label="Юридический адрес">

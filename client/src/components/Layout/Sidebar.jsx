@@ -33,10 +33,15 @@ const Sidebar = () => {
       label: 'Сотрудники',
     },
     {
-      key: '/passes',
-      icon: <IdcardOutlined />,
-      label: 'Пропуска',
+      key: '/applications',
+      icon: <FileTextOutlined />,
+      label: 'Заявки',
     },
+    // {
+    //   key: '/passes',
+    //   icon: <IdcardOutlined />,
+    //   label: 'Пропуска',
+    // },
     {
       key: 'references',
       icon: <BankOutlined />,
