@@ -10,6 +10,7 @@ import {
   Modal,
   message,
   Popconfirm,
+  Select,
 } from 'antd';
 import {
   PlusOutlined,
@@ -17,9 +18,13 @@ import {
   EditOutlined,
   DeleteOutlined,
   UserOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import { employeeService } from '../services/employeeService';
+import { counterpartyService } from '../services/counterpartyService';
+import { citizenshipService } from '../services/citizenshipService';
 import EmployeeFormModal from '../components/Employees/EmployeeFormModal';
+import EmployeeViewModal from '../components/Employees/EmployeeViewModal';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -27,13 +32,21 @@ const DATE_FORMAT = 'DD.MM.YYYY';
 
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
+  const [counterparties, setCounterparties] = useState([]);
+  const [citizenships, setCitizenships] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [selectedCounterparty, setSelectedCounterparty] = useState(null);
+  const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [viewingEmployee, setViewingEmployee] = useState(null);
 
   useEffect(() => {
     fetchEmployees();
+    fetchCounterparties();
+    fetchCitizenships();
   }, []);
 
   const fetchEmployees = async () => {
@@ -58,6 +71,24 @@ const EmployeesPage = () => {
     }
   };
 
+  const fetchCounterparties = async () => {
+    try {
+      const { data } = await counterpartyService.getAll({ limit: 100 });
+      setCounterparties(data.data.counterparties || []);
+    } catch (error) {
+      console.error('Error loading counterparties:', error);
+    }
+  };
+
+  const fetchCitizenships = async () => {
+    try {
+      const { data } = await citizenshipService.getAll();
+      setCitizenships(data.data.citizenships || []);
+    } catch (error) {
+      console.error('Error loading citizenships:', error);
+    }
+  };
+
   const handleAdd = () => {
     setEditingEmployee(null);
     setIsModalOpen(true);
@@ -66,6 +97,11 @@ const EmployeesPage = () => {
   const handleEdit = (employee) => {
     setEditingEmployee(employee);
     setIsModalOpen(true);
+  };
+
+  const handleView = (employee) => {
+    setViewingEmployee(employee);
+    setIsViewModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -101,7 +137,7 @@ const EmployeesPage = () => {
 
   const filteredEmployees = employees.filter((employee) => {
     const searchLower = searchText.toLowerCase();
-    return (
+    const matchesSearch = !searchText || (
       employee.firstName?.toLowerCase().includes(searchLower) ||
       employee.lastName?.toLowerCase().includes(searchLower) ||
       employee.middleName?.toLowerCase().includes(searchLower) ||
@@ -109,6 +145,11 @@ const EmployeesPage = () => {
       employee.inn?.toLowerCase().includes(searchLower) ||
       employee.snils?.toLowerCase().includes(searchLower)
     );
+    
+    const matchesCounterparty = !selectedCounterparty || employee.counterpartyId === selectedCounterparty;
+    const matchesCitizenship = !selectedCitizenship || employee.citizenshipId === selectedCitizenship;
+    
+    return matchesSearch && matchesCounterparty && matchesCitizenship;
   });
 
   const columns = [
@@ -143,34 +184,39 @@ const EmployeesPage = () => {
       render: (name) => name || '-',
     },
     {
-      title: 'ИНН',
-      dataIndex: 'inn',
-      key: 'inn',
-      render: (text) => text || '-',
-    },
-    {
-      title: 'СНИЛС',
-      dataIndex: 'snils',
-      key: 'snils',
-      render: (text) => text || '-',
-    },
-    {
-      title: 'КИГ',
-      dataIndex: 'kig',
-      key: 'kig',
-      render: (text) => text || '-',
-    },
-    {
-      title: 'Дата рождения',
-      dataIndex: 'birthDate',
-      key: 'birthDate',
-      render: (date) => (date ? dayjs(date).format(DATE_FORMAT) : '-'),
-    },
-    {
-      title: '№ паспорта',
-      dataIndex: 'passportNumber',
-      key: 'passportNumber',
-      render: (text) => text || '-',
+      title: 'Документы',
+      key: 'documents',
+      width: 140,
+      render: (_, record) => {
+        const documentFields = [
+          { field: 'birthDate', label: 'Дата рождения' },
+          { field: 'passportNumber', label: '№ паспорта' },
+          { field: 'passportDate', label: 'Дата выдачи паспорта' },
+          { field: 'passportIssuer', label: 'Кем выдан паспорт' },
+          { field: 'registrationAddress', label: 'Адрес регистрации' },
+          { field: 'patentNumber', label: 'Номер патента' },
+          { field: 'patentIssueDate', label: 'Дата выдачи патента' },
+          { field: 'blankNumber', label: 'Номер бланка' },
+          { field: 'inn', label: 'ИНН' },
+          { field: 'snils', label: 'СНИЛС' },
+          { field: 'kig', label: 'КИГ' },
+        ];
+        
+        return (
+          <Space size={4} wrap style={{ maxWidth: 120 }}>
+            {documentFields.map(({ field, label }) => (
+              <Tooltip key={field} title={label}>
+                <div style={{
+                  width: 16,
+                  height: 16,
+                  backgroundColor: record[field] ? '#52c41a' : '#ff4d4f',
+                  borderRadius: 2,
+                }} />
+              </Tooltip>
+            ))}
+          </Space>
+        );
+      },
     },
     {
       title: 'Статус',
@@ -190,10 +236,13 @@ const EmployeesPage = () => {
     {
       title: 'Действия',
       key: 'actions',
-      width: 120,
+      width: 150,
       fixed: 'right',
       render: (_, record) => (
         <Space>
+          <Tooltip title="Просмотр">
+            <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+          </Tooltip>
           <Tooltip title="Редактировать">
             <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           </Tooltip>
@@ -234,6 +283,42 @@ const EmployeesPage = () => {
           size="large"
           style={{ maxWidth: 500 }}
         />
+        <Space size="middle">
+          <Select
+            placeholder="Контрагент"
+            allowClear
+            onChange={setSelectedCounterparty}
+            style={{ width: 250 }}
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
+          >
+            {counterparties.map((c) => (
+              <Select.Option key={c.id} value={c.id}>
+                {c.name}
+              </Select.Option>
+            ))}
+          </Select>
+          <Select
+            placeholder="Гражданство"
+            allowClear
+            onChange={setSelectedCitizenship}
+            style={{ width: 200 }}
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
+          >
+            {citizenships.map((c) => (
+              <Select.Option key={c.id} value={c.id}>
+                {c.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Space>
       </Space>
 
       <Table
@@ -241,7 +326,7 @@ const EmployeesPage = () => {
         dataSource={filteredEmployees}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1800 }}
+        scroll={{ x: 1200 }}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -254,6 +339,17 @@ const EmployeesPage = () => {
         employee={editingEmployee}
         onCancel={() => setIsModalOpen(false)}
         onSuccess={handleFormSuccess}
+      />
+
+      <EmployeeViewModal
+        visible={isViewModalOpen}
+        employee={viewingEmployee}
+        onCancel={() => setIsViewModalOpen(false)}
+        onEdit={() => {
+          setIsViewModalOpen(false);
+          setEditingEmployee(viewingEmployee);
+          setIsModalOpen(true);
+        }}
       />
     </div>
   );
