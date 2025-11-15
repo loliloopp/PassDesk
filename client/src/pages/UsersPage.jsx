@@ -51,10 +51,11 @@ const UsersPage = () => {
     setLoading(true)
     try {
       const response = await userService.getAll()
-      setUsers(response.data.data.users || []) // Fixed: access nested users array
+      // Правильный путь: response.data.users (Axios уже распаковывает один уровень data)
+      setUsers(response?.data?.users || [])
     } catch (error) {
-      message.error('Ошибка загрузки пользователей')
       console.error('Error fetching users:', error)
+      setUsers([])
     } finally {
       setLoading(false)
     }

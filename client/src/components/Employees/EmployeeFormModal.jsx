@@ -57,9 +57,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       setLoading(true);
       const values = await form.validateFields();
       
-      console.log('=== FORM VALUES BEFORE FORMATTING ===');
-      console.log(JSON.stringify(values, null, 2));
-      
       // Преобразуем пустые строки в null
       const formattedValues = {};
       Object.keys(values).forEach(key => {
@@ -72,9 +69,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           formattedValues[key] = value;
         }
       });
-      
-      console.log('=== FORMATTED VALUES ===');
-      console.log(JSON.stringify(formattedValues, null, 2));
 
       onSuccess(formattedValues);
     } catch (error) {

@@ -52,16 +52,8 @@ const EmployeesPage = () => {
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      console.log('=== FETCHING EMPLOYEES ===');
       const response = await employeeService.getAll();
-      console.log('Full response:', response);
-      console.log('response.data:', response?.data);
-      
-      // Правильный путь: response.data.employees (не response.data.data.employees!)
       const employees = response?.data?.employees || [];
-      console.log('Extracted employees:', employees);
-      console.log('Employees count:', employees.length);
-      
       setEmployees(employees);
     } catch (error) {
       console.error('Error fetching employees:', error);
