@@ -81,7 +81,7 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
     // Для изображений показываем превью в модальном окне
     if (file.mimeType.startsWith('image/')) {
       try {
-        console.log('Requesting view link for file:', file.id, file.originalName);
+        console.log('Requesting view link for file:', file.id, file.fileName);
         const response = await employeeService.getFileViewLink(employeeId, file.id);
         console.log('Received view link response:', response);
         
@@ -89,7 +89,7 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
           console.log('Opening preview with URL:', response.data.viewUrl);
           setPreviewFile({
             url: response.data.viewUrl,
-            name: file.originalName
+            name: file.fileName
           });
           setPreviewVisible(true);
         } else {
@@ -143,7 +143,7 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
               >
                 <List.Item.Meta
                   avatar={getFileIcon(file.mimeType)}
-                  title={file.originalName}
+                  title={file.fileName}
                   description={
                     <Space split="|">
                       <span>{formatFileSize(file.fileSize)}</span>

@@ -211,8 +211,8 @@ export const deleteEmployeeFile = async (req, res, next) => {
       // Продолжаем даже если не удалось удалить с Яндекс.Диска
     }
     
-    // Помечаем файл как удаленный в БД
-    await file.update({ isDeleted: true });
+    // Физически удаляем запись из БД
+    await file.destroy();
     
     res.json({
       success: true,

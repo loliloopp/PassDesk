@@ -96,12 +96,14 @@ export const sanitizeFileName = (fileName) => {
   
   if (lastDotIndex > 0) {
     name = fileName.substring(0, lastDotIndex);
-    extension = fileName.substring(lastDotIndex);
+    extension = fileName.substring(lastDotIndex); // Расширение с точкой
   }
   
-  // Транслитерируем имя, расширение оставляем как есть
-  const transliteratedName = transliterate(name);
+  // Транслитерируем только имя файла (БЕЗ расширения)
+  // Заменяем точки на подчеркивания только в имени, не в расширении
+  const transliteratedName = transliterate(name.replace(/\./g, '_'));
   
   return `${transliteratedName}${extension}`.toLowerCase();
 };
+
 

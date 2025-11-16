@@ -248,7 +248,7 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
           >
             <List.Item.Meta
               avatar={getFileIcon(file.mimeType)}
-              title={file.originalName}
+              title={file.fileName}
               description={
                 <Space split="|">
                   <span>{formatFileSize(file.fileSize)}</span>

@@ -1,6 +1,8 @@
 import { Employee, Counterparty, User, Citizenship, File } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
+import yandexDiskClient, { basePath } from '../config/storage.js';
+import { buildEmployeeFilePath } from '../utils/transliterate.js';
 
 export const getAllEmployees = async (req, res, next) => {
   try {
@@ -212,7 +214,15 @@ export const deleteEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const employee = await Employee.findByPk(id);
+    const employee = await Employee.findByPk(id, {
+      include: [
+        {
+          model: Counterparty,
+          as: 'counterparty',
+          attributes: ['id', 'name']
+        }
+      ]
+    });
 
     if (!employee) {
       return res.status(404).json({
@@ -221,6 +231,58 @@ export const deleteEmployee = async (req, res, next) => {
       });
     }
 
+    // 1. Получаем все файлы сотрудника из БД
+    const files = await File.findAll({
+      where: {
+        entityType: 'employee',
+        entityId: id,
+        isDeleted: false
+      }
+    });
+
+    // 2. Удаляем каждый файл с Яндекс.Диска
+    for (const file of files) {
+      try {
+        await yandexDiskClient.delete('/resources', {
+          params: {
+            path: file.filePath,
+            permanently: true
+          }
+        });
+      } catch (error) {
+        console.error(`Error deleting file from Yandex.Disk: ${file.filePath}`, error.message);
+        // Продолжаем удаление, даже если файл уже отсутствует на диске
+      }
+    }
+
+    // 3. Физически удаляем файлы из БД
+    await File.destroy({
+      where: {
+        entityType: 'employee',
+        entityId: id
+      }
+    });
+
+    // 4. Удаляем папку сотрудника с Яндекс.Диска
+    if (employee.counterparty) {
+      const employeeFullName = `${employee.lastName} ${employee.firstName} ${employee.middleName || ''}`.trim();
+      const employeeFolderPath = buildEmployeeFilePath(employee.counterparty.name, employeeFullName);
+      const fullPath = `${basePath}${employeeFolderPath}`;
+
+      try {
+        await yandexDiskClient.delete('/resources', {
+          params: {
+            path: fullPath,
+            permanently: true
+          }
+        });
+      } catch (error) {
+        console.error(`Error deleting employee folder from Yandex.Disk: ${fullPath}`, error.message);
+        // Продолжаем, даже если папка уже отсутствует
+      }
+    }
+
+    // 5. Удаляем сотрудника из БД
     await employee.destroy();
 
     res.json({

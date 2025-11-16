@@ -7,15 +7,16 @@ const storage = multer.memoryStorage();
 
 // Фильтр файлов
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = process.env.ALLOWED_FILE_TYPES?.split(',') || [
+  // Разрешенные типы файлов
+  const allowedTypes = [
     'image/jpeg',
     'image/jpg',
     'image/png',
     'application/pdf',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    'application/vnd.ms-excel', // XLS
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
+    'application/msword', // DOC
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
   ];
 
   if (allowedTypes.includes(file.mimetype)) {
