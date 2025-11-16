@@ -1,5 +1,6 @@
-import { Employee, Counterparty, User, Citizenship } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File } from '../models/index.js';
 import { Op } from 'sequelize';
+import sequelize from '../config/database.js';
 
 export const getAllEmployees = async (req, res, next) => {
   try {
@@ -41,7 +42,22 @@ export const getAllEmployees = async (req, res, next) => {
           as: 'creator',
           attributes: ['id', 'firstName', 'lastName']
         }
-      ]
+      ],
+      // Добавляем подсчет файлов для каждого сотрудника
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)::int
+              FROM files
+              WHERE files.entity_type = 'employee'
+                AND files.entity_id = "Employee"."id"
+                AND files.is_deleted = false
+            )`),
+            'filesCount'
+          ]
+        ]
+      }
     });
 
     res.json({

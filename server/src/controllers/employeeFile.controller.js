@@ -11,14 +11,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
   try {
     const { employeeId } = req.params;
     
-    console.log('=== Upload Employee Files Request ===');
-    console.log('Employee ID:', employeeId);
-    console.log('req.files:', req.files);
-    console.log('req.files length:', req.files?.length);
-    console.log('User:', req.user);
-    
     if (!req.files || req.files.length === 0) {
-      console.log('No files provided');
       return res.status(400).json({
         success: false,
         message: 'Файлы не предоставлены'
@@ -33,9 +26,6 @@ export const uploadEmployeeFiles = async (req, res, next) => {
         attributes: ['id', 'name']
       }]
     });
-    
-    console.log('Employee found:', employee ? 'yes' : 'no');
-    console.log('Employee counterparty:', employee?.counterparty?.name);
     
     if (!employee) {
       throw new AppError('Сотрудник не найден', 404);
@@ -53,8 +43,6 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     );
     const fullPath = `${basePath}${relativePath}`;
     
-    console.log('Creating folder path:', fullPath);
-    
     // Создаем папки рекурсивно если не существуют
     const pathParts = fullPath.split('/').filter(Boolean);
     let currentPath = '';
@@ -62,18 +50,14 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     for (const part of pathParts) {
       currentPath += '/' + part;
       try {
-        console.log('Creating folder:', currentPath);
         await yandexDiskClient.put('/resources', undefined, {
           params: { path: currentPath }
         });
-        console.log('Folder created:', currentPath);
       } catch (error) {
         // 409 = папка уже существует, это нормально
         if (error.response?.status !== 409) {
           console.error('Error creating folder:', currentPath, error.response?.data);
           throw new AppError(`Ошибка создания папки ${currentPath} на Яндекс.Диске`, 500);
-        } else {
-          console.log('Folder already exists:', currentPath);
         }
       }
     }
@@ -278,4 +262,45 @@ export const getEmployeeFileDownloadLink = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Получение ссылки для просмотра файла (публичная ссылка)
+ */
+export const getEmployeeFileViewLink = async (req, res, next) => {
+  try {
+    const { employeeId, fileId } = req.params;
+    
+    // Находим файл
+    const file = await File.findOne({
+      where: {
+        id: fileId,
+        entityType: 'employee',
+        entityId: employeeId,
+        isDeleted: false
+      }
+    });
+    
+    if (!file) {
+      throw new AppError('Файл не найден', 404);
+    }
+    
+    // Для изображений всегда получаем прямую ссылку для скачивания
+    // (она работает лучше для встраивания)
+    const downloadResponse = await yandexDiskClient.get('/resources/download', {
+      params: { path: file.filePath }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        viewUrl: downloadResponse.data.href,
+        fileName: file.originalName,
+        mimeType: file.mimeType
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

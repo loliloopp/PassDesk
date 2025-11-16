@@ -63,6 +63,12 @@ export const employeeService = {
   getFileDownloadLink: async (employeeId, fileId) => {
     const response = await api.get(`/employees/${employeeId}/files/${fileId}/download`)
     return response.data
+  },
+
+  // Получить ссылку для просмотра файла
+  getFileViewLink: async (employeeId, fileId) => {
+    const response = await api.get(`/employees/${employeeId}/files/${fileId}/view`)
+    return response.data
   }
 }
 

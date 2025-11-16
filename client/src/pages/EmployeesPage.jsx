@@ -11,6 +11,7 @@ import {
   message,
   Popconfirm,
   Select,
+  Badge,
 } from 'antd';
 import {
   PlusOutlined,
@@ -19,11 +20,13 @@ import {
   DeleteOutlined,
   UserOutlined,
   EyeOutlined,
+  FileOutlined,
 } from '@ant-design/icons';
 import { employeeService } from '../services/employeeService';
 import { citizenshipService } from '../services/citizenshipService';
 import EmployeeFormModal from '../components/Employees/EmployeeFormModal';
 import EmployeeViewModal from '../components/Employees/EmployeeViewModal';
+import EmployeeFilesModal from '../components/Employees/EmployeeFilesModal';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -37,8 +40,10 @@ const EmployeesPage = () => {
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewingEmployee, setViewingEmployee] = useState(null);
+  const [filesEmployee, setFilesEmployee] = useState(null);
 
   useEffect(() => {
     fetchEmployees();
@@ -83,6 +88,16 @@ const EmployeesPage = () => {
     setIsViewModalOpen(true);
   };
 
+  const handleViewFiles = (employee) => {
+    setFilesEmployee(employee);
+    setIsFilesModalOpen(true);
+  };
+
+  const handleCloseFilesModal = () => {
+    setIsFilesModalOpen(false);
+    setFilesEmployee(null);
+  };
+
   const handleDelete = async (id) => {
     try {
       await employeeService.delete(id);
@@ -98,11 +113,15 @@ const EmployeesPage = () => {
       if (editingEmployee) {
         await employeeService.update(editingEmployee.id, values);
         message.success('Сотрудник обновлен');
+        setIsModalOpen(false);
       } else {
-        await employeeService.create(values);
+        const response = await employeeService.create(values);
         message.success('Сотрудник создан');
+        // После создания открываем сотрудника на редактирование для загрузки файлов
+        const newEmployee = response.data.data;
+        setEditingEmployee(newEmployee);
+        message.info('Теперь вы можете загрузить файлы сотрудника на вкладке "Документы"');
       }
-      setIsModalOpen(false);
       fetchEmployees();
     } catch (error) {
       console.error('Error saving employee:', error);
@@ -187,6 +206,28 @@ const EmployeesPage = () => {
               </Tooltip>
             ))}
           </Space>
+        );
+      },
+    },
+    {
+      title: 'Файлы',
+      key: 'files',
+      width: 80,
+      align: 'center',
+      render: (_, record) => {
+        const filesCount = record.filesCount || 0;
+        return (
+          <Tooltip title={filesCount > 0 ? `Просмотр файлов (${filesCount})` : 'Нет файлов'}>
+            <Badge count={filesCount} showZero={false}>
+              <Button
+                type="text"
+                icon={<FileOutlined />}
+                onClick={() => handleViewFiles(record)}
+                disabled={filesCount === 0}
+                style={{ color: filesCount > 0 ? '#1890ff' : '#d9d9d9' }}
+              />
+            </Badge>
+          </Tooltip>
         );
       },
     },
@@ -305,6 +346,13 @@ const EmployeesPage = () => {
           setEditingEmployee(viewingEmployee);
           setIsModalOpen(true);
         }}
+      />
+
+      <EmployeeFilesModal
+        visible={isFilesModalOpen}
+        employeeId={filesEmployee?.id}
+        employeeName={filesEmployee ? `${filesEmployee.lastName} ${filesEmployee.firstName} ${filesEmployee.middleName || ''}` : ''}
+        onClose={handleCloseFilesModal}
       />
     </div>
   );

@@ -55,5 +55,10 @@ router.get('/:employeeId/files/:fileId/download',
   employeeFileController.getEmployeeFileDownloadLink
 );
 
+// Get employee file view link
+router.get('/:employeeId/files/:fileId/view',
+  employeeFileController.getEmployeeFileViewLink
+);
+
 export default router;
 

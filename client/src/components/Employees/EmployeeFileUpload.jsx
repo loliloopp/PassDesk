@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Button, List, Popconfirm, message, Space, Tooltip } from 'antd';
+import { Upload, Button, List, Popconfirm, message, Space, Tooltip, Modal } from 'antd';
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -18,6 +18,8 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
 
   useEffect(() => {
     if (employeeId) {
@@ -44,35 +46,21 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
       return;
     }
 
-    console.log('Starting upload...', { employeeId, fileCount: fileList.length });
-    console.log('Files to upload:', fileList);
-
     const formData = new FormData();
     fileList.forEach(fileObj => {
-      console.log('Adding file to FormData:', fileObj);
       // fileObj из Upload имеет структуру { originFileObj: File, ... }
       const actualFile = fileObj.originFileObj || fileObj;
-      console.log('Actual file:', actualFile.name, actualFile.type, actualFile.size);
       formData.append('files', actualFile);
     });
 
-    // Проверяем содержимое FormData
-    console.log('FormData contents:');
-    for (let pair of formData.entries()) {
-      console.log('FormData entry:', pair[0], pair[1]);
-    }
-
     setUploading(true);
     try {
-      console.log('Sending request to:', `/employees/${employeeId}/files`);
-      const response = await employeeService.uploadFiles(employeeId, formData);
-      console.log('Upload response:', response);
+      await employeeService.uploadFiles(employeeId, formData);
       message.success('Файлы успешно загружены');
       setFileList([]);
       fetchFiles();
     } catch (error) {
       console.error('Error uploading files:', error);
-      console.error('Error response:', error.response);
       message.error(error.response?.data?.message || 'Ошибка загрузки файлов');
     } finally {
       setUploading(false);
@@ -102,6 +90,36 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
     }
   };
 
+  const handleView = async (file) => {
+    // Для изображений показываем превью в модальном окне
+    if (file.mimeType.startsWith('image/')) {
+      try {
+        const response = await employeeService.getFileViewLink(employeeId, file.id);
+        if (response.data.viewUrl) {
+          setPreviewFile({
+            url: response.data.viewUrl,
+            name: file.originalName
+          });
+          setPreviewVisible(true);
+        }
+      } catch (error) {
+        console.error('Error getting view link:', error);
+        message.error('Ошибка получения ссылки для просмотра');
+      }
+    } else {
+      // Для других файлов открываем в новой вкладке
+      try {
+        const response = await employeeService.getFileViewLink(employeeId, file.id);
+        if (response.data.viewUrl) {
+          window.open(response.data.viewUrl, '_blank');
+        }
+      } catch (error) {
+        console.error('Error getting view link:', error);
+        message.error('Ошибка получения ссылки для просмотра');
+      }
+    }
+  };
+
   const getFileIcon = (mimeType) => {
     if (mimeType.startsWith('image/')) {
       return <FileImageOutlined style={{ fontSize: 24, color: '#52c41a' }} />;
@@ -126,8 +144,6 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
     accept: '.jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx',
     fileList: fileList,
     beforeUpload: (file) => {
-      console.log('beforeUpload called:', file.name, file.type, file.size);
-      
       // Проверка размера файла (макс. 10 МБ)
       const isLt10M = file.size / 1024 / 1024 < 10;
       if (!isLt10M) {
@@ -152,16 +168,13 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
         return Upload.LIST_IGNORE;
       }
 
-      console.log('File validated, adding to list');
       return false; // Не загружать автоматически
     },
     onChange: (info) => {
-      console.log('onChange called:', info.fileList.length);
       // Обновляем fileList при изменениях
       setFileList(info.fileList);
     },
     onRemove: (file) => {
-      console.log('onRemove called:', file.name);
       return true; // Разрешить удаление
     },
     showUploadList: true
@@ -199,24 +212,23 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
         renderItem={(file) => (
           <List.Item
             actions={[
-              <Tooltip title="Скачать">
+              <Tooltip key="view" title="Просмотр">
+                <Button
+                  icon={<EyeOutlined />}
+                  size="small"
+                  onClick={() => handleView(file)}
+                />
+              </Tooltip>,
+              <Tooltip key="download" title="Скачать">
                 <Button
                   icon={<DownloadOutlined />}
                   size="small"
                   onClick={() => handleDownload(file)}
                 />
               </Tooltip>,
-              file.publicUrl && (
-                <Tooltip title="Открыть в новой вкладке">
-                  <Button
-                    icon={<EyeOutlined />}
-                    size="small"
-                    onClick={() => window.open(file.publicUrl, '_blank')}
-                  />
-                </Tooltip>
-              ),
               !readonly && (
                 <Popconfirm
+                  key="delete"
                   title="Удалить файл?"
                   description="Это действие нельзя отменить"
                   onConfirm={() => handleDelete(file.id)}
@@ -247,6 +259,47 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
           </List.Item>
         )}
       />
+
+      {/* Модальное окно для предпросмотра изображений */}
+      <Modal
+        open={previewVisible}
+        title={previewFile?.name}
+        footer={null}
+        onCancel={() => setPreviewVisible(false)}
+        width={800}
+        centered
+      >
+        {previewFile && (
+          <div style={{ textAlign: 'center' }}>
+            <img
+              src={previewFile.url}
+              alt={previewFile.name}
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '70vh',
+                objectFit: 'contain'
+              }}
+              onError={(e) => {
+                console.error('Error loading image:', previewFile.url);
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'block';
+              }}
+            />
+            <div style={{ display: 'none', padding: '40px', textAlign: 'center' }}>
+              <FileImageOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />
+              <p style={{ marginTop: 16, color: '#8c8c8c' }}>
+                Не удалось загрузить изображение
+              </p>
+              <Button 
+                type="primary" 
+                onClick={() => window.open(previewFile.url, '_blank')}
+              >
+                Открыть в новой вкладке
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </Space>
   );
 };
