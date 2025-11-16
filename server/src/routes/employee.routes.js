@@ -2,7 +2,9 @@ import express from 'express';
 import { body } from 'express-validator';
 import { validate } from '../middleware/validator.js';
 import { authenticate, authorize } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 import * as employeeController from '../controllers/employee.controller.js';
+import * as employeeFileController from '../controllers/employeeFile.controller.js';
 
 const router = express.Router();
 
@@ -28,13 +30,30 @@ const updateEmployeeValidation = [
   body('phone').optional().trim()
 ];
 
-// Routes
+// Employee routes
 router.get('/', employeeController.getAllEmployees);
 router.get('/:id', employeeController.getEmployeeById);
 router.post('/', authorize('admin', 'manager'), createEmployeeValidation, validate, employeeController.createEmployee);
 router.put('/:id', authorize('admin', 'manager'), updateEmployeeValidation, validate, employeeController.updateEmployee);
 router.delete('/:id', authorize('admin'), employeeController.deleteEmployee);
 router.get('/search', employeeController.searchEmployees);
+
+// Employee files routes
+router.post('/:employeeId/files', 
+  authorize('admin', 'manager'), 
+  upload.array('files', 10), // максимум 10 файлов за раз
+  employeeFileController.uploadEmployeeFiles
+);
+router.get('/:employeeId/files', 
+  employeeFileController.getEmployeeFiles
+);
+router.delete('/:employeeId/files/:fileId', 
+  authorize('admin', 'manager'), 
+  employeeFileController.deleteEmployeeFile
+);
+router.get('/:employeeId/files/:fileId/download', 
+  employeeFileController.getEmployeeFileDownloadLink
+);
 
 export default router;
 

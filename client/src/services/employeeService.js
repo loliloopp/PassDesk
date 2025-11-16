@@ -35,6 +35,34 @@ export const employeeService = {
   search: async (query) => {
     const response = await api.get('/employees/search', { params: { query } })
     return response.data
+  },
+
+  // Загрузить файлы для сотрудника
+  uploadFiles: async (employeeId, formData) => {
+    const response = await api.post(`/employees/${employeeId}/files`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  },
+
+  // Получить файлы сотрудника
+  getFiles: async (employeeId) => {
+    const response = await api.get(`/employees/${employeeId}/files`)
+    return response.data
+  },
+
+  // Удалить файл сотрудника
+  deleteFile: async (employeeId, fileId) => {
+    const response = await api.delete(`/employees/${employeeId}/files/${fileId}`)
+    return response.data
+  },
+
+  // Получить ссылку для скачивания файла
+  getFileDownloadLink: async (employeeId, fileId) => {
+    const response = await api.get(`/employees/${employeeId}/files/${fileId}/download`)
+    return response.data
   }
 }
 

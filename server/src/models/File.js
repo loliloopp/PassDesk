@@ -6,9 +6,9 @@ class File extends Model {}
 File.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
     },
     fileKey: {
       type: DataTypes.STRING,
@@ -59,12 +59,12 @@ File.init(
       comment: 'Тип связанной сущности'
     },
     entityId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       field: 'entity_id',
       comment: 'ID связанной сущности'
     },
     uploadedBy: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       field: 'uploaded_by',
       references: {
         model: 'users',

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Switch } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Switch, Tabs } from 'antd';
 import { citizenshipService } from '../../services/citizenshipService';
+import EmployeeFileUpload from './EmployeeFileUpload';
 import dayjs from 'dayjs';
 
 const { TextArea } = Input;
@@ -88,33 +89,35 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       cancelText="Отмена"
       confirmLoading={loading}
     >
-      <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-        {/* Основная информация - 4 столбца */}
-        <Row gutter={16}>
-          <Col span={6}>
-            <Form.Item
-              name="lastName"
-              label="Фамилия"
-              rules={[{ required: true, message: 'Введите фамилию' }]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item
-              name="firstName"
-              label="Имя"
-              rules={[{ required: true, message: 'Введите имя' }]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item name="middleName" label="Отчество">
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
+      <Tabs defaultActiveKey="1" style={{ marginTop: 24 }}>
+        <Tabs.TabPane tab="Основная информация" key="1">
+          <Form form={form} layout="vertical">
+            {/* Основная информация - 4 столбца */}
+            <Row gutter={16}>
+              <Col span={6}>
+                <Form.Item
+                  name="lastName"
+                  label="Фамилия"
+                  rules={[{ required: true, message: 'Введите фамилию' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={6}>
+                <Form.Item
+                  name="firstName"
+                  label="Имя"
+                  rules={[{ required: true, message: 'Введите имя' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={6}>
+                <Form.Item name="middleName" label="Отчество">
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={6}>
             <Form.Item
               name="position"
               label="Должность"
@@ -302,7 +305,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             </Form.Item>
           </Col>
         </Row>
-      </Form>
+          </Form>
+        </Tabs.TabPane>
+
+        {employee?.id && (
+          <Tabs.TabPane tab="Документы" key="2">
+            <EmployeeFileUpload employeeId={employee.id} readonly={false} />
+          </Tabs.TabPane>
+        )}
+      </Tabs>
     </Modal>
   );
 };
