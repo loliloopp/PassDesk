@@ -39,7 +39,7 @@ const userProfileService = {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
-      timeout: 60000 // 60 секунд для загрузки
+      timeout: 90000 // 90 секунд для загрузки
     });
     
     console.log('✅ Upload response:', response.data);

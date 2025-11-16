@@ -6,7 +6,6 @@ import {
   Button,
   Form,
   Input,
-  DatePicker,
   Select,
   Spin,
   message,
@@ -30,16 +29,33 @@ import {
   UploadOutlined,
   EyeOutlined,
   DeleteOutlined,
-  CheckCircleFilled
+  CheckCircleFilled,
+  LogoutOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import imageCompression from 'browser-image-compression';
 import userProfileService from '@/services/userProfileService';
 import { citizenshipService } from '@/services/citizenshipService';
+import { useAuthStore } from '@/store/authStore';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { useBreakpoint } = Grid;
+
+// Функция для форматирования даты с автоматическими точками
+const formatDateInput = (value) => {
+  // Убираем все нецифровые символы
+  const numbers = value.replace(/\D/g, '');
+  
+  // Форматируем с точками
+  if (numbers.length <= 2) {
+    return numbers;
+  } else if (numbers.length <= 4) {
+    return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
+  } else {
+    return `${numbers.slice(0, 2)}.${numbers.slice(2, 4)}.${numbers.slice(4, 8)}`;
+  }
+};
 
 const UserProfilePage = () => {
   const screens = useBreakpoint();
@@ -70,12 +86,19 @@ const UserProfilePage = () => {
       setEmployee(data.employee);
       
       if (data.employee) {
+        // Форматируем даты в DD.MM.YYYY
+        const formatDate = (date) => {
+          if (!date) return '';
+          const d = dayjs(date);
+          return d.isValid() ? d.format('DD.MM.YYYY') : '';
+        };
+        
         // Заполняем форму данными
         form.setFieldsValue({
           ...data.employee,
-          birthDate: data.employee.birthDate ? dayjs(data.employee.birthDate) : null,
-          passportDate: data.employee.passportDate ? dayjs(data.employee.passportDate) : null,
-          patentIssueDate: data.employee.patentIssueDate ? dayjs(data.employee.patentIssueDate) : null,
+          birthDate: formatDate(data.employee.birthDate),
+          passportDate: formatDate(data.employee.passportDate),
+          patentIssueDate: formatDate(data.employee.patentIssueDate),
         });
         
         // Загружаем файлы
@@ -100,8 +123,9 @@ const UserProfilePage = () => {
 
   const loadFiles = async (employeeId) => {
     try {
-      const { data } = await userProfileService.getFiles(employeeId);
-      setFiles(data.data || []);
+      const response = await userProfileService.getFiles(employeeId);
+      console.log('📁 Files loaded:', response);
+      setFiles(response.data || []);
     } catch (error) {
       console.error('Error loading files:', error);
     }
@@ -115,11 +139,17 @@ const UserProfilePage = () => {
     setIsEditing(false);
     // Восстанавливаем исходные данные
     if (employee) {
+      const formatDate = (date) => {
+        if (!date) return '';
+        const d = dayjs(date);
+        return d.isValid() ? d.format('DD.MM.YYYY') : '';
+      };
+      
       form.setFieldsValue({
         ...employee,
-        birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
-        passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
-        patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+        birthDate: formatDate(employee.birthDate),
+        passportDate: formatDate(employee.passportDate),
+        patentIssueDate: formatDate(employee.patentIssueDate),
       });
     }
   };
@@ -129,12 +159,22 @@ const UserProfilePage = () => {
       const values = await form.validateFields();
       setSaving(true);
 
-      // Форматируем даты
+      // Преобразуем даты из DD.MM.YYYY в YYYY-MM-DD
+      const parseDate = (dateStr) => {
+        if (!dateStr) return null;
+        const parts = dateStr.split('.');
+        if (parts.length === 3) {
+          const [day, month, year] = parts;
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        return null;
+      };
+
       const formattedValues = {
         ...values,
-        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
-        passportDate: values.passportDate ? values.passportDate.format('YYYY-MM-DD') : null,
-        patentIssueDate: values.patentIssueDate ? values.patentIssueDate.format('YYYY-MM-DD') : null,
+        birthDate: parseDate(values.birthDate),
+        passportDate: parseDate(values.passportDate),
+        patentIssueDate: parseDate(values.patentIssueDate),
       };
 
       console.log('💾 Saving profile:', formattedValues);
@@ -357,25 +397,45 @@ const UserProfilePage = () => {
   const isEmpty = !employee.firstName && !employee.lastName;
 
   return (
-    <div style={{ padding: isMobile ? '8px' : '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      <Card
-        title={
-          !isMobile && (
-            <Space>
-              <UserOutlined />
-              <Title level={3} style={{ margin: 0 }}>
-                Мой профиль
-              </Title>
-            </Space>
-          )
-        }
-        extra={
-          !isEditing ? (
+    <div style={{ 
+      minHeight: '100vh',
+      paddingTop: isMobile ? '56px' : '72px', // Отступ для фиксированного хедера
+      background: '#f0f2f5'
+    }}>
+      {/* Закрепленная шапка */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: isMobile ? 0 : 250, // Учитываем ширину Sidebar на desktop
+        right: 0,
+        zIndex: 1000,
+        background: '#fff',
+        borderBottom: '1px solid #f0f0f0',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+      }}>
+        {/* Заголовок */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: isMobile ? '12px 16px' : '16px 24px',
+          maxWidth: '1400px',
+          margin: '0 auto'
+        }}>
+          <Space>
+            {!isMobile && <UserOutlined style={{ fontSize: 20, color: '#1890ff' }} />}
+            <Title level={isMobile ? 4 : 3} style={{ margin: 0 }}>
+              Мой профиль
+            </Title>
+          </Space>
+          
+          {/* Кнопки редактирования */}
+          {!isEditing ? (
             <Button 
               type="primary" 
               icon={<EditOutlined />} 
               onClick={handleEdit}
-              size={isMobile ? 'middle' : 'default'}
+              size={isMobile ? 'middle' : 'large'}
             >
               {!isMobile && 'Редактировать'}
             </Button>
@@ -384,7 +444,7 @@ const UserProfilePage = () => {
               <Button 
                 onClick={handleCancel} 
                 icon={<CloseOutlined />}
-                size={isMobile ? 'middle' : 'default'}
+                size={isMobile ? 'middle' : 'large'}
               >
                 {!isMobile && 'Отмена'}
               </Button>
@@ -393,23 +453,32 @@ const UserProfilePage = () => {
                 icon={<SaveOutlined />}
                 onClick={handleSave}
                 loading={saving}
-                size={isMobile ? 'middle' : 'default'}
+                size={isMobile ? 'middle' : 'large'}
               >
                 {!isMobile && 'Сохранить'}
               </Button>
             </Space>
-          )
-        }
-      >
+          )}
+        </div>
+      </div>
+
+      {/* Основное содержимое */}
+      <div style={{ 
+        padding: isMobile ? '8px' : '24px',
+        maxWidth: '1400px',
+        margin: '0 auto'
+      }}>
         {isEmpty && !isEditing && (
           <Alert
             message="Заполните ваш профиль"
             description="Пожалуйста, заполните информацию о себе и загрузите необходимые документы"
             type="info"
             showIcon
-            style={{ marginBottom: 24 }}
+            style={{ marginBottom: 16 }}
           />
         )}
+
+        <Card bordered={false}>
 
         <Form form={form} layout="vertical" disabled={!isEditing}>
           <Title level={4}>Личная информация</Title>
@@ -451,7 +520,14 @@ const UserProfilePage = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="birthDate" label="Дата рождения">
-                <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+                <Input 
+                  placeholder="ДД.ММ.ГГГГ"
+                  maxLength={10}
+                  onChange={(e) => {
+                    const formatted = formatDateInput(e.target.value);
+                    form.setFieldValue('birthDate', formatted);
+                  }}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -483,7 +559,14 @@ const UserProfilePage = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="passportDate" label="Дата выдачи паспорта">
-                <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+                <Input 
+                  placeholder="ДД.ММ.ГГГГ"
+                  maxLength={10}
+                  onChange={(e) => {
+                    const formatted = formatDateInput(e.target.value);
+                    form.setFieldValue('passportDate', formatted);
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
@@ -518,7 +601,14 @@ const UserProfilePage = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="patentIssueDate" label="Дата выдачи патента">
-                <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+                <Input 
+                  placeholder="ДД.ММ.ГГГГ"
+                  maxLength={10}
+                  onChange={(e) => {
+                    const formatted = formatDateInput(e.target.value);
+                    form.setFieldValue('patentIssueDate', formatted);
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
@@ -648,15 +738,16 @@ const UserProfilePage = () => {
                   }
                   title={
                     <div style={{ 
-                      fontSize: isMobile ? 14 : 16,
-                      wordBreak: 'break-word' 
+                      fontSize: isMobile ? 13 : 16,
+                      wordBreak: 'break-word',
+                      lineHeight: isMobile ? '1.3' : '1.5'
                     }}>
                       {file.fileName}
                     </div>
                   }
                   description={
                     <Space direction={isMobile ? 'vertical' : 'horizontal'} size={4}>
-                      <Text type="secondary" style={{ fontSize: isMobile ? 12 : 14 }}>
+                      <Text type="secondary" style={{ fontSize: isMobile ? 11 : 14 }}>
                         {file.fileSize > 1024 * 1024 
                           ? `${(file.fileSize / 1024 / 1024).toFixed(2)} МБ`
                           : `${(file.fileSize / 1024).toFixed(2)} КБ`
@@ -666,7 +757,7 @@ const UserProfilePage = () => {
                         <Badge 
                           status="success" 
                           text={
-                            <Text type="secondary" style={{ fontSize: isMobile ? 11 : 13 }}>
+                            <Text type="secondary" style={{ fontSize: isMobile ? 10 : 13 }}>
                               Изображение
                             </Text>
                           } 
@@ -679,6 +770,22 @@ const UserProfilePage = () => {
             )}
           />
         )}
+      </Card>
+
+      {/* Кнопка выхода */}
+      <Card bordered={false} style={{ marginTop: 16, textAlign: 'center' }}>
+        <Button 
+          danger
+          icon={<LogoutOutlined />}
+          onClick={() => {
+            useAuthStore.getState().logout();
+            window.location.href = '/login';
+          }}
+          size="large"
+          block={isMobile}
+        >
+          Выйти из аккаунта
+        </Button>
       </Card>
 
       {/* Модальное окно предпросмотра файлов */}
@@ -698,6 +805,7 @@ const UserProfilePage = () => {
           />
         )}
       </Modal>
+      </div>
     </div>
   );
 };
