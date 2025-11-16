@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler.js';
+import { User } from '../models/index.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -15,8 +16,21 @@ export const authenticate = async (req, res, next) => {
     // Проверяем токен
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
+    // Загружаем пользователя с counterpartyId
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'role', 'counterpartyId']
+    });
+    
+    if (!user) {
+      throw new AppError('User not found', 401);
+    }
+    
     // Добавляем данные пользователя в запрос
-    req.user = decoded;
+    req.user = {
+      id: user.id,
+      role: user.role,
+      counterpartyId: user.counterpartyId
+    };
     
     next();
   } catch (error) {

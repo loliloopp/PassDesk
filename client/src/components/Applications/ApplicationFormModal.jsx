@@ -14,6 +14,7 @@ import {
 import { applicationService } from '../../services/applicationService';
 import { counterpartyService } from '../../services/counterpartyService';
 import { constructionSiteService } from '../../services/constructionSiteService';
+import { useAuthStore } from '../../store/authStore';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -21,19 +22,21 @@ const { TextArea } = Input;
 const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [counterparties, setCounterparties] = useState([]);
   const [sites, setSites] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [contracts, setContracts] = useState({ generalContract: null, subcontracts: [] });
   const [selectedCounterparty, setSelectedCounterparty] = useState(null);
+  const [counterpartyType, setCounterpartyType] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
   const [loadingContracts, setLoadingContracts] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  
+  const getCurrentUser = useAuthStore(state => state.getCurrentUser);
 
   useEffect(() => {
     if (visible) {
-      fetchCounterparties();
       fetchSites();
+      loadUserCounterparty();
       if (editingId) {
         fetchApplication();
       } else {
@@ -42,12 +45,26 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     }
   }, [visible, editingId]);
 
-  const fetchCounterparties = async () => {
+  const loadUserCounterparty = async () => {
     try {
-      const { data } = await counterpartyService.getAll({ limit: 100 });
-      setCounterparties(data.data.counterparties);
+      const { data } = await getCurrentUser();
+      const user = data.user;
+      const counterpartyId = user.counterpartyId;
+      
+      if (counterpartyId) {
+        setSelectedCounterparty(counterpartyId);
+        
+        // Загружаем информацию о контрагенте для определения типа
+        const counterpartyResponse = await counterpartyService.getById(counterpartyId);
+        const counterparty = counterpartyResponse.data.data;
+        setCounterpartyType(counterparty.type);
+        
+        // Загружаем сотрудников
+        fetchEmployees(counterpartyId);
+      }
     } catch (error) {
-      console.error('Error loading counterparties:', error);
+      console.error('Error loading user counterparty:', error);
+      message.error('Ошибка загрузки данных контрагента');
     }
   };
 
@@ -123,25 +140,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     }
   };
 
-  const handleCounterpartyChange = (value) => {
-    setSelectedCounterparty(value);
-    form.setFieldsValue({
-      generalContractId: null,
-      subcontractId: null,
-      employeeIds: [],
-    });
-    setContracts({ generalContract: null, subcontracts: [] });
-    setEmployees([]);
-    
-    // Загружаем сотрудников сразу
-    fetchEmployees(value);
-    
-    // Если выбран объект, загружаем договоры
-    if (selectedSite) {
-      fetchContracts(value, selectedSite);
-    }
-  };
-
   const handleSiteChange = (value) => {
     setSelectedSite(value);
     form.setFieldsValue({
@@ -150,7 +148,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     });
     setContracts({ generalContract: null, subcontracts: [] });
     
-    // Если выбран контрагент, загружаем договоры
+    // Загружаем договоры с контрагентом пользователя
     if (selectedCounterparty) {
       fetchContracts(selectedCounterparty, value);
     }
@@ -177,7 +175,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     }
   };
 
-  const counterpartyType = counterparties.find(c => c.id === selectedCounterparty)?.type;
   const isContractor = counterpartyType === 'contractor';
 
   return (
@@ -192,28 +189,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     >
       <Spin spinning={loading}>
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-          <Form.Item
-            name="counterpartyId"
-            label="Контрагент"
-            rules={[{ required: true, message: 'Выберите контрагента' }]}
-          >
-            <Select
-              placeholder="Выберите контрагента"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-              onChange={handleCounterpartyChange}
-            >
-              {counterparties.map(c => (
-                <Select.Option key={c.id} value={c.id}>
-                  {c.name} ({c.type === 'general_contractor' ? 'Генподрядчик' : c.type === 'contractor' ? 'Подрядчик' : 'Заказчик'})
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
           <Form.Item
             name="constructionSiteId"
             label="Объект строительства"

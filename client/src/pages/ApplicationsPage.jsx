@@ -102,12 +102,6 @@ const ApplicationsPage = () => {
       width: 200,
     },
     {
-      title: 'Контрагент',
-      dataIndex: ['counterparty', 'name'],
-      key: 'counterparty',
-      ellipsis: true,
-    },
-    {
       title: 'Объект',
       dataIndex: ['constructionSite', 'shortName'],
       key: 'constructionSite',

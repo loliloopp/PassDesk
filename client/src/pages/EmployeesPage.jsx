@@ -21,7 +21,6 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import { employeeService } from '../services/employeeService';
-import { counterpartyService } from '../services/counterpartyService';
 import { citizenshipService } from '../services/citizenshipService';
 import EmployeeFormModal from '../components/Employees/EmployeeFormModal';
 import EmployeeViewModal from '../components/Employees/EmployeeViewModal';
@@ -32,11 +31,9 @@ const DATE_FORMAT = 'DD.MM.YYYY';
 
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
-  const [counterparties, setCounterparties] = useState([]);
   const [citizenships, setCitizenships] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [selectedCounterparty, setSelectedCounterparty] = useState(null);
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -45,7 +42,6 @@ const EmployeesPage = () => {
 
   useEffect(() => {
     fetchEmployees();
-    fetchCounterparties();
     fetchCitizenships();
   }, []);
 
@@ -60,15 +56,6 @@ const EmployeesPage = () => {
       setEmployees([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchCounterparties = async () => {
-    try {
-      const { data } = await counterpartyService.getAll({ limit: 100 });
-      setCounterparties(data.data.counterparties || []);
-    } catch (error) {
-      console.error('Error loading counterparties:', error);
     }
   };
 
@@ -138,10 +125,9 @@ const EmployeesPage = () => {
       employee.snils?.toLowerCase().includes(searchLower)
     );
     
-    const matchesCounterparty = !selectedCounterparty || employee.counterpartyId === selectedCounterparty;
     const matchesCitizenship = !selectedCitizenship || employee.citizenshipId === selectedCitizenship;
     
-    return matchesSearch && matchesCounterparty && matchesCitizenship;
+    return matchesSearch && matchesCitizenship;
   });
 
   const columns = [
@@ -162,12 +148,6 @@ const EmployeesPage = () => {
       title: 'Должность',
       dataIndex: 'position',
       key: 'position',
-    },
-    {
-      title: 'Контрагент',
-      dataIndex: ['counterparty', 'name'],
-      key: 'counterparty',
-      render: (name) => name || '-',
     },
     {
       title: 'Гражданство',
@@ -266,51 +246,34 @@ const EmployeesPage = () => {
         </Button>
       </div>
 
-      <Space style={{ marginBottom: 16, width: '100%' }} direction="vertical">
+      <Space style={{ marginBottom: 16 }}>
         <Input
           placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           size="large"
-          style={{ maxWidth: 500 }}
+          style={{ width: 400 }}
+          allowClear
         />
-        <Space size="middle">
-          <Select
-            placeholder="Контрагент"
-            allowClear
-            onChange={setSelectedCounterparty}
-            style={{ width: 250 }}
-            showSearch
-            optionFilterProp="children"
-            filterOption={(input, option) =>
-              option.children.toLowerCase().includes(input.toLowerCase())
-            }
-          >
-            {counterparties.map((c) => (
-              <Select.Option key={c.id} value={c.id}>
-                {c.name}
-              </Select.Option>
-            ))}
-          </Select>
-          <Select
-            placeholder="Гражданство"
-            allowClear
-            onChange={setSelectedCitizenship}
-            style={{ width: 200 }}
-            showSearch
-            optionFilterProp="children"
-            filterOption={(input, option) =>
-              option.children.toLowerCase().includes(input.toLowerCase())
-            }
-          >
-            {citizenships.map((c) => (
-              <Select.Option key={c.id} value={c.id}>
-                {c.name}
-              </Select.Option>
-            ))}
-          </Select>
-        </Space>
+        <Select
+          placeholder="Гражданство"
+          allowClear
+          value={selectedCitizenship}
+          onChange={setSelectedCitizenship}
+          style={{ width: 200 }}
+          showSearch
+          optionFilterProp="children"
+          filterOption={(input, option) =>
+            option.children.toLowerCase().includes(input.toLowerCase())
+          }
+        >
+          {citizenships.map((c) => (
+            <Select.Option key={c.id} value={c.id}>
+              {c.name}
+            </Select.Option>
+          ))}
+        </Select>
       </Space>
 
       <Table

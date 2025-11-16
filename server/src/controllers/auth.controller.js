@@ -193,6 +193,7 @@ export const getCurrentUser = async (req, res, next) => {
           lastName: user.lastName,
           role: user.role,
           isActive: user.isActive,
+          counterpartyId: user.counterpartyId,
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,

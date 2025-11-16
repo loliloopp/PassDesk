@@ -72,7 +72,7 @@ export const getUserById = async (req, res, next) => {
 
 export const createUser = async (req, res, next) => {
   try {
-    const { email, password, firstName, lastName, role = 'user' } = req.body;
+    const { email, password, firstName, lastName, role = 'user', counterpartyId } = req.body;
 
     // Проверяем, существует ли пользователь
     const existingUser = await User.findOne({ where: { email } });
@@ -87,6 +87,7 @@ export const createUser = async (req, res, next) => {
       firstName,
       lastName,
       role,
+      counterpartyId,
     });
 
     res.status(201).json({

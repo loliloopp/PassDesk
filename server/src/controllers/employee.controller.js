@@ -112,6 +112,7 @@ export const createEmployee = async (req, res, next) => {
     
     const employeeData = {
       ...req.body,
+      counterpartyId: req.user.counterpartyId,
       createdBy: req.user.id
     };
     
@@ -148,8 +149,12 @@ export const createEmployee = async (req, res, next) => {
 export const updateEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
+    
+    // Не перезаписываем counterpartyId при обновлении
+    const { counterpartyId, ...updateData } = req.body;
+    
     const updates = {
-      ...req.body,
+      ...updateData,
       updatedBy: req.user.id
     };
 

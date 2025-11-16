@@ -156,11 +156,17 @@ export const createApplication = async (req, res) => {
     // Создаем заявку
     const application = await Application.create({
       ...applicationData,
+      counterpartyId: req.user.counterpartyId,
       createdBy: req.user.id
     }, { transaction });
     
-    // Добавляем сотрудников
-    await application.addEmployees(employeeIds, { transaction });
+    // Добавляем сотрудников через таблицу маппинга
+    const mappingRecords = employeeIds.map(employeeId => ({
+      applicationId: application.id,
+      employeeId: employeeId
+    }));
+    
+    await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
     
     await transaction.commit();
     
@@ -222,9 +228,11 @@ export const updateApplication = async (req, res) => {
       });
     }
     
-    // Обновляем данные заявки
+    // Обновляем данные заявки (не перезаписываем counterpartyId)
+    const { counterpartyId, ...updateData } = updates;
+    
     await application.update({
-      ...updates,
+      ...updateData,
       updatedBy: req.user.id
     }, { transaction });
     
@@ -238,8 +246,19 @@ export const updateApplication = async (req, res) => {
         });
       }
       
-      // Заменяем сотрудников (удаляем старые и добавляем новые)
-      await application.setEmployees(employeeIds, { transaction });
+      // Удаляем старые связи
+      await ApplicationEmployeeMapping.destroy({
+        where: { applicationId: id },
+        transaction
+      });
+      
+      // Создаем новые связи
+      const mappingRecords = employeeIds.map(employeeId => ({
+        applicationId: id,
+        employeeId: employeeId
+      }));
+      
+      await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
     }
     
     await transaction.commit();

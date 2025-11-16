@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Switch } from 'antd';
-import { counterpartyService } from '../../services/counterpartyService';
 import { citizenshipService } from '../../services/citizenshipService';
 import dayjs from 'dayjs';
 
@@ -10,13 +9,11 @@ const DATE_FORMAT = 'DD.MM.YYYY';
 
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
-  const [counterparties, setCounterparties] = useState([]);
   const [citizenships, setCitizenships] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (visible) {
-      fetchCounterparties();
       fetchCitizenships();
       if (employee) {
         form.setFieldsValue({
@@ -33,15 +30,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       }
     }
   }, [visible, employee]);
-
-  const fetchCounterparties = async () => {
-    try {
-      const { data } = await counterpartyService.getAll({ limit: 100 });
-      setCounterparties(data.data.counterparties);
-    } catch (error) {
-      console.error('Error loading counterparties:', error);
-    }
-  };
 
   const fetchCitizenships = async () => {
     try {
@@ -137,25 +125,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           </Col>
         </Row>
 
-        {/* Контрагент и гражданство - 2 столбца */}
+        {/* Гражданство - одна строка */}
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="counterpartyId" label="Контрагент">
-              <Select
-                placeholder="Выберите контрагента"
-                allowClear
-                showSearch
-                optionFilterProp="children"
-              >
-                {counterparties.map((c) => (
-                  <Option key={c.id} value={c.id}>
-                    {c.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
+          <Col span={24}>
             <Form.Item name="citizenshipId" label="Гражданство">
               <Select
                 placeholder="Выберите или добавьте"
