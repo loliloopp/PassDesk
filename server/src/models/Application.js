@@ -3,9 +3,9 @@ import { sequelize } from '../config/database.js';
 
 const Application = sequelize.define('Application', {
   id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
   applicationNumber: {
     type: DataTypes.STRING(100),
@@ -15,7 +15,7 @@ const Application = sequelize.define('Application', {
     comment: 'Уникальный номер заявки'
   },
   counterpartyId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     field: 'counterparty_id',
     references: {
@@ -25,7 +25,7 @@ const Application = sequelize.define('Application', {
     comment: 'Контрагент, от имени которого заявка'
   },
   constructionSiteId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     field: 'construction_site_id',
     references: {
@@ -35,7 +35,7 @@ const Application = sequelize.define('Application', {
     comment: 'Объект строительства'
   },
   generalContractId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     field: 'general_contract_id',
     references: {
@@ -45,7 +45,7 @@ const Application = sequelize.define('Application', {
     comment: 'Договор генподряда'
   },
   subcontractId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     field: 'subcontract_id',
     references: {
@@ -53,6 +53,13 @@ const Application = sequelize.define('Application', {
       key: 'id'
     },
     comment: 'Договор подряда (только для подрядчиков)'
+  },
+  applicationType: {
+    type: DataTypes.ENUM('biometric', 'customer'),
+    allowNull: false,
+    field: 'application_type',
+    defaultValue: 'biometric',
+    comment: 'Тип заявки: биометрия или заказчик'
   },
   status: {
     type: DataTypes.ENUM('draft', 'submitted', 'approved', 'rejected'),
@@ -66,7 +73,7 @@ const Application = sequelize.define('Application', {
     comment: 'Примечания к заявке'
   },
   createdBy: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true, // Разрешаем NULL при удалении пользователя
     field: 'created_by',
     references: {
@@ -76,7 +83,7 @@ const Application = sequelize.define('Application', {
     onDelete: 'SET NULL' // При удалении пользователя устанавливаем NULL
   },
   updatedBy: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     field: 'updated_by',
     references: {
@@ -97,6 +104,9 @@ const Application = sequelize.define('Application', {
     },
     {
       fields: ['construction_site_id']
+    },
+    {
+      fields: ['application_type']
     },
     {
       fields: ['status']

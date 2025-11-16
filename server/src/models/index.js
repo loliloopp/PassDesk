@@ -8,6 +8,7 @@ import ConstructionSite from './ConstructionSite.js';
 import Contract from './Contract.js';
 import Application from './Application.js';
 import ApplicationEmployeeMapping from './ApplicationEmployee.js';
+import ApplicationFileMapping from './ApplicationFileMapping.js';
 import Citizenship from './Citizenship.js';
 
 // Define associations
@@ -116,6 +117,31 @@ ApplicationEmployeeMapping.belongsTo(Application, { foreignKey: 'application_id'
 Employee.hasMany(ApplicationEmployeeMapping, { foreignKey: 'employee_id', as: 'employeeApplicationsMapping' });
 ApplicationEmployeeMapping.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
 
+// Application <-> File (many-to-many через ApplicationFileMapping)
+Application.belongsToMany(File, {
+  through: ApplicationFileMapping,
+  foreignKey: 'application_id',
+  otherKey: 'file_id',
+  as: 'files'
+});
+
+File.belongsToMany(Application, {
+  through: ApplicationFileMapping,
+  foreignKey: 'file_id',
+  otherKey: 'application_id',
+  as: 'applications'
+});
+
+// Прямые связи для ApplicationFileMapping
+Application.hasMany(ApplicationFileMapping, { foreignKey: 'application_id', as: 'applicationFilesMapping' });
+ApplicationFileMapping.belongsTo(Application, { foreignKey: 'application_id', as: 'application' });
+
+Employee.hasMany(ApplicationFileMapping, { foreignKey: 'employee_id', as: 'employeeFilesMapping' });
+ApplicationFileMapping.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
+
+File.hasMany(ApplicationFileMapping, { foreignKey: 'file_id', as: 'fileApplicationsMapping' });
+ApplicationFileMapping.belongsTo(File, { foreignKey: 'file_id', as: 'file' });
+
 export {
   sequelize,
   User,
@@ -127,6 +153,7 @@ export {
   Contract,
   Application,
   ApplicationEmployeeMapping,
+  ApplicationFileMapping,
   Citizenship
 };
 

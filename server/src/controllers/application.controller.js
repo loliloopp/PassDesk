@@ -1,4 +1,4 @@
-import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, sequelize } from '../models/index.js';
+import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Получить все заявки
@@ -57,6 +57,15 @@ export const getAllApplications = async (req, res) => {
           as: 'employees',
           attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
           through: { attributes: [] } // Не включать поля из связующей таблицы
+        },
+        {
+          model: File,
+          as: 'files',
+          attributes: ['id', 'fileName', 'originalName', 'mimeType', 'fileSize'],
+          through: {
+            attributes: ['employeeId'], // Включаем employeeId из маппинга
+            as: 'fileMapping'
+          }
         }
       ]
     });
@@ -149,7 +158,7 @@ export const createApplication = async (req, res) => {
   const transaction = await sequelize.transaction();
   
   try {
-    const { employeeIds, ...applicationData } = req.body;
+    const { employeeIds, selectedFiles, ...applicationData } = req.body;
     
     // Проверяем, что выбран хотя бы один сотрудник
     if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
@@ -175,9 +184,21 @@ export const createApplication = async (req, res) => {
     
     await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
     
+    // Добавляем файлы, если они выбраны
+    // selectedFiles должен быть массивом объектов: [{ employeeId, fileId }, ...]
+    if (selectedFiles && Array.isArray(selectedFiles) && selectedFiles.length > 0) {
+      const fileRecords = selectedFiles.map(({ employeeId, fileId }) => ({
+        applicationId: application.id,
+        employeeId: employeeId,
+        fileId: fileId
+      }));
+      
+      await ApplicationFileMapping.bulkCreate(fileRecords, { transaction });
+    }
+    
     await transaction.commit();
     
-    // Загружаем заявку с сотрудниками
+    // Загружаем заявку с сотрудниками и файлами
     const result = await Application.findByPk(application.id, {
       include: [
         {
@@ -185,6 +206,15 @@ export const createApplication = async (req, res) => {
           as: 'employees',
           attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
           through: { attributes: [] }
+        },
+        {
+          model: File,
+          as: 'files',
+          attributes: ['id', 'fileName', 'originalName', 'mimeType', 'fileSize'],
+          through: {
+            attributes: ['employeeId'],
+            as: 'fileMapping'
+          }
         }
       ]
     });
