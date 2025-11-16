@@ -44,17 +44,20 @@ const { useBreakpoint } = Grid;
 
 // Функция для форматирования даты с автоматическими точками
 const formatDateInput = (value) => {
-  // Убираем все нецифровые символы
+  // Убираем все нецифровые символы (точки, запятые и т.д.)
   const numbers = value.replace(/\D/g, '');
   
-  // Форматируем с точками
-  if (numbers.length <= 2) {
-    return numbers;
-  } else if (numbers.length <= 4) {
-    return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
-  } else {
-    return `${numbers.slice(0, 2)}.${numbers.slice(2, 4)}.${numbers.slice(4, 8)}`;
+  // Форматируем с точками: ДД.ММ.ГГГГ
+  let result = '';
+  
+  for (let i = 0; i < numbers.length && i < 8; i++) {
+    if (i === 2 || i === 4) {
+      result += '.';
+    }
+    result += numbers[i];
   }
+  
+  return result;
 };
 
 const UserProfilePage = () => {
@@ -114,17 +117,21 @@ const UserProfilePage = () => {
 
   const loadCitizenships = async () => {
     try {
-      const { data } = await citizenshipService.getAll();
-      setCitizenships(data.citizenships || []);
+      const response = await citizenshipService.getAll();
+      
+      // Сервер возвращает { success: true, data: { citizenships: [...] } }
+      // Axios оборачивает это в response.data
+      const citizenshipsData = response.data?.data?.citizenships || response.data?.citizenships || [];
+      setCitizenships(citizenshipsData);
     } catch (error) {
       console.error('Error loading citizenships:', error);
+      message.error('Ошибка загрузки списка гражданств');
     }
   };
 
   const loadFiles = async (employeeId) => {
     try {
       const response = await userProfileService.getFiles(employeeId);
-      console.log('📁 Files loaded:', response);
       setFiles(response.data || []);
     } catch (error) {
       console.error('Error loading files:', error);
@@ -159,13 +166,33 @@ const UserProfilePage = () => {
       const values = await form.validateFields();
       setSaving(true);
 
-      // Преобразуем даты из DD.MM.YYYY в YYYY-MM-DD
+      // Преобразуем даты из DD.MM.YYYY в YYYY-MM-DD с валидацией
       const parseDate = (dateStr) => {
         if (!dateStr) return null;
+        
+        // Проверяем формат DD.MM.YYYY (должно быть ровно 10 символов с точками)
+        if (dateStr.length !== 10 || dateStr.split('.').length !== 3) {
+          return null; // Неполная дата - не сохраняем
+        }
+        
         const parts = dateStr.split('.');
         if (parts.length === 3) {
           const [day, month, year] = parts;
-          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          
+          // Проверяем, что все части - числа
+          if (!day || !month || !year || isNaN(day) || isNaN(month) || isNaN(year)) {
+            return null;
+          }
+          
+          // Проверяем валидность даты с помощью dayjs
+          const dateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          const parsedDate = dayjs(dateString, 'YYYY-MM-DD', true);
+          
+          if (!parsedDate.isValid()) {
+            return null; // Невалидная дата (например 32.13.2024)
+          }
+          
+          return dateString;
         }
         return null;
       };
