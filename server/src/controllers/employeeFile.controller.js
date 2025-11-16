@@ -110,6 +110,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
           resourceId: fileInfo.resource_id || null,
           entityType: 'employee',
           entityId: employeeId,
+          employeeId: employeeId, // Явная связь с сотрудником
           uploadedBy: req.user.id
         });
         

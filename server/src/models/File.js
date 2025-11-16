@@ -63,6 +63,17 @@ File.init(
       field: 'entity_id',
       comment: 'ID связанной сущности'
     },
+    employeeId: {
+      type: DataTypes.UUID,
+      field: 'employee_id',
+      allowNull: true,
+      references: {
+        model: 'employees',
+        key: 'id'
+      },
+      onDelete: 'CASCADE',
+      comment: 'ID сотрудника (явная связь)'
+    },
     uploadedBy: {
       type: DataTypes.UUID,
       field: 'uploaded_by',
@@ -90,6 +101,9 @@ File.init(
       },
       {
         fields: ['entity_type', 'entity_id']
+      },
+      {
+        fields: ['employee_id']
       },
       {
         fields: ['uploaded_by']
