@@ -30,7 +30,28 @@ const updateEmployeeValidation = [
   body('phone').optional().trim()
 ];
 
+// Более мягкая валидация для профиля пользователя
+const updateMyProfileValidation = [
+  body('firstName').optional().trim(),
+  body('lastName').optional().trim(),
+  body('middleName').optional().trim(),
+  body('position').optional().trim(),
+  body('email').optional().isEmail().withMessage('Введите корректный email'),
+  body('phone').optional().trim(),
+  body('inn').optional().trim(),
+  body('snils').optional().trim(),
+  body('kig').optional().trim(),
+  body('passportNumber').optional().trim(),
+  body('passportIssuer').optional().trim(),
+  body('registrationAddress').optional().trim(),
+  body('patentNumber').optional().trim(),
+  body('blankNumber').optional().trim(),
+  body('notes').optional().trim()
+];
+
 // Employee routes
+router.get('/my-profile', employeeController.getMyProfile); // Получить свой профиль
+router.put('/my-profile', updateMyProfileValidation, validate, employeeController.updateMyProfile); // Обновить свой профиль
 router.get('/', employeeController.getAllEmployees);
 router.get('/:id', employeeController.getEmployeeById);
 router.post('/', authorize('admin', 'manager'), createEmployeeValidation, validate, employeeController.createEmployee);
@@ -39,8 +60,8 @@ router.delete('/:id', authorize('admin'), employeeController.deleteEmployee);
 router.get('/search', employeeController.searchEmployees);
 
 // Employee files routes
+// Пользователи (user) могут загружать файлы только для своего профиля
 router.post('/:employeeId/files', 
-  authorize('admin', 'manager'), 
   upload.array('files', 10), // максимум 10 файлов за раз
   employeeFileController.uploadEmployeeFiles
 );
@@ -48,7 +69,6 @@ router.get('/:employeeId/files',
   employeeFileController.getEmployeeFiles
 );
 router.delete('/:employeeId/files/:fileId', 
-  authorize('admin', 'manager'), 
   employeeFileController.deleteEmployeeFile
 );
 router.get('/:employeeId/files/:fileId/download', 

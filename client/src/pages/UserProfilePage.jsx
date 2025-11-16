@@ -1,0 +1,706 @@
+import { useState, useEffect } from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  Button,
+  Form,
+  Input,
+  DatePicker,
+  Select,
+  Spin,
+  message,
+  Typography,
+  Upload,
+  List,
+  Space,
+  Modal,
+  Alert,
+  Grid,
+  Badge,
+  Progress
+} from 'antd';
+import {
+  EditOutlined,
+  SaveOutlined,
+  CloseOutlined,
+  UserOutlined,
+  CameraOutlined,
+  FileOutlined,
+  UploadOutlined,
+  EyeOutlined,
+  DeleteOutlined,
+  CheckCircleFilled
+} from '@ant-design/icons';
+import dayjs from 'dayjs';
+import imageCompression from 'browser-image-compression';
+import userProfileService from '@/services/userProfileService';
+import { citizenshipService } from '@/services/citizenshipService';
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
+const { useBreakpoint } = Grid;
+
+const UserProfilePage = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [employee, setEmployee] = useState(null);
+  const [citizenships, setCitizenships] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [form] = Form.useForm();
+
+  // Загрузка данных профиля
+  useEffect(() => {
+    loadProfile();
+    loadCitizenships();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const { data } = await userProfileService.getMyProfile();
+      setEmployee(data.employee);
+      
+      if (data.employee) {
+        // Заполняем форму данными
+        form.setFieldsValue({
+          ...data.employee,
+          birthDate: data.employee.birthDate ? dayjs(data.employee.birthDate) : null,
+          passportDate: data.employee.passportDate ? dayjs(data.employee.passportDate) : null,
+          patentIssueDate: data.employee.patentIssueDate ? dayjs(data.employee.patentIssueDate) : null,
+        });
+        
+        // Загружаем файлы
+        loadFiles(data.employee.id);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      message.error('Ошибка загрузки профиля');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCitizenships = async () => {
+    try {
+      const { data } = await citizenshipService.getAll();
+      setCitizenships(data.citizenships || []);
+    } catch (error) {
+      console.error('Error loading citizenships:', error);
+    }
+  };
+
+  const loadFiles = async (employeeId) => {
+    try {
+      const { data } = await userProfileService.getFiles(employeeId);
+      setFiles(data.data || []);
+    } catch (error) {
+      console.error('Error loading files:', error);
+    }
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    // Восстанавливаем исходные данные
+    if (employee) {
+      form.setFieldsValue({
+        ...employee,
+        birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
+        passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
+        patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
+
+      // Форматируем даты
+      const formattedValues = {
+        ...values,
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        passportDate: values.passportDate ? values.passportDate.format('YYYY-MM-DD') : null,
+        patentIssueDate: values.patentIssueDate ? values.patentIssueDate.format('YYYY-MM-DD') : null,
+      };
+
+      console.log('💾 Saving profile:', formattedValues);
+
+      const { data } = await userProfileService.updateMyProfile(formattedValues);
+      setEmployee(data.employee);
+      setIsEditing(false);
+      message.success('Профиль успешно обновлен');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      
+      // Детальное сообщение об ошибке
+      if (error.response?.data?.errors) {
+        const errorMessages = error.response.data.errors
+          .map(err => `${err.field}: ${err.message}`)
+          .join('\n');
+        message.error({
+          content: (
+            <div>
+              <div>Ошибка валидации:</div>
+              <div style={{ marginTop: 8, fontSize: 12 }}>
+                {error.response.data.errors.map((err, idx) => (
+                  <div key={idx}>• {err.field}: {err.message}</div>
+                ))}
+              </div>
+            </div>
+          ),
+          duration: 5
+        });
+      } else {
+        message.error(error.response?.data?.message || 'Ошибка сохранения профиля');
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Обработка загрузки файлов
+  const handleUpload = async () => {
+    if (fileList.length === 0) {
+      message.warning('Выберите файлы для загрузки');
+      return;
+    }
+
+    // Проверка лимитов
+    const currentFilesCount = files.length;
+    const totalFiles = currentFilesCount + fileList.length;
+    if (totalFiles > 10) {
+      message.error(`Превышен лимит файлов. У вас уже загружено ${currentFilesCount} файлов. Максимум 10.`);
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const processedFiles = [];
+      
+      // Обрабатываем каждый файл
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        let processedFile = file;
+        
+        // Если это изображение и размер больше 1MB - сжимаем
+        if (file.type.startsWith('image/') && file.size > 1024 * 1024) {
+          try {
+            message.loading({ 
+              content: `Сжатие изображения ${i + 1}/${fileList.length}...`, 
+              key: 'compress',
+              duration: 0 
+            });
+            
+            const options = {
+              maxSizeMB: 1, // Максимальный размер 1MB
+              maxWidthOrHeight: 1920, // Максимальное разрешение
+              useWebWorker: true,
+              fileType: file.type
+            };
+            
+            const compressedBlob = await imageCompression(file, options);
+            
+            // Создаем новый File объект из сжатого blob
+            processedFile = new File([compressedBlob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            });
+            
+            const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
+            const compressedSizeMB = (processedFile.size / 1024 / 1024).toFixed(2);
+            
+            console.log(`Изображение сжато: ${originalSizeMB}MB -> ${compressedSizeMB}MB`);
+            message.destroy('compress');
+          } catch (compressionError) {
+            console.error('Ошибка сжатия изображения:', compressionError);
+            message.destroy('compress');
+            // Продолжаем с оригинальным файлом
+          }
+        }
+        
+        // Проверка размера после сжатия
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (processedFile.size > maxSize) {
+          message.error(`Файл "${file.name}" слишком большой даже после сжатия`);
+          setUploading(false);
+          return;
+        }
+        
+        processedFiles.push(processedFile);
+      }
+      
+      // Загружаем файлы
+      message.loading({ content: 'Загрузка файлов...', key: 'upload', duration: 0 });
+      
+      try {
+        const response = await userProfileService.uploadFiles(employee.id, processedFiles);
+        console.log('✅ Upload successful:', response);
+        
+        message.destroy('upload');
+        message.success({
+          content: `✅ Успешно загружено ${processedFiles.length} файл(ов)!`,
+          duration: 3,
+          style: {
+            marginTop: '20vh',
+          }
+        });
+        
+        setFileList([]);
+        await loadFiles(employee.id);
+      } catch (uploadError) {
+        console.error('❌ Upload failed:', uploadError);
+        message.destroy('upload');
+        
+        // Даже если произошла ошибка, пробуем обновить список файлов
+        // так как файл мог быть сохранен на сервере
+        await loadFiles(employee.id);
+        
+        // Проверяем, был ли файл действительно загружен
+        const updatedFiles = files;
+        const newFilesCount = updatedFiles.length - currentFilesCount;
+        
+        if (newFilesCount > 0) {
+          // Файл сохранился несмотря на ошибку
+          message.success({
+            content: `✅ Файл успешно загружен (${newFilesCount} файл.)`,
+            duration: 3
+          });
+          setFileList([]);
+        } else {
+          // Реальная ошибка загрузки
+          throw uploadError;
+        }
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      message.destroy('upload');
+      message.destroy('compress');
+      message.error(error.response?.data?.message || error.message || 'Ошибка загрузки файлов');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    try {
+      await userProfileService.deleteFile(employee.id, fileId);
+      message.success('Файл удален');
+      loadFiles(employee.id);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      message.error('Ошибка удаления файла');
+    }
+  };
+
+  const handleViewFile = async (file) => {
+    try {
+      const { data } = await userProfileService.getFileViewLink(employee.id, file.id);
+      setPreviewFile({
+        url: data.viewUrl,
+        name: file.fileName
+      });
+      setPreviewVisible(true);
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      message.error('Ошибка просмотра файла');
+    }
+  };
+
+  const uploadProps = {
+    multiple: true,
+    fileList,
+    beforeUpload: (file) => {
+      setFileList(prev => [...prev, file]);
+      return false;
+    },
+    onRemove: (file) => {
+      setFileList(prev => prev.filter(f => f.uid !== file.uid));
+    },
+    accept: 'image/*,.pdf,.doc,.docx,.xls,.xlsx'
+  };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <Card>
+        <Alert
+          message="Профиль не найден"
+          description="Пожалуйста, обратитесь к администратору"
+          type="warning"
+          showIcon
+        />
+      </Card>
+    );
+  }
+
+  const isEmpty = !employee.firstName && !employee.lastName;
+
+  return (
+    <div style={{ padding: isMobile ? '8px' : '24px', maxWidth: '1400px', margin: '0 auto' }}>
+      <Card
+        title={
+          !isMobile && (
+            <Space>
+              <UserOutlined />
+              <Title level={3} style={{ margin: 0 }}>
+                Мой профиль
+              </Title>
+            </Space>
+          )
+        }
+        extra={
+          !isEditing ? (
+            <Button 
+              type="primary" 
+              icon={<EditOutlined />} 
+              onClick={handleEdit}
+              size={isMobile ? 'middle' : 'default'}
+            >
+              {!isMobile && 'Редактировать'}
+            </Button>
+          ) : (
+            <Space size={isMobile ? 'small' : 'middle'}>
+              <Button 
+                onClick={handleCancel} 
+                icon={<CloseOutlined />}
+                size={isMobile ? 'middle' : 'default'}
+              >
+                {!isMobile && 'Отмена'}
+              </Button>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                onClick={handleSave}
+                loading={saving}
+                size={isMobile ? 'middle' : 'default'}
+              >
+                {!isMobile && 'Сохранить'}
+              </Button>
+            </Space>
+          )
+        }
+      >
+        {isEmpty && !isEditing && (
+          <Alert
+            message="Заполните ваш профиль"
+            description="Пожалуйста, заполните информацию о себе и загрузите необходимые документы"
+            type="info"
+            showIcon
+            style={{ marginBottom: 24 }}
+          />
+        )}
+
+        <Form form={form} layout="vertical" disabled={!isEditing}>
+          <Title level={4}>Личная информация</Title>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="lastName" label="Фамилия" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="firstName" label="Имя" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="middleName" label="Отчество">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="position" label="Должность">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="citizenshipId" label="Гражданство">
+                <Select
+                  showSearch
+                  optionFilterProp="children"
+                  placeholder="Выберите гражданство"
+                >
+                  {citizenships.map(c => (
+                    <Select.Option key={c.id} value={c.id}>
+                      {c.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="birthDate" label="Дата рождения">
+                <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Title level={4} style={{ marginTop: 24 }}>Контактная информация</Title>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item
+                name="email"
+                label="Email"
+                rules={[{ type: 'email', message: 'Некорректный email' }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="phone" label="Телефон">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Title level={4} style={{ marginTop: 24 }}>Документы</Title>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="passportNumber" label="Номер паспорта">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="passportDate" label="Дата выдачи паспорта">
+                <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="passportIssuer" label="Кем выдан">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Form.Item name="registrationAddress" label="Адрес регистрации">
+                <TextArea rows={2} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="inn" label="ИНН">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="snils" label="СНИЛС">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="kig" label="КИГ">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="patentNumber" label="Номер патента">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="patentIssueDate" label="Дата выдачи патента">
+                <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Form.Item name="blankNumber" label="Номер бланка">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Title level={4} style={{ marginTop: 24 }}>Заметки</Title>
+          <Row>
+            <Col xs={24}>
+              <Form.Item name="notes" label="Дополнительная информация">
+                <TextArea rows={3} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Card>
+
+      {/* Секция загрузки файлов */}
+      <Card
+        title={
+          <Space>
+            <FileOutlined />
+            <span>Документы ({files.length}/10)</span>
+          </Space>
+        }
+        style={{ marginTop: 24 }}
+      >
+        <Alert
+          message="Лимиты загрузки"
+          description={
+            <>
+              <div>• Максимум 10 файлов</div>
+              <div>• Размер каждого файла не более 5МБ</div>
+              <div>• Изображения больше 1МБ автоматически сжимаются</div>
+            </>
+          }
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+
+        <Upload {...uploadProps}>
+          <Button icon={isMobile ? <CameraOutlined /> : <UploadOutlined />}>
+            {isMobile ? 'Сделать фото / Выбрать файл' : 'Выбрать файлы'}
+          </Button>
+        </Upload>
+
+        {fileList.length > 0 && (
+          <Button
+            type="primary"
+            onClick={handleUpload}
+            loading={uploading}
+            style={{ marginTop: 16 }}
+            block
+          >
+            Загрузить {fileList.length} файл(ов)
+          </Button>
+        )}
+
+        {files.length > 0 && (
+          <List
+            style={{ marginTop: 24 }}
+            dataSource={files}
+            renderItem={(file) => (
+              <List.Item
+                actions={
+                  isMobile 
+                    ? [
+                        <Button
+                          type="link"
+                          icon={<EyeOutlined />}
+                          onClick={() => handleViewFile(file)}
+                          size="small"
+                        />,
+                        <Button
+                          type="link"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteFile(file.id)}
+                          size="small"
+                        />
+                      ]
+                    : [
+                        <Button
+                          type="link"
+                          icon={<EyeOutlined />}
+                          onClick={() => handleViewFile(file)}
+                        >
+                          Просмотр
+                        </Button>,
+                        <Button
+                          type="link"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteFile(file.id)}
+                        >
+                          Удалить
+                        </Button>
+                      ]
+                }
+              >
+                <List.Item.Meta
+                  avatar={
+                    <Badge 
+                      count={
+                        <CheckCircleFilled 
+                          style={{ 
+                            color: '#52c41a', 
+                            fontSize: isMobile ? 18 : 20,
+                            backgroundColor: 'white',
+                            borderRadius: '50%'
+                          }} 
+                        />
+                      }
+                      offset={[-5, isMobile ? 32 : 35]}
+                    >
+                      <FileOutlined 
+                        style={{ 
+                          fontSize: isMobile ? 28 : 32,
+                          color: file.mimeType.startsWith('image/') ? '#1890ff' : '#8c8c8c'
+                        }} 
+                      />
+                    </Badge>
+                  }
+                  title={
+                    <div style={{ 
+                      fontSize: isMobile ? 14 : 16,
+                      wordBreak: 'break-word' 
+                    }}>
+                      {file.fileName}
+                    </div>
+                  }
+                  description={
+                    <Space direction={isMobile ? 'vertical' : 'horizontal'} size={4}>
+                      <Text type="secondary" style={{ fontSize: isMobile ? 12 : 14 }}>
+                        {file.fileSize > 1024 * 1024 
+                          ? `${(file.fileSize / 1024 / 1024).toFixed(2)} МБ`
+                          : `${(file.fileSize / 1024).toFixed(2)} КБ`
+                        }
+                      </Text>
+                      {file.mimeType.startsWith('image/') && (
+                        <Badge 
+                          status="success" 
+                          text={
+                            <Text type="secondary" style={{ fontSize: isMobile ? 11 : 13 }}>
+                              Изображение
+                            </Text>
+                          } 
+                        />
+                      )}
+                    </Space>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        )}
+      </Card>
+
+      {/* Модальное окно предпросмотра файлов */}
+      <Modal
+        open={previewVisible}
+        title={previewFile?.name}
+        footer={null}
+        onCancel={() => setPreviewVisible(false)}
+        width="80%"
+        style={{ top: 20 }}
+      >
+        {previewFile && (
+          <iframe
+            src={previewFile.url}
+            style={{ width: '100%', height: '70vh', border: 'none' }}
+            title="File Preview"
+          />
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+export default UserProfilePage;
+

@@ -1,8 +1,9 @@
-import { Employee, Counterparty, User, Citizenship, File } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import yandexDiskClient, { basePath } from '../config/storage.js';
 import { buildEmployeeFilePath } from '../utils/transliterate.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 export const getAllEmployees = async (req, res, next) => {
   try {
@@ -366,4 +367,199 @@ export const searchEmployees = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Получить профиль сотрудника текущего пользователя
+ */
+export const getMyProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Находим связь пользователь-сотрудник
+    let mapping = await UserEmployeeMapping.findOne({
+      where: { userId },
+      include: [
+        {
+          model: Employee,
+          as: 'employee',
+          include: [
+            {
+              model: Counterparty,
+              as: 'counterparty',
+              attributes: ['id', 'name', 'type']
+            },
+            {
+              model: Citizenship,
+              as: 'citizenship',
+              attributes: ['id', 'name', 'code']
+            }
+          ]
+        }
+      ]
+    });
+
+    // Если mapping не найден, создаем пустой профиль сотрудника
+    if (!mapping) {
+      console.log(`Creating employee profile for user ${userId}`);
+      
+      const user = await User.findByPk(userId);
+      if (!user) {
+        throw new AppError('Пользователь не найден', 404);
+      }
+
+      // Создаем запись сотрудника с минимальными данными
+      const employee = await Employee.create({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        middleName: null,
+        position: '',
+        email: user.email,
+        counterpartyId: user.counterpartyId,
+        isActive: true,
+        createdBy: userId
+      });
+
+      // Создаем связь
+      mapping = await UserEmployeeMapping.create({
+        userId: user.id,
+        employeeId: employee.id
+      });
+
+      // Перезагружаем с отношениями
+      mapping = await UserEmployeeMapping.findOne({
+        where: { userId },
+        include: [
+          {
+            model: Employee,
+            as: 'employee',
+            include: [
+              {
+                model: Counterparty,
+                as: 'counterparty',
+                attributes: ['id', 'name', 'type']
+              },
+              {
+                model: Citizenship,
+                as: 'citizenship',
+                attributes: ['id', 'name', 'code']
+              }
+            ]
+          }
+        ]
+      });
+    }
+
+    if (!mapping || !mapping.employee) {
+      throw new AppError('Профиль сотрудника не найден', 404);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        employee: mapping.employee
+      }
+    });
+  } catch (error) {
+    console.error('Error getting my profile:', error);
+    next(error);
+  }
+};
+
+/**
+ * Обновить профиль сотрудника текущего пользователя
+ */
+export const updateMyProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const updateData = req.body;
+
+    console.log('📝 Update profile request:', {
+      userId,
+      updateData
+    });
+
+    // Находим связь пользователь-сотрудник
+    const mapping = await UserEmployeeMapping.findOne({
+      where: { userId }
+    });
+
+    if (!mapping) {
+      throw new AppError('Профиль сотрудника не найден', 404);
+    }
+
+    const employee = await Employee.findByPk(mapping.employeeId);
+    if (!employee) {
+      throw new AppError('Сотрудник не найден', 404);
+    }
+
+    // Пользователи не могут изменять контрагента и некоторые системные поля
+    const allowedFields = [
+      'firstName', 'lastName', 'middleName', 'position',
+      'citizenshipId', 'birthDate',
+      'inn', 'snils', 'kig',
+      'passportNumber', 'passportDate', 'passportIssuer', 'registrationAddress',
+      'patentNumber', 'patentIssueDate', 'blankNumber',
+      'email', 'phone', 'notes'
+    ];
+
+    const filteredData = {};
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        filteredData[field] = updateData[field];
+      }
+    });
+
+    console.log('✅ Filtered data:', filteredData);
+
+    // Обновляем профиль
+    await employee.update({
+      ...filteredData,
+      updatedBy: userId
+    });
+
+    // Загружаем обновленные данные с отношениями
+    const updatedEmployee = await Employee.findByPk(employee.id, {
+      include: [
+        {
+          model: Counterparty,
+          as: 'counterparty'
+        },
+        {
+          model: Citizenship,
+          as: 'citizenship'
+        }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: 'Профиль успешно обновлен',
+      data: {
+        employee: updatedEmployee
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error updating my profile:', error);
+    
+    // Если это ошибка валидации Sequelize, возвращаем детали
+    if (error.name === 'SequelizeValidationError') {
+      const validationErrors = error.errors.map(err => ({
+        field: err.path,
+        message: err.message,
+        value: err.value
+      }));
+      
+      console.error('Validation errors:', validationErrors);
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Ошибка валидации',
+        errors: validationErrors
+      });
+    }
+    
+    next(error);
+  }
+};
+
 

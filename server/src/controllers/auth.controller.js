@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../middleware/errorHandler.js';
-import { User } from '../models/index.js';
+import { User, Employee, Setting, UserEmployeeMapping } from '../models/index.js';
+import sequelize from '../config/database.js';
 
 // Генерация JWT токена
 const generateToken = (userId, role) => {
@@ -21,14 +22,47 @@ const generateRefreshToken = (userId) => {
   );
 };
 
+/**
+ * Парсинг ФИО из строки
+ * @param {string} fullName - ФИО в формате "Фамилия Имя Отчество"
+ * @returns {object} - { lastName, firstName, middleName }
+ */
+const parseFullName = (fullName) => {
+  const parts = fullName.trim().split(/\s+/);
+  
+  return {
+    lastName: parts[0] || '',
+    firstName: parts[1] || '',
+    middleName: parts.slice(2).join(' ') || null
+  };
+};
+
 export const register = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  
   try {
-    const { email, password, firstName, lastName, role = 'user' } = req.body;
+    const { email, password, lastName, firstName, middleName, position } = req.body; // Изменено: отдельные поля вместо fullName
+
+    // Валидация входных данных
+    if (!email || !password || !lastName || !firstName || !position) {
+      throw new AppError('Все обязательные поля должны быть заполнены', 400);
+    }
+
+    if (password.length < 6) {
+      throw new AppError('Пароль должен содержать минимум 6 символов', 400);
+    }
 
     // Проверяем, существует ли пользователь
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       throw new AppError('Пользователь с таким email уже существует', 409);
+    }
+
+    // Получаем контрагента по умолчанию из настроек
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    if (!defaultCounterpartyId || defaultCounterpartyId === '') {
+      throw new AppError('Регистрация временно недоступна. Обратитесь к администратору.', 503);
     }
 
     // Создаем пользователя (пароль автоматически хешируется в хуке модели)
@@ -37,19 +71,42 @@ export const register = async (req, res, next) => {
       password,
       firstName,
       lastName,
-      role,
-    });
+      role: 'user',
+      counterpartyId: defaultCounterpartyId,
+      isActive: true
+    }, { transaction });
+
+    // Создаем запись сотрудника
+    const employee = await Employee.create({
+      firstName,
+      lastName,
+      middleName: middleName || null, // Отчество необязательное
+      position,
+      email,
+      counterpartyId: defaultCounterpartyId,
+      isActive: true,
+      createdBy: user.id
+    }, { transaction });
+
+    // Создаем связь пользователь-сотрудник
+    await UserEmployeeMapping.create({
+      userId: user.id,
+      employeeId: employee.id
+    }, { transaction });
+
+    // Коммитим транзакцию
+    await transaction.commit();
 
     // Генерируем токены
     const token = generateToken(user.id, user.role);
     const refreshToken = generateRefreshToken(user.id);
 
-    // Обновляем lastLogin
+    // Обновляем lastLogin (вне транзакции, так как транзакция уже закоммичена)
     await user.update({ lastLogin: new Date() });
 
     res.status(201).json({
       success: true,
-      message: 'Пользователь успешно зарегистрирован',
+      message: 'Регистрация прошла успешно',
       data: {
         user: {
           id: user.id,
@@ -58,11 +115,18 @@ export const register = async (req, res, next) => {
           lastName: user.lastName,
           role: user.role,
         },
+        employee: {
+          id: employee.id,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          middleName: employee.middleName
+        },
         token,
         refreshToken,
       },
     });
   } catch (error) {
+    await transaction.rollback();
     next(error);
   }
 };

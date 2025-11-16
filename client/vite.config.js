@@ -12,12 +12,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
-    },
+    host: true, // Слушать на всех сетевых интерфейсах (0.0.0.0)
+    // Прокси НЕ используется - клиент напрямую обращается к серверу
+    // Это позволяет работать как с localhost, так и с мобильных устройств
   },
   build: {
     outDir: 'dist',

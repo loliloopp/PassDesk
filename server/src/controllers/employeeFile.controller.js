@@ -11,11 +11,22 @@ export const uploadEmployeeFiles = async (req, res, next) => {
   try {
     const { employeeId } = req.params;
     
+    console.log('📤 Upload request:', {
+      employeeId,
+      filesCount: req.files?.length,
+      user: req.user?.id
+    });
+    
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Файлы не предоставлены'
       });
+    }
+    
+    // Проверяем аутентификацию
+    if (!req.user || !req.user.id) {
+      throw new AppError('Пользователь не аутентифицирован', 401);
     }
     
     // Загружаем данные сотрудника с контрагентом
@@ -33,6 +44,33 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     
     if (!employee.counterparty) {
       throw new AppError('У сотрудника не указан контрагент', 400);
+    }
+    
+    // Проверка лимитов для обычных пользователей
+    if (req.user.role === 'user') {
+      // Проверяем количество существующих файлов
+      const existingFilesCount = await File.count({
+        where: {
+          entityType: 'employee',
+          entityId: employeeId,
+          isDeleted: false
+        }
+      });
+      
+      const newFilesCount = req.files.length;
+      const totalFiles = existingFilesCount + newFilesCount;
+      
+      if (totalFiles > 10) {
+        throw new AppError(`Превышен лимит файлов. Максимум 10 файлов. У вас уже ${existingFilesCount} файлов.`, 400);
+      }
+      
+      // Проверяем размер каждого файла (макс 5MB)
+      for (const file of req.files) {
+        const fileSizeMB = file.size / (1024 * 1024);
+        if (fileSizeMB > 5) {
+          throw new AppError(`Файл "${file.originalname}" слишком большой (${fileSizeMB.toFixed(2)}MB). Максимум 5MB.`, 400);
+        }
+      }
     }
     
     // Формируем путь: /PassDesk/Counterparty_Name/Employee_LastName_FirstName_MiddleName/
@@ -63,10 +101,13 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     }
     
     const uploadedFiles = [];
+    const errors = [];
     
     // Загружаем каждый файл
     for (const file of req.files) {
       try {
+        console.log(`📁 Uploading file: ${file.originalname}, size: ${file.size} bytes`);
+        
         const timestamp = Date.now();
         const safeFileName = sanitizeFileName(file.originalname);
         const fileName = `${timestamp}_${safeFileName}`;
@@ -88,6 +129,8 @@ export const uploadEmployeeFiles = async (req, res, next) => {
             'Content-Type': file.mimetype
           }
         });
+        
+        console.log(`✅ File uploaded to Yandex.Disk: ${filePath}`);
         
         // Получаем информацию о загруженном файле
         const fileInfoResponse = await yandexDiskClient.get('/resources', {
@@ -114,16 +157,26 @@ export const uploadEmployeeFiles = async (req, res, next) => {
           uploadedBy: req.user.id
         });
         
+        console.log(`✅ File record saved to DB: ${fileRecord.id}`);
         uploadedFiles.push(fileRecord);
       } catch (error) {
-        console.error(`Error uploading file ${file.originalname}:`, error);
+        console.error(`❌ Error uploading file ${file.originalname}:`, error.message);
+        errors.push({
+          fileName: file.originalname,
+          error: error.message
+        });
         // Продолжаем загрузку остальных файлов
       }
     }
     
     if (uploadedFiles.length === 0) {
-      throw new AppError('Не удалось загрузить ни одного файла', 500);
+      throw new AppError(
+        `Не удалось загрузить ни одного файла. ${errors.length > 0 ? 'Ошибки: ' + errors.map(e => `${e.fileName}: ${e.error}`).join('; ') : ''}`, 
+        500
+      );
     }
+    
+    console.log(`✅ Upload complete! ${uploadedFiles.length} file(s) uploaded successfully`);
     
     res.status(201).json({
       success: true,
@@ -131,6 +184,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
       data: uploadedFiles
     });
   } catch (error) {
+    console.error('❌ Upload error:', error.message);
     next(error);
   }
 };

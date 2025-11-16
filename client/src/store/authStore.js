@@ -33,7 +33,16 @@ export const useAuthStore = create(
       register: async (userData) => {
         set({ isLoading: true })
         try {
+          console.log('🚀 Attempting registration...', {
+            baseURL: api.defaults.baseURL,
+            url: '/auth/register',
+            data: { ...userData, password: '***' }
+          });
+          
           const response = await api.post('/auth/register', userData)
+          
+          console.log('✅ Registration successful:', response.data);
+          
           const { user, token } = response.data.data
 
           set({
@@ -45,6 +54,13 @@ export const useAuthStore = create(
 
           return response.data
         } catch (error) {
+          console.error('❌ Registration error:', {
+            message: error.message,
+            code: error.code,
+            response: error.response?.data,
+            status: error.response?.status,
+            baseURL: api.defaults.baseURL
+          });
           set({ isLoading: false })
           throw error
         }

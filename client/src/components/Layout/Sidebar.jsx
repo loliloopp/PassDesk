@@ -9,7 +9,10 @@ import {
   TeamOutlined,
   ShopOutlined,
   BankOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  SettingOutlined,
+  ProfileOutlined,
+  ControlOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 
@@ -21,7 +24,17 @@ const Sidebar = () => {
   const { logout, user } = useAuthStore()
   const [collapsed, setCollapsed] = useState(false)
 
-  const menuItems = [
+  // Меню для обычных пользователей (role: user)
+  const userMenuItems = [
+    {
+      key: '/my-profile',
+      icon: <ProfileOutlined />,
+      label: 'Мой профиль',
+    }
+  ]
+
+  // Меню для администраторов и менеджеров
+  const adminManagerMenuItems = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
@@ -37,11 +50,6 @@ const Sidebar = () => {
       icon: <FileTextOutlined />,
       label: 'Заявки',
     },
-    // {
-    //   key: '/passes',
-    //   icon: <IdcardOutlined />,
-    //   label: 'Пропуска',
-    // },
     {
       key: 'references',
       icon: <BankOutlined />,
@@ -66,13 +74,21 @@ const Sidebar = () => {
     },
   ]
 
-  // Добавляем пункт "Пользователи" только для администраторов
-  if (user?.role === 'admin') {
-    menuItems.push({
-      key: '/users',
-      icon: <TeamOutlined />,
-      label: 'Пользователи',
-    })
+  // Выбираем меню на основе роли пользователя
+  let menuItems = []
+  if (user?.role === 'user') {
+    menuItems = userMenuItems
+  } else {
+    menuItems = [...adminManagerMenuItems]
+    
+    // Добавляем "Администрирование" только для администраторов
+    if (user?.role === 'admin') {
+      menuItems.push({
+        key: '/administration',
+        icon: <ControlOutlined />,
+        label: 'Администрирование',
+      })
+    }
   }
 
   const handleMenuClick = ({ key }) => {
