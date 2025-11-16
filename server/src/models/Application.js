@@ -67,12 +67,13 @@ const Application = sequelize.define('Application', {
   },
   createdBy: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true, // Разрешаем NULL при удалении пользователя
     field: 'created_by',
     references: {
       model: 'users',
       key: 'id'
-    }
+    },
+    onDelete: 'SET NULL' // При удалении пользователя устанавливаем NULL
   },
   updatedBy: {
     type: DataTypes.INTEGER,
@@ -81,7 +82,8 @@ const Application = sequelize.define('Application', {
     references: {
       model: 'users',
       key: 'id'
-    }
+    },
+    onDelete: 'SET NULL' // При удалении пользователя устанавливаем NULL
   }
 }, {
   sequelize,

@@ -8,6 +8,9 @@ export const getAllApplications = async (req, res) => {
     
     const where = {};
     
+    // Каждый пользователь видит только свои заявки
+    where.createdBy = req.user.id;
+    
     if (counterpartyId) {
       where.counterparty_id = counterpartyId;
     }
@@ -85,7 +88,11 @@ export const getApplicationById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const application = await Application.findByPk(id, {
+    const application = await Application.findOne({
+      where: {
+        id: id,
+        createdBy: req.user.id // Только свои заявки
+      },
       include: [
         {
           model: Counterparty,
@@ -218,7 +225,13 @@ export const updateApplication = async (req, res) => {
     const { id } = req.params;
     const { employeeIds, ...updates } = req.body;
     
-    const application = await Application.findByPk(id, { transaction });
+    const application = await Application.findOne({
+      where: {
+        id: id,
+        createdBy: req.user.id // Только свои заявки
+      },
+      transaction
+    });
     
     if (!application) {
       await transaction.rollback();
@@ -308,7 +321,12 @@ export const deleteApplication = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const application = await Application.findByPk(id);
+    const application = await Application.findOne({
+      where: {
+        id: id,
+        createdBy: req.user.id // Только свои заявки
+      }
+    });
     
     if (!application) {
       return res.status(404).json({
@@ -340,7 +358,11 @@ export const copyApplication = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const original = await Application.findByPk(id, {
+    const original = await Application.findOne({
+      where: {
+        id: id,
+        createdBy: req.user.id // Только свои заявки
+      },
       include: [
         {
           model: Employee,
