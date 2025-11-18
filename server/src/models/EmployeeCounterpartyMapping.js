@@ -40,6 +40,16 @@ EmployeeCounterpartyMapping.init(
         key: 'id'
       },
       comment: 'ID подразделения (может быть NULL)'
+    },
+    constructionSiteId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'construction_site_id',
+      references: {
+        model: 'construction_sites',
+        key: 'id'
+      },
+      comment: 'ID объекта строительства (может быть NULL)'
     }
   },
   {
@@ -59,10 +69,9 @@ EmployeeCounterpartyMapping.init(
         fields: ['department_id']
       },
       {
-        unique: true,
-        fields: ['employee_id', 'counterparty_id'],
-        name: 'unique_employee_counterparty'
+        fields: ['construction_site_id']
       }
+      // Уникальный индекс создан в миграции: unique_employee_counterparty_site_mapping
     ]
   }
 );

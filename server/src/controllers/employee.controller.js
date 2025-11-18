@@ -1,4 +1,4 @@
-import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import yandexDiskClient, { basePath } from '../config/storage.js';
@@ -87,6 +87,11 @@ export const getAllEmployees = async (req, res, next) => {
               model: Department,
               as: 'department',
               attributes: ['id', 'name']
+            },
+            {
+              model: ConstructionSite,
+              as: 'constructionSite',
+              attributes: ['id', 'shortName', 'fullName']
             }
           ]
         }
@@ -189,21 +194,23 @@ export const createEmployee = async (req, res, next) => {
     
     const employeeData = {
       ...req.body,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      status: 'new' // При создании сотрудника статус всегда "Новый"
     };
     
-    // Удаляем counterpartyId из данных сотрудника, если он был передан
-    delete employeeData.counterpartyId;
+    // Удаляем counterpartyId и constructionSiteId из данных сотрудника
+    const { counterpartyId, constructionSiteId, ...cleanEmployeeData } = employeeData;
     
-    console.log('Employee data to create:', JSON.stringify(employeeData, null, 2));
+    console.log('Employee data to create:', JSON.stringify(cleanEmployeeData, null, 2));
 
-    const employee = await Employee.create(employeeData);
+    const employee = await Employee.create(cleanEmployeeData);
     
-    // Создаём запись в маппинге (сотрудник-контрагент)
+    // Создаём запись в маппинге (сотрудник-контрагент-объект)
     await EmployeeCounterpartyMapping.create({
       employeeId: employee.id,
       counterpartyId: req.user.counterpartyId,
-      departmentId: null // Подразделение можно будет назначить позже
+      departmentId: null, // Подразделение можно будет назначить позже
+      constructionSiteId: constructionSiteId || null // Объект из формы, если был выбран
     });
     
     console.log('✓ Employee-Counterparty mapping created');
@@ -295,8 +302,8 @@ export const updateEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    // Не перезаписываем counterpartyId при обновлении
-    const { counterpartyId, ...updateData } = req.body;
+    // Не перезаписываем counterpartyId при обновлении, constructionSiteId идет в маппинг
+    const { counterpartyId, constructionSiteId, ...updateData } = req.body;
     
     const updates = {
       ...updateData,
@@ -313,6 +320,19 @@ export const updateEmployee = async (req, res, next) => {
     }
 
     await employee.update(updates);
+    
+    // Если был передан constructionSiteId, обновляем маппинг
+    if (constructionSiteId !== undefined) {
+      await EmployeeCounterpartyMapping.update(
+        { constructionSiteId: constructionSiteId || null },
+        { 
+          where: { 
+            employeeId: id,
+            counterpartyId: req.user.counterpartyId 
+          } 
+        }
+      );
+    }
     
     // Получаем обновленного сотрудника с гражданством для правильного расчета statusCard
     const updatedEmployee = await Employee.findByPk(id, {

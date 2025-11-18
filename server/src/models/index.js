@@ -61,6 +61,9 @@ EmployeeCounterpartyMapping.belongsTo(Counterparty, { foreignKey: 'counterparty_
 Department.hasMany(EmployeeCounterpartyMapping, { foreignKey: 'department_id', as: 'departmentEmployeeMappings' });
 EmployeeCounterpartyMapping.belongsTo(Department, { foreignKey: 'department_id', as: 'department' });
 
+ConstructionSite.hasMany(EmployeeCounterpartyMapping, { foreignKey: 'construction_site_id', as: 'siteEmployeeMappings' });
+EmployeeCounterpartyMapping.belongsTo(ConstructionSite, { foreignKey: 'construction_site_id', as: 'constructionSite' });
+
 // Counterparty -> User (контрагент -> пользователи контрагента)
 Counterparty.hasMany(User, { foreignKey: 'counterparty_id', as: 'users' });
 User.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });

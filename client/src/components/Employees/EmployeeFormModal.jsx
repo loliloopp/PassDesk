@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Tabs, Button, Space } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Tabs, Button, Space, Checkbox } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
+import { constructionSiteService } from '../../services/constructionSiteService';
+import settingsService from '../../services/settingsService';
+import { useAuthStore } from '../../store/authStore';
 import EmployeeFileUpload from './EmployeeFileUpload';
 import dayjs from 'dayjs';
 
@@ -12,6 +15,7 @@ const DATE_FORMAT = 'DD.MM.YYYY';
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
+  const [constructionSites, setConstructionSites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('1');
   const [tabsValidation, setTabsValidation] = useState({
@@ -20,6 +24,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     '3': false, // Патент
   });
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
+  const { user } = useAuthStore();
+  
+  // Определяем, может ли текущий пользователь изменять статусы
+  const canEditTbStatus = user?.counterpartyId === defaultCounterpartyId;
+  const canEditActiveStatus = employee?.employeeCounterpartyMappings?.[0]?.counterpartyId === user?.counterpartyId;
 
   // Определяем, требуется ли патент для выбранного гражданства
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
@@ -47,12 +57,23 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   useEffect(() => {
     if (visible) {
       fetchCitizenships();
+      fetchConstructionSites();
+      fetchDefaultCounterparty();
+      
       if (employee) {
+        // Получаем данные из маппинга для установки в форму
+        const mapping = employee.employeeCounterpartyMappings?.[0];
+        
         form.setFieldsValue({
           ...employee,
           birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
           passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
           patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+          constructionSiteId: mapping?.constructionSiteId || null,
+          // Преобразуем статусы в булевы значения для чекбоксов
+          isTbPassed: employee.status === 'tb_passed' || employee.status === 'processed',
+          isFired: employee.statusActive === 'fired',
+          isInactive: employee.statusActive === 'inactive',
         });
         // Устанавливаем выбранное гражданство
         if (employee.citizenshipId) {
@@ -100,6 +121,24 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       setCitizenships(data.data.citizenships || []);
     } catch (error) {
       console.error('Error loading citizenships:', error);
+    }
+  };
+
+  const fetchConstructionSites = async () => {
+    try {
+      const { data } = await constructionSiteService.getAll();
+      setConstructionSites(data.data.constructionSites || []);
+    } catch (error) {
+      console.error('Error loading construction sites:', error);
+    }
+  };
+
+  const fetchDefaultCounterparty = async () => {
+    try {
+      const response = await settingsService.getPublicSettings();
+      setDefaultCounterpartyId(response.data.defaultCounterpartyId);
+    } catch (error) {
+      console.error('Error loading default counterparty:', error);
     }
   };
 
@@ -157,6 +196,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       
       const formattedValues = {};
       Object.keys(values).forEach(key => {
+        // Пропускаем чекбоксы статусов - они не сохраняются напрямую
+        if (key === 'isTbPassed' || key === 'isFired' || key === 'isInactive') {
+          return;
+        }
+        
         const value = values[key];
         if (value === '' || value === undefined) {
           formattedValues[key] = null;
@@ -166,6 +210,26 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           formattedValues[key] = value;
         }
       });
+
+      // Обрабатываем статусы
+      // status: логика зависит от чекбокса isTbPassed
+      if (values.isTbPassed) {
+        formattedValues.status = 'tb_passed';
+      } else if (employee?.status === 'processed') {
+        // Если сотрудник уже обработан, не меняем статус
+        formattedValues.status = 'processed';
+      } else {
+        formattedValues.status = 'new';
+      }
+      
+      // statusActive: взаимоисключающие статусы
+      if (values.isFired) {
+        formattedValues.statusActive = 'fired';
+      } else if (values.isInactive) {
+        formattedValues.statusActive = 'inactive';
+      } else {
+        formattedValues.statusActive = null;
+      }
 
       formattedValues.statusCard = 'draft';
       await onSuccess(formattedValues);
@@ -186,6 +250,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       
       const formattedValues = {};
       Object.keys(values).forEach(key => {
+        // Пропускаем чекбоксы статусов - они не сохраняются напрямую
+        if (key === 'isTbPassed' || key === 'isFired' || key === 'isInactive') {
+          return;
+        }
+        
         const value = values[key];
         if (value === '' || value === undefined) {
           formattedValues[key] = null;
@@ -195,6 +264,26 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           formattedValues[key] = value;
         }
       });
+
+      // Обрабатываем статусы
+      // status: логика зависит от чекбокса isTbPassed
+      if (values.isTbPassed) {
+        formattedValues.status = 'tb_passed';
+      } else if (employee?.status === 'processed') {
+        // Если сотрудник уже обработан, не меняем статус
+        formattedValues.status = 'processed';
+      } else {
+        formattedValues.status = 'new';
+      }
+      
+      // statusActive: взаимоисключающие статусы
+      if (values.isFired) {
+        formattedValues.statusActive = 'fired';
+      } else if (values.isInactive) {
+        formattedValues.statusActive = 'inactive';
+      } else {
+        formattedValues.statusActive = null;
+      }
 
       formattedValues.statusCard = 'completed';
       await onSuccess(formattedValues);
@@ -272,6 +361,54 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             } 
             key="1"
           >
+            {/* Чекбоксы статусов - только для существующих сотрудников */}
+            {employee?.id && (
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col span={24}>
+                  <Space size="large">
+                    <Checkbox
+                      checked={form.getFieldValue('isTbPassed')}
+                      disabled={!canEditTbStatus}
+                      onChange={(e) => {
+                        form.setFieldsValue({ isTbPassed: e.target.checked });
+                      }}
+                      style={{ color: '#52c41a', fontWeight: 'bold' }}
+                    >
+                      Проведен инструктаж ТБ
+                    </Checkbox>
+                    <Checkbox
+                      checked={form.getFieldValue('isFired')}
+                      disabled={!canEditActiveStatus}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          form.setFieldsValue({ isFired: true, isInactive: false });
+                        } else {
+                          form.setFieldsValue({ isFired: false });
+                        }
+                      }}
+                      style={{ color: '#ff4d4f', fontWeight: 'bold' }}
+                    >
+                      Уволен
+                    </Checkbox>
+                    <Checkbox
+                      checked={form.getFieldValue('isInactive')}
+                      disabled={!canEditActiveStatus}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          form.setFieldsValue({ isInactive: true, isFired: false });
+                        } else {
+                          form.setFieldsValue({ isInactive: false });
+                        }
+                      }}
+                      style={{ color: '#1890ff', fontWeight: 'bold' }}
+                    >
+                      Неактивный
+                    </Checkbox>
+                  </Space>
+                </Col>
+              </Row>
+            )}
+            
             {/* ФИО и должность - 4 столбца */}
             <Row gutter={16}>
               <Col span={6}>
@@ -531,6 +668,38 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               </Row>
             </Tabs.TabPane>
           )}
+
+          {/* Вкладка: Объект (без обязательных полей, без галочки) */}
+          <Tabs.TabPane 
+            tab={
+              <span style={getTabStyle()}>
+                Объект
+              </span>
+            } 
+            key="5"
+          >
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item 
+                  name="constructionSiteId" 
+                  label="Объект строительства"
+                >
+                  <Select
+                    placeholder="Выберите объект"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                  >
+                    {constructionSites.map((site) => (
+                      <Option key={site.id} value={site.id}>
+                        {site.shortName || site.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+          </Tabs.TabPane>
 
           {/* Вкладка: Файлы (только для существующих сотрудников) */}
           {employee?.id && (

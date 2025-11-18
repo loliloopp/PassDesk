@@ -159,6 +159,19 @@ Employee.init(
       },
       comment: 'Статус заполнения данных сотрудника: draft (черновик), completed (заполнено)'
     },
+    status: {
+      type: DataTypes.ENUM('new', 'tb_passed', 'processed'),
+      defaultValue: 'new',
+      allowNull: false,
+      field: 'status',
+      comment: 'Статус сотрудника: new (Новый), tb_passed (Проведен ТБ), processed (Обработан)'
+    },
+    statusActive: {
+      type: DataTypes.ENUM('fired', 'inactive'),
+      allowNull: true,
+      field: 'status_active',
+      comment: 'Активность сотрудника: fired (Уволен), inactive (Неактивный), NULL (Активен)'
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

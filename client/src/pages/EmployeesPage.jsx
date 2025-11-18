@@ -23,12 +23,16 @@ import {
   FileOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
+  FileExcelOutlined,
 } from '@ant-design/icons';
 import { employeeService } from '../services/employeeService';
 import { citizenshipService } from '../services/citizenshipService';
+import settingsService from '../services/settingsService';
+import { useAuthStore } from '../store/authStore';
 import EmployeeFormModal from '../components/Employees/EmployeeFormModal';
 import EmployeeViewModal from '../components/Employees/EmployeeViewModal';
 import EmployeeFilesModal from '../components/Employees/EmployeeFilesModal';
+import ExportToExcelModal from '../components/Employees/ExportToExcelModal';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -57,13 +61,20 @@ const EmployeesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewingEmployee, setViewingEmployee] = useState(null);
   const [filesEmployee, setFilesEmployee] = useState(null);
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
+  const { user } = useAuthStore();
+
+  // Определяем, может ли текущий пользователь видеть кнопку экспорта
+  const canExport = user?.counterpartyId === defaultCounterpartyId;
 
   useEffect(() => {
     fetchEmployees();
     fetchCitizenships();
+    fetchDefaultCounterparty();
   }, []);
 
   const fetchEmployees = async () => {
@@ -86,6 +97,15 @@ const EmployeesPage = () => {
       setCitizenships(data.data.citizenships || []);
     } catch (error) {
       console.error('Error loading citizenships:', error);
+    }
+  };
+
+  const fetchDefaultCounterparty = async () => {
+    try {
+      const response = await settingsService.getPublicSettings();
+      setDefaultCounterpartyId(response.data.defaultCounterpartyId);
+    } catch (error) {
+      console.error('Error loading default counterparty:', error);
     }
   };
 
@@ -176,7 +196,7 @@ const EmployeesPage = () => {
       title: 'ФИО',
       key: 'fullName',
       render: (_, record) => (
-        <span>
+        <span style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
           {record.lastName} {record.firstName} {record.middleName || ''}
         </span>
       ),
@@ -186,10 +206,13 @@ const EmployeesPage = () => {
       title: 'Должность',
       dataIndex: 'position',
       key: 'position',
+      width: 120,
+      ellipsis: true,
     },
     {
       title: 'Подразделение',
       key: 'department',
+      ellipsis: true,
       render: (_, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
         if (mappings.length === 0) return '-';
@@ -198,9 +221,21 @@ const EmployeesPage = () => {
       },
     },
     {
+      title: 'Объект',
+      key: 'constructionSite',
+      ellipsis: true,
+      render: (_, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        if (mappings.length === 0) return '-';
+        const siteName = mappings[0]?.constructionSite?.shortName || mappings[0]?.constructionSite?.name;
+        return siteName || '-';
+      },
+    },
+    {
       title: 'Гражданство',
       dataIndex: ['citizenship', 'name'],
       key: 'citizenship',
+      ellipsis: true,
       render: (name) => name || '-',
     },
     {
@@ -252,18 +287,42 @@ const EmployeesPage = () => {
     },
     {
       title: 'Статус',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      render: (isActive) => (
-        <Tag color={isActive ? 'success' : 'default'}>
-          {isActive ? 'Активен' : 'Неактивен'}
-        </Tag>
-      ),
+      key: 'status',
+      width: 120,
+      render: (_, record) => {
+        // Приоритет: statusActive (Уволен/Неактивный) > status (Новый/Проведен ТБ/Обработан)
+        if (record.statusActive === 'fired') {
+          return <Tag color="red">Уволен</Tag>;
+        }
+        if (record.statusActive === 'inactive') {
+          return <Tag color="blue">Неактивный</Tag>;
+        }
+        
+        // Если statusActive пустой, показываем status
+        const statusMap = {
+          'new': { text: 'Новый', color: 'default' },
+          'tb_passed': { text: 'Проведен ТБ', color: 'green' },
+          'processed': { text: 'Обработан', color: 'success' },
+        };
+        
+        const statusInfo = statusMap[record.status] || { text: '-', color: 'default' };
+        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+      },
       filters: [
-        { text: 'Активен', value: true },
-        { text: 'Неактивен', value: false },
+        { text: 'Уволен', value: 'fired' },
+        { text: 'Неактивный', value: 'inactive' },
+        { text: 'Новый', value: 'new' },
+        { text: 'Проведен ТБ', value: 'tb_passed' },
+        { text: 'Обработан', value: 'processed' },
       ],
-      onFilter: (value, record) => record.isActive === value,
+      onFilter: (value, record) => {
+        // Для фильтрации statusActive
+        if (value === 'fired' || value === 'inactive') {
+          return record.statusActive === value;
+        }
+        // Для фильтрации status (только если statusActive пустой)
+        return !record.statusActive && record.status === value;
+      },
     },
     {
       title: 'Действия',
@@ -340,6 +399,15 @@ const EmployeesPage = () => {
               </Select.Option>
             ))}
           </Select>
+          {canExport && (
+            <Button 
+              type="default" 
+              icon={<FileExcelOutlined />} 
+              onClick={() => setIsExportModalOpen(true)}
+            >
+              Импорт в Excel
+            </Button>
+          )}
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             Добавить сотрудника
           </Button>
@@ -352,7 +420,6 @@ const EmployeesPage = () => {
         rowKey="id"
         loading={loading}
         size="small"
-        scroll={{ x: 1400 }}
         pagination={{
           pageSize: 20,
           showSizeChanger: true,
@@ -387,6 +454,15 @@ const EmployeesPage = () => {
         employeeId={filesEmployee?.id}
         employeeName={filesEmployee ? `${filesEmployee.lastName} ${filesEmployee.firstName} ${filesEmployee.middleName || ''}` : ''}
         onClose={handleCloseFilesModal}
+      />
+
+      <ExportToExcelModal
+        visible={isExportModalOpen}
+        onCancel={() => {
+          setIsExportModalOpen(false);
+          // Обновляем список сотрудников после экспорта
+          fetchEmployees();
+        }}
       />
     </div>
   );
