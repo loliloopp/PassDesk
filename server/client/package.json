@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "passdesk-server": "file:..",
+    "xlsx": "^0.18.5"
+  }
+}

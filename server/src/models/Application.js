@@ -117,7 +117,7 @@ const Application = sequelize.define('Application', {
   ],
   hooks: {
     beforeValidate: (application) => {
-      // Генерация номера заявки если не указан
+      // Генерация запасного номера заявки если не указан (не должно происходить)
       if (!application.applicationNumber) {
         const timestamp = Date.now();
         const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');

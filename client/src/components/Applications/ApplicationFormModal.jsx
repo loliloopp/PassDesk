@@ -42,6 +42,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const [loadingFiles, setLoadingFiles] = useState(false);
   
   const getCurrentUser = useAuthStore(state => state.getCurrentUser);
+  const applicationType = Form.useWatch('applicationType', form);
 
   useEffect(() => {
     if (visible) {
@@ -365,7 +366,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
                 </Checkbox.Group>
               </Form.Item>
 
-              {selectedEmployeeIds.length > 0 && (
+              {applicationType !== 'biometric' && selectedEmployeeIds.length > 0 && (
                 <Form.Item label="Документы сотрудников">
                   <Collapse>
                     {selectedEmployeeIds.map(empId => {

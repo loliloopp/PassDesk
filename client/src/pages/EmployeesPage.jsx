@@ -114,6 +114,7 @@ const EmployeesPage = () => {
         await employeeService.update(editingEmployee.id, values);
         message.success('Сотрудник обновлен');
         setIsModalOpen(false);
+        setEditingEmployee(null); // Очищаем editingEmployee после обновления
       } else {
         const response = await employeeService.create(values);
         message.success('Сотрудник создан');
@@ -333,7 +334,10 @@ const EmployeesPage = () => {
       <EmployeeFormModal
         visible={isModalOpen}
         employee={editingEmployee}
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setEditingEmployee(null); // Очищаем editingEmployee при закрытии
+        }}
         onSuccess={handleFormSuccess}
       />
 

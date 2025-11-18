@@ -212,6 +212,8 @@ export const updateEmployee = async (req, res, next) => {
 };
 
 export const deleteEmployee = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { id } = req.params;
 
@@ -226,6 +228,7 @@ export const deleteEmployee = async (req, res, next) => {
     });
 
     if (!employee) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Сотрудник не найден'
@@ -239,17 +242,42 @@ export const deleteEmployee = async (req, res, next) => {
       counterparty: employee.counterparty?.name
     });
 
-    // 1. Получаем все файлы сотрудника из БД
+    // 1. Находим связанного пользователя (если есть)
+    const userMapping = await UserEmployeeMapping.findOne({
+      where: { employeeId: id },
+      transaction
+    });
+
+    if (userMapping) {
+      console.log(`Found linked user: ${userMapping.userId}`);
+      
+      // Удаляем связь
+      await userMapping.destroy({ transaction });
+      console.log('✓ User-Employee mapping deleted');
+      
+      // Удаляем пользователя
+      const deletedUserCount = await User.destroy({
+        where: { id: userMapping.userId },
+        transaction
+      });
+      
+      if (deletedUserCount > 0) {
+        console.log('✓ Linked user deleted');
+      }
+    }
+
+    // 2. Получаем все файлы сотрудника из БД
     const files = await File.findAll({
       where: {
         entityType: 'employee',
         entityId: id
-      }
+      },
+      transaction
     });
 
     console.log(`Found ${files.length} files to delete`);
 
-    // 2. Удаляем каждый файл с Яндекс.Диска
+    // 3. Удаляем каждый файл с Яндекс.Диска
     for (const file of files) {
       try {
         console.log(`Deleting file from Yandex.Disk: ${file.filePath}`);
@@ -271,16 +299,17 @@ export const deleteEmployee = async (req, res, next) => {
       }
     }
 
-    // 3. Физически удаляем файлы из БД
+    // 4. Физически удаляем файлы из БД
     const deletedCount = await File.destroy({
       where: {
         entityType: 'employee',
         entityId: id
-      }
+      },
+      transaction
     });
     console.log(`Deleted ${deletedCount} file records from DB`);
 
-    // 4. Удаляем папку сотрудника с Яндекс.Диска
+    // 5. Удаляем папку сотрудника с Яндекс.Диска
     if (employee.counterparty) {
       const employeeFullName = `${employee.lastName} ${employee.firstName} ${employee.middleName || ''}`.trim();
       const employeeFolderPath = buildEmployeeFilePath(employee.counterparty.name, employeeFullName);
@@ -307,16 +336,20 @@ export const deleteEmployee = async (req, res, next) => {
       }
     }
 
-    // 5. Удаляем сотрудника из БД
-    await employee.destroy();
+    // 6. Удаляем сотрудника из БД
+    await employee.destroy({ transaction });
     console.log('✓ Employee deleted from DB');
+    
+    // Коммитим транзакцию
+    await transaction.commit();
     console.log('=== DELETE COMPLETE ===');
 
     res.json({
       success: true,
-      message: 'Сотрудник удален'
+      message: 'Сотрудник и связанный пользователь удалены'
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error deleting employee:', error);
     next(error);
   }

@@ -29,8 +29,27 @@ const LoginPage = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      const errorMessage = err.userMessage || err.response?.data?.message || 'Ошибка входа. Проверьте данные.'
-      message.error(errorMessage)
+      
+      // Детальное сообщение об ошибке для входа
+      let errorMessage = 'Ошибка входа. Попробуйте снова.';
+      
+      if (err.response?.data?.message) {
+        // Сообщение с сервера (например, "Неверный email или пароль")
+        errorMessage = err.response.data.message;
+      } else if (err.userMessage) {
+        // Улучшенное сообщение из interceptor (например, "Ошибка сети")
+        errorMessage = err.userMessage;
+      } else if (err.code === 'ERR_NETWORK') {
+        errorMessage = 'Не удается подключиться к серверу. Проверьте, что сервер запущен.';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Неверный email или пароль';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Доступ запрещен. Ваш аккаунт может быть деактивирован.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      message.error(errorMessage, 5); // Показываем на 5 секунд
     } finally {
       setLoading(false)
     }

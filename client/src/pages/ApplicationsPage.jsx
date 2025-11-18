@@ -4,7 +4,6 @@ import {
   Button,
   Space,
   Typography,
-  Tag,
   Tooltip,
   Modal,
   message,
@@ -16,20 +15,15 @@ import {
   DeleteOutlined,
   CopyOutlined,
   SearchOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import { applicationService } from '../services/applicationService';
 import ApplicationFormModal from '../components/Applications/ApplicationFormModal';
+import ApplicationViewModal from '../components/Applications/ApplicationViewModal';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
 const { Search } = Input;
-
-const statusMap = {
-  draft: { label: 'Черновик', color: 'default' },
-  submitted: { label: 'Подана', color: 'blue' },
-  approved: { label: 'Одобрена', color: 'success' },
-  rejected: { label: 'Отклонена', color: 'error' }
-};
 
 const ApplicationsPage = () => {
   const [data, setData] = useState([]);
@@ -37,6 +31,8 @@ const ApplicationsPage = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [viewModalVisible, setViewModalVisible] = useState(false);
+  const [viewingId, setViewingId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -63,6 +59,11 @@ const ApplicationsPage = () => {
   const handleEdit = (record) => {
     setEditingId(record.id);
     setModalVisible(true);
+  };
+
+  const handleView = (record) => {
+    setViewingId(record.id);
+    setViewModalVisible(true);
   };
 
   const handleCopy = async (id) => {
@@ -99,24 +100,13 @@ const ApplicationsPage = () => {
       title: '№ заявки',
       dataIndex: 'applicationNumber',
       key: 'applicationNumber',
-      width: 200,
+      ellipsis: true,
     },
     {
       title: 'Объект',
       dataIndex: ['constructionSite', 'shortName'],
       key: 'constructionSite',
       ellipsis: true,
-    },
-    {
-      title: 'Договор генподряда',
-      dataIndex: ['generalContract', 'contractNumber'],
-      key: 'generalContract',
-    },
-    {
-      title: 'Договор подряда',
-      dataIndex: ['subcontract', 'contractNumber'],
-      key: 'subcontract',
-      render: (value) => value || '-',
     },
     {
       title: 'Сотрудников',
@@ -126,37 +116,38 @@ const ApplicationsPage = () => {
       width: 100,
     },
     {
-      title: 'Статус',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => (
-        <Tag color={statusMap[status]?.color}>
-          {statusMap[status]?.label}
-        </Tag>
-      ),
-      filters: Object.entries(statusMap).map(([key, value]) => ({
-        text: value.label,
-        value: key,
-      })),
-      onFilter: (value, record) => record.status === value,
+      title: 'Автор',
+      key: 'author',
+      ellipsis: true,
+      render: (_, record) => 
+        record.creator ? `${record.creator.firstName} ${record.creator.lastName}` : '-',
     },
     {
       title: 'Дата создания',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      ellipsis: true,
       render: (date) => dayjs(date).format('DD.MM.YYYY HH:mm'),
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
       title: 'Действия',
       key: 'actions',
-      width: 150,
-      fixed: 'right',
+      width: 140,
       render: (_, record) => (
-        <Space>
+        <Space size={4}>
+          <Tooltip title="Просмотр">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleView(record)}
+            />
+          </Tooltip>
           <Tooltip title="Редактировать">
             <Button
               type="text"
+              size="small"
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
             />
@@ -164,6 +155,7 @@ const ApplicationsPage = () => {
           <Tooltip title="Копировать">
             <Button
               type="text"
+              size="small"
               icon={<CopyOutlined />}
               onClick={() => handleCopy(record.id)}
             />
@@ -171,6 +163,7 @@ const ApplicationsPage = () => {
           <Tooltip title="Удалить">
             <Button
               type="text"
+              size="small"
               danger
               icon={<DeleteOutlined />}
               onClick={() => handleDelete(record.id)}
@@ -223,7 +216,7 @@ const ApplicationsPage = () => {
         dataSource={filteredData}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1400 }}
+        size="small"
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -239,6 +232,12 @@ const ApplicationsPage = () => {
           setModalVisible(false);
           fetchData();
         }}
+      />
+
+      <ApplicationViewModal
+        visible={viewModalVisible}
+        applicationId={viewingId}
+        onCancel={() => setViewModalVisible(false)}
       />
     </div>
   );

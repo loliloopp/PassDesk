@@ -74,7 +74,7 @@ const Header = () => {
         )}
 
         <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
-          <Space style={{ cursor: 'pointer' }}>
+          <Space style={{ cursor: 'pointer' }} size="small">
             <Avatar
               size={isMobile ? 'small' : 'default'}
               style={{ backgroundColor: '#2563eb' }}
@@ -82,14 +82,14 @@ const Header = () => {
             />
             {/* Имя пользователя скрываем на мобильных */}
             {!isMobile && (
-              <Space direction="vertical" size={0}>
-                <Text strong style={{ fontSize: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                <Text strong style={{ fontSize: 14, margin: 0 }}>
                   {user?.firstName} {user?.lastName}
                 </Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12, margin: 0 }}>
                   {getRoleLabel(user?.role)}
                 </Text>
-              </Space>
+              </div>
             )}
             {!isMobile && <DownOutlined style={{ fontSize: 12, color: '#666' }} />}
           </Space>

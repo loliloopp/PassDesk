@@ -67,23 +67,37 @@ export const useAuthStore = create(
       },
 
       logout: async () => {
-        try {
-          await api.post('/auth/logout')
-        } catch (error) {
-          console.error('Logout error:', error)
-        } finally {
-          set({
-            user: null,
-            token: null,
-            isAuthenticated: false
-          })
+        const currentToken = get().token
+        
+        // Сначала очищаем локальное состояние
+        set({
+          user: null,
+          token: null,
+          isAuthenticated: false
+        })
+        
+        // Если есть токен, пытаемся уведомить сервер (не критично если упадет)
+        if (currentToken) {
+          try {
+            await api.post('/auth/logout')
+          } catch (error) {
+            // Игнорируем ошибки logout на сервере
+            console.log('Server logout failed (not critical):', error.message)
+          }
         }
       },
 
       getCurrentUser: async () => {
         try {
           const response = await api.get('/auth/me')
-          set({ user: response.data.data })
+          // Сохраняем полный объект пользователя с ролью
+          const userData = response.data.data.user || response.data.data
+          console.log('✅ getCurrentUser: received data', { 
+            raw: response.data.data,
+            userData,
+            role: userData?.role 
+          })
+          set({ user: userData })
           return response.data
         } catch (error) {
           console.error('Get current user error:', error)

@@ -1,5 +1,55 @@
-import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, sequelize } from '../models/index.js';
+import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
+
+// Функция генерации номера заявки
+const generateApplicationNumber = async (constructionSiteId) => {
+  try {
+    // Загружаем объект строительства
+    const site = await ConstructionSite.findByPk(constructionSiteId);
+    
+    if (site && site.shortName) {
+      // Получаем первые 3 буквы названия объекта (только русские буквы)
+      const sitePrefix = site.shortName
+        .replace(/[^А-ЯЁа-яё]/g, '') // Оставляем только русские буквы
+        .substring(0, 3)
+        .toUpperCase();
+      
+      // Форматируем дату (ДДММГГ)
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = String(now.getFullYear()).substring(2);
+      const dateStr = `${day}${month}${year}`;
+      
+      // Получаем начало и конец текущего дня
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      
+      // Подсчитываем количество заявок на этот объект за сегодня
+      const count = await Application.count({
+        where: {
+          constructionSiteId: constructionSiteId,
+          createdAt: {
+            [Op.between]: [startOfDay, endOfDay]
+          }
+        }
+      });
+      
+      // Порядковый номер (следующий)
+      const sequence = String(count + 1).padStart(3, '0');
+      
+      // Формируем номер заявки: ЗИЛ-171125-001
+      return `${sitePrefix}-${dateStr}-${sequence}`;
+    }
+  } catch (error) {
+    console.error('Error generating application number:', error);
+  }
+  
+  // В случае ошибки используем старый формат
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `APP-${timestamp}-${random}`;
+};
 
 // Получить все заявки
 export const getAllApplications = async (req, res) => {
@@ -55,7 +105,19 @@ export const getAllApplications = async (req, res) => {
         {
           model: Employee,
           as: 'employees',
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
+          include: [
+            { 
+              model: Citizenship, 
+              as: 'citizenship', 
+              attributes: ['name'] 
+            },
+            { 
+              model: Counterparty, 
+              as: 'counterparty', 
+              attributes: ['name', 'inn', 'kpp'] 
+            }
+          ],
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'position'],
           through: { attributes: [] } // Не включать поля из связующей таблицы
         },
         {
@@ -126,7 +188,19 @@ export const getApplicationById = async (req, res) => {
         {
           model: Employee,
           as: 'employees',
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
+          include: [
+            { 
+              model: Citizenship, 
+              as: 'citizenship', 
+              attributes: ['name'] 
+            },
+            { 
+              model: Counterparty, 
+              as: 'counterparty', 
+              attributes: ['name', 'inn', 'kpp'] 
+            }
+          ],
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'position'],
           through: { attributes: [] }
         }
       ]
@@ -169,9 +243,13 @@ export const createApplication = async (req, res) => {
       });
     }
     
+    // Генерируем номер заявки
+    const applicationNumber = await generateApplicationNumber(applicationData.constructionSiteId);
+    
     // Создаем заявку
     const application = await Application.create({
       ...applicationData,
+      applicationNumber,
       counterpartyId: req.user.counterpartyId,
       createdBy: req.user.id
     }, { transaction });

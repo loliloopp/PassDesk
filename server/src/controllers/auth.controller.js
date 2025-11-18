@@ -142,18 +142,18 @@ export const login = async (req, res, next) => {
     });
 
     if (!user) {
-      throw new AppError('Неверный email или пароль', 401);
+      throw new AppError('Неверный email или пароль. Проверьте правильность введенных данных.', 401);
     }
 
     // Проверяем пароль
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      throw new AppError('Неверный email или пароль', 401);
+      throw new AppError('Неверный email или пароль. Проверьте правильность введенных данных.', 401);
     }
 
     // Проверяем, активен ли пользователь
     if (!user.isActive) {
-      throw new AppError('Аккаунт деактивирован', 403);
+      throw new AppError('Ваш аккаунт деактивирован. Обратитесь к администратору.', 403);
     }
 
     // Генерируем токены
