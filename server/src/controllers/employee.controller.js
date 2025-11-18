@@ -5,6 +5,40 @@ import yandexDiskClient, { basePath } from '../config/storage.js';
 import { buildEmployeeFilePath } from '../utils/transliterate.js';
 import { AppError } from '../middleware/errorHandler.js';
 
+// Функция для вычисления статуса заполнения карточки сотрудника
+const calculateStatusCard = (employee) => {
+  const requiresPatent = employee.citizenship?.requiresPatent !== false;
+  
+  // Базовые обязательные поля
+  const baseRequiredFields = [
+    employee.lastName,
+    employee.firstName,
+    employee.position,
+    employee.citizenshipId,
+    employee.birthDate,
+    employee.inn,
+    employee.snils,
+    employee.passportNumber,
+    employee.passportDate,
+    employee.passportIssuer,
+    employee.registrationAddress,
+    employee.phone
+  ];
+  
+  // Поля, зависящие от гражданства
+  const conditionalFields = requiresPatent ? [
+    employee.kig,
+    employee.patentNumber,
+    employee.patentIssueDate,
+    employee.blankNumber
+  ] : [];
+  
+  const allRequiredFields = [...baseRequiredFields, ...conditionalFields];
+  const allFilled = allRequiredFields.every(field => field !== null && field !== undefined && field !== '');
+  
+  return allFilled ? 'completed' : 'draft';
+};
+
 export const getAllEmployees = async (req, res, next) => {
   try {
     const { page = 1, limit = 100, search = '' } = req.query;
@@ -38,7 +72,7 @@ export const getAllEmployees = async (req, res, next) => {
         {
           model: Citizenship,
           as: 'citizenship',
-          attributes: ['id', 'name', 'code']
+          attributes: ['id', 'name', 'code', 'requiresPatent']
         },
         {
           model: User,
@@ -63,10 +97,17 @@ export const getAllEmployees = async (req, res, next) => {
       }
     });
 
+    // Пересчитываем statusCard для каждого сотрудника
+    const employeesWithStatus = rows.map(employee => {
+      const employeeData = employee.toJSON();
+      employeeData.statusCard = calculateStatusCard(employeeData);
+      return employeeData;
+    });
+
     res.json({
       success: true,
       data: {
-        employees: rows,
+        employees: employeesWithStatus,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -93,7 +134,8 @@ export const getEmployeeById = async (req, res, next) => {
         },
         {
           model: Citizenship,
-          as: 'citizenship'
+          as: 'citizenship',
+          attributes: ['id', 'name', 'code', 'requiresPatent']
         },
         {
           model: User,
@@ -113,9 +155,13 @@ export const getEmployeeById = async (req, res, next) => {
       });
     }
 
+    // Пересчитываем statusCard
+    const employeeData = employee.toJSON();
+    employeeData.statusCard = calculateStatusCard(employeeData);
+
     res.json({
       success: true,
-      data: employee
+      data: employeeData
     });
   } catch (error) {
     console.error('Error fetching employee:', error);
@@ -138,16 +184,57 @@ export const createEmployee = async (req, res, next) => {
     console.log('Employee data to create:', JSON.stringify(employeeData, null, 2));
 
     const employee = await Employee.create(employeeData);
+    
+    // Получаем созданного сотрудника с гражданством для правильного расчета statusCard
+    const createdEmployee = await Employee.findByPk(employee.id, {
+      include: [
+        {
+          model: Citizenship,
+          as: 'citizenship',
+          attributes: ['id', 'name', 'code', 'requiresPatent']
+        }
+      ]
+    });
+    
+    const employeeDataWithStatus = createdEmployee.toJSON();
+    employeeDataWithStatus.statusCard = calculateStatusCard(employeeDataWithStatus);
 
     res.status(201).json({
       success: true,
       message: 'Сотрудник создан',
-      data: employee
+      data: employeeDataWithStatus
     });
   } catch (error) {
     console.error('Error creating employee:', error);
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
+    
+    // Обработка ошибки уникальности
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors[0]?.path;
+      let fieldName = field;
+      
+      // Переводим названия полей на русский
+      const fieldNames = {
+        'inn': 'ИНН',
+        'snils': 'СНИЛС',
+        'kig': 'КИГ',
+        'passport_number': 'Номер паспорта'
+      };
+      
+      if (fieldNames[field]) {
+        fieldName = fieldNames[field];
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: `${fieldName} уже используется другим сотрудником`,
+        errors: [{
+          field: field,
+          message: `${fieldName} должен быть уникальным`
+        }]
+      });
+    }
     
     if (error.name === 'SequelizeValidationError') {
       console.error('Validation errors:', error.errors);
@@ -187,14 +274,55 @@ export const updateEmployee = async (req, res, next) => {
     }
 
     await employee.update(updates);
+    
+    // Получаем обновленного сотрудника с гражданством для правильного расчета statusCard
+    const updatedEmployee = await Employee.findByPk(id, {
+      include: [
+        {
+          model: Citizenship,
+          as: 'citizenship',
+          attributes: ['id', 'name', 'code', 'requiresPatent']
+        }
+      ]
+    });
+    
+    const employeeDataWithStatus = updatedEmployee.toJSON();
+    employeeDataWithStatus.statusCard = calculateStatusCard(employeeDataWithStatus);
 
     res.json({
       success: true,
       message: 'Сотрудник обновлен',
-      data: employee
+      data: employeeDataWithStatus
     });
   } catch (error) {
     console.error('Error updating employee:', error);
+    
+    // Обработка ошибки уникальности
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors[0]?.path;
+      let fieldName = field;
+      
+      // Переводим названия полей на русский
+      const fieldNames = {
+        'inn': 'ИНН',
+        'snils': 'СНИЛС',
+        'kig': 'КИГ',
+        'passport_number': 'Номер паспорта'
+      };
+      
+      if (fieldNames[field]) {
+        fieldName = fieldNames[field];
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: `${fieldName} уже используется другим сотрудником`,
+        errors: [{
+          field: field,
+          message: `${fieldName} должен быть уникальным`
+        }]
+      });
+    }
     
     if (error.name === 'SequelizeValidationError') {
       return res.status(400).json({

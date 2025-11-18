@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Card, Tabs, Typography, Space } from 'antd';
-import { SettingOutlined, TeamOutlined } from '@ant-design/icons';
+import { SettingOutlined, TeamOutlined, GlobalOutlined } from '@ant-design/icons';
 import UsersPage from './UsersPage';
 import SettingsPage from './SettingsPage';
+import CitizenshipsPage from './CitizenshipsPage';
 
 const { Title } = Typography;
 
@@ -19,6 +20,16 @@ const AdministrationPage = () => {
         </span>
       ),
       children: <UsersPage />
+    },
+    {
+      key: 'citizenships',
+      label: (
+        <span>
+          <GlobalOutlined />
+          Гражданство
+        </span>
+      ),
+      children: <CitizenshipsPage />
     },
     {
       key: 'settings',

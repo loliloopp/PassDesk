@@ -56,6 +56,7 @@ Employee.init(
   inn: {
     type: DataTypes.STRING(12),
     allowNull: true,
+    unique: true,
     field: 'inn',
     validate: {
       isValidInn(value) {
@@ -69,11 +70,12 @@ Employee.init(
         }
       }
     },
-    comment: 'ИНН сотрудника'
+    comment: 'ИНН сотрудника (уникальный)'
   },
   snils: {
     type: DataTypes.STRING(14),
     allowNull: true,
+    unique: true,
     field: 'snils',
     validate: {
       isValidSnils(value) {
@@ -84,19 +86,21 @@ Employee.init(
         }
       }
     },
-    comment: 'СНИЛС сотрудника'
+    comment: 'СНИЛС сотрудника (уникальный)'
   },
   kig: {
     type: DataTypes.STRING(50),
     allowNull: true,
+    unique: true,
     field: 'kig',
-    comment: 'КИГ (Карта иностранного гражданина)'
+    comment: 'КИГ (Карта иностранного гражданина) (уникальный)'
   },
     passportNumber: {
       type: DataTypes.STRING,
       allowNull: true,
+      unique: true,
       field: 'passport_number',
-      comment: 'Номер паспорта'
+      comment: 'Номер паспорта (уникальный)'
     },
     passportDate: {
       type: DataTypes.DATE,
@@ -153,6 +157,16 @@ Employee.init(
     },
     notes: {
       type: DataTypes.TEXT
+    },
+    statusCard: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'draft',
+      allowNull: false,
+      field: 'status_card',
+      validate: {
+        isIn: [['draft', 'completed']]
+      },
+      comment: 'Статус заполнения данных сотрудника: draft (черновик), completed (заполнено)'
     },
     isActive: {
       type: DataTypes.BOOLEAN,

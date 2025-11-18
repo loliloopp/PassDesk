@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Switch, Tabs } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Tabs, Button, Space } from 'antd';
+import { CheckCircleFilled, CheckCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
 import EmployeeFileUpload from './EmployeeFileUpload';
 import dayjs from 'dayjs';
@@ -12,6 +13,36 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('1');
+  const [tabsValidation, setTabsValidation] = useState({
+    '1': false, // Основная информация
+    '2': false, // Документы
+    '3': false, // Патент
+  });
+  const [selectedCitizenship, setSelectedCitizenship] = useState(null);
+
+  // Определяем, требуется ли патент для выбранного гражданства
+  const requiresPatent = selectedCitizenship?.requiresPatent !== false;
+
+  // Определяем обязательные поля для каждой вкладки (динамически)
+  const getRequiredFieldsByTab = () => {
+    const baseFields = {
+      '1': ['lastName', 'firstName', 'position', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '2': requiresPatent 
+        ? ['inn', 'snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
+        : ['inn', 'snils', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
+      '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
+    };
+    
+    // Если патент не требуется, убираем вкладку "Патент" из валидации
+    if (!requiresPatent) {
+      delete baseFields['3'];
+    }
+    
+    return baseFields;
+  };
+  
+  const requiredFieldsByTab = getRequiredFieldsByTab();
 
   useEffect(() => {
     if (visible) {
@@ -22,31 +53,108 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
           passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
           patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
-          isActive: employee.isActive !== undefined ? employee.isActive : true,
         });
+        // Устанавливаем выбранное гражданство
+        if (employee.citizenshipId) {
+          updateSelectedCitizenship(employee.citizenshipId);
+        }
+        // Проверяем валидность вкладок при загрузке существующего сотрудника
+        setTimeout(() => validateAllTabs(), 100);
       } else {
         form.resetFields();
-        // Устанавливаем статус "Активен" по умолчанию для новых сотрудников
-        form.setFieldsValue({ isActive: true });
+        setActiveTab('1');
+        setTabsValidation({ '1': false, '2': false, '3': false });
+        setSelectedCitizenship(null);
       }
     }
   }, [visible, employee]);
 
+  // Обновляем selectedCitizenship при изменении списка citizenships
+  useEffect(() => {
+    if (employee?.citizenshipId && citizenships.length > 0) {
+      updateSelectedCitizenship(employee.citizenshipId);
+    }
+  }, [citizenships, employee]);
+
+  // Обновляем валидацию при изменении requiresPatent
+  useEffect(() => {
+    if (visible) {
+      validateAllTabs();
+    }
+  }, [requiresPatent]);
+
+  const updateSelectedCitizenship = (citizenshipId) => {
+    const citizenship = citizenships.find(c => c.id === citizenshipId);
+    setSelectedCitizenship(citizenship || null);
+  };
+
+  const handleCitizenshipChange = (citizenshipId) => {
+    updateSelectedCitizenship(citizenshipId);
+    // Сбрасываем валидацию
+    validateAllTabs();
+  };
+
   const fetchCitizenships = async () => {
     try {
       const { data } = await citizenshipService.getAll();
-      setCitizenships(data.data.citizenships || []); // Fixed: access nested citizenships array
+      setCitizenships(data.data.citizenships || []);
     } catch (error) {
       console.error('Error loading citizenships:', error);
     }
   };
 
-  const handleSubmit = async () => {
+  // Проверяем, заполнены ли все обязательные поля на вкладке
+  const validateTab = async (tabKey) => {
+    const requiredFields = requiredFieldsByTab[tabKey];
+    if (!requiredFields) return false;
+
+    try {
+      const values = form.getFieldsValue();
+      const allFilled = requiredFields.every(field => {
+        const value = values[field];
+        return value !== undefined && value !== null && value !== '';
+      });
+      return allFilled;
+    } catch {
+      return false;
+    }
+  };
+
+  // Проверяем все вкладки
+  const validateAllTabs = async () => {
+    const validation = {};
+    for (const tabKey of Object.keys(requiredFieldsByTab)) {
+      validation[tabKey] = await validateTab(tabKey);
+    }
+    setTabsValidation(validation);
+    return validation;
+  };
+
+  // Проверяем, все ли вкладки валидны
+  const allTabsValid = () => {
+    return Object.values(tabsValidation).every(valid => valid === true);
+  };
+
+  // Обработчик изменения полей формы
+  const handleFieldsChange = () => {
+    validateAllTabs();
+  };
+
+  // Переход на следующую вкладку
+  const handleNext = () => {
+    const tabOrder = ['1', '2', '3'];
+    const currentIndex = tabOrder.indexOf(activeTab);
+    if (currentIndex < tabOrder.length - 1) {
+      setActiveTab(tabOrder[currentIndex + 1]);
+    }
+  };
+
+  // Сохранение как черновик
+  const handleSaveDraft = async () => {
     try {
       setLoading(true);
-      const values = await form.validateFields();
+      const values = form.getFieldsValue();
       
-      // Преобразуем пустые строки в null
       const formattedValues = {};
       Object.keys(values).forEach(key => {
         const value = values[key];
@@ -59,40 +167,112 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         }
       });
 
-      onSuccess(formattedValues);
+      formattedValues.statusCard = 'draft';
+      await onSuccess(formattedValues);
     } catch (error) {
-      console.error('Validation error:', error);
+      console.error('Save draft error:', error);
+      // Ошибка уже показана в родительском компоненте через message.error
+      // Не закрываем модальное окно
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddCitizenship = async (name) => {
+  // Полное сохранение
+  const handleSave = async () => {
     try {
-      const { data } = await citizenshipService.create({ name });
-      setCitizenships([...citizenships, data.data]);
-      form.setFieldsValue({ citizenshipId: data.data.id });
-      message.success('Гражданство добавлено');
+      setLoading(true);
+      const values = await form.validateFields();
+      
+      const formattedValues = {};
+      Object.keys(values).forEach(key => {
+        const value = values[key];
+        if (value === '' || value === undefined) {
+          formattedValues[key] = null;
+        } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
+          formattedValues[key] = value ? value.format('YYYY-MM-DD') : null;
+        } else {
+          formattedValues[key] = value;
+        }
+      });
+
+      formattedValues.statusCard = 'completed';
+      await onSuccess(formattedValues);
+      // Закрываем модальное окно ТОЛЬКО после успешного сохранения
+      onCancel();
     } catch (error) {
-      message.error('Ошибка добавления гражданства');
+      console.error('Validation or save error:', error);
+      // Если это ошибка валидации формы, показываем сообщение
+      if (error.errorFields) {
+        message.error('Пожалуйста, заполните все обязательные поля');
+      }
+      // Если это ошибка сохранения (дубликат ИНН и т.д.), сообщение уже показано в родителе
+      // Не закрываем модальное окно
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Определяем стиль вкладки (обычный черный текст)
+  const getTabStyle = () => {
+    return {};
+  };
+
+  // Рендерим иконку статуса вкладки
+  const getTabIcon = (tabKey) => {
+    if (tabsValidation[tabKey]) {
+      return <CheckCircleFilled style={{ color: '#52c41a', fontSize: 16, marginRight: 8 }} />;
+    }
+    return <CheckCircleOutlined style={{ color: '#d9d9d9', fontSize: 16, marginRight: 8 }} />;
   };
 
   return (
     <Modal
       title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
       open={visible}
-      onOk={handleSubmit}
       onCancel={onCancel}
       width={1200}
-      okText={employee ? 'Сохранить' : 'Добавить'}
-      cancelText="Отмена"
-      confirmLoading={loading}
+      footer={
+        <Space>
+          <Button onClick={onCancel}>
+            {employee ? 'Закрыть' : 'Отмена'}
+          </Button>
+          <Button onClick={handleSaveDraft} loading={loading}>
+            Сохранить черновик
+          </Button>
+          {allTabsValid() ? (
+            <Button type="primary" onClick={handleSave} loading={loading}>
+              Сохранить
+            </Button>
+          ) : (
+            <Button type="primary" onClick={handleNext}>
+              Следующая
+            </Button>
+          )}
+        </Space>
+      }
     >
-      <Tabs defaultActiveKey="1" style={{ marginTop: 24 }}>
-        <Tabs.TabPane tab="Основная информация" key="1">
-          <Form form={form} layout="vertical">
-            {/* Основная информация - 4 столбца */}
+      <Form 
+        form={form} 
+        layout="vertical"
+        onFieldsChange={handleFieldsChange}
+      >
+        <Tabs 
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          style={{ marginTop: 16 }}
+        >
+          {/* Вкладка: Основная информация */}
+          <Tabs.TabPane 
+            tab={
+              <span style={getTabStyle()}>
+                {getTabIcon('1')}
+                Основная информация
+              </span>
+            } 
+            key="1"
+          >
+            {/* ФИО и должность - 4 столбца */}
             <Row gutter={16}>
               <Col span={6}>
                 <Form.Item
@@ -118,205 +298,250 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 </Form.Item>
               </Col>
               <Col span={6}>
-            <Form.Item
-              name="position"
-              label="Должность"
-              rules={[{ required: true, message: 'Введите должность' }]}
-            >
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
+                <Form.Item
+                  name="position"
+                  label="Должность"
+                  rules={[{ required: true, message: 'Введите должность' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
 
-        {/* Гражданство - одна строка */}
-        <Row gutter={16}>
-          <Col span={24}>
-            <Form.Item name="citizenshipId" label="Гражданство">
-              <Select
-                placeholder="Выберите или добавьте"
-                allowClear
-                showSearch
-                optionFilterProp="children"
-                dropdownRender={(menu) => (
-                  <>
-                    {menu}
-                    <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
-                      <Input.Search
-                        placeholder="Добавить новое"
-                        enterButton="Добавить"
-                        onSearch={handleAddCitizenship}
-                      />
-                    </div>
-                  </>
-                )}
-              >
-                {citizenships.map((c) => (
-                  <Option key={c.id} value={c.id}>
-                    {c.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+            {/* Гражданство и дата рождения */}
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item 
+                  name="citizenshipId" 
+                  label="Гражданство"
+                  rules={[{ required: true, message: 'Выберите гражданство' }]}
+                >
+                  <Select
+                    placeholder="Выберите гражданство"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    onChange={handleCitizenshipChange}
+                  >
+                    {citizenships.map((c) => (
+                      <Option key={c.id} value={c.id}>
+                        {c.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item 
+                  name="birthDate" 
+                  label="Дата рождения"
+                  rules={[{ required: true, message: 'Введите дату рождения' }]}
+                >
+                  <DatePicker
+                    style={{ width: '100%' }}
+                    format={DATE_FORMAT}
+                    placeholder="ДД.ММ.ГГГГ"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
 
-        {/* Личные данные - 4 столбца */}
-        <Row gutter={16}>
-          <Col span={6}>
-            <Form.Item name="birthDate" label="Дата рождения">
-              <DatePicker
-                style={{ width: '100%' }}
-                format={DATE_FORMAT}
-                placeholder="ДД.ММ.ГГГГ"
-              />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item 
-              name="inn" 
-              label="ИНН"
-              rules={[
-                {
-                  pattern: /^\d{10}$|^\d{12}$/,
-                  message: 'ИНН должен содержать 10 или 12 цифр'
-                }
-              ]}
-            >
-              <Input maxLength={12} placeholder="10 или 12 цифр" />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item 
-              name="snils" 
-              label="СНИЛС"
-              rules={[
-                {
-                  pattern: /^\d{3}-\d{3}-\d{3}\s\d{2}$/,
-                  message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX (например: 123-456-789 00)'
-                }
-              ]}
-            >
-              <Input maxLength={14} placeholder="123-456-789 00" />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item name="kig" label="КИГ">
-              <Input placeholder="КИГ" />
-            </Form.Item>
-          </Col>
-        </Row>
+            {/* Адрес регистрации */}
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item 
+                  name="registrationAddress" 
+                  label="Адрес регистрации"
+                  rules={[{ required: true, message: 'Введите адрес регистрации' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
 
-        {/* Паспортные данные - 4 столбца */}
-        <Row gutter={16}>
-          <Col span={6}>
-            <Form.Item name="passportNumber" label="№ паспорта">
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item name="passportDate" label="Дата паспорта">
-              <DatePicker
-                style={{ width: '100%' }}
-                format={DATE_FORMAT}
-                placeholder="ДД.ММ.ГГГГ"
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="passportIssuer" label="Кем выдан паспорт">
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
+            {/* Контакты */}
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="email"
+                  label="Email"
+                  rules={[
+                    { 
+                      type: 'email', 
+                      message: 'Введите корректный email (например: ivanov@example.com)' 
+                    }
+                  ]}
+                >
+                  <Input placeholder="ivanov@example.com" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item 
+                  name="phone" 
+                  label="Телефон"
+                  rules={[{ required: true, message: 'Введите телефон' }]}
+                >
+                  <Input placeholder="+7 (999) 123-45-67" />
+                </Form.Item>
+              </Col>
+            </Row>
 
-        {/* Адрес регистрации - 1 столбец */}
-        <Row gutter={16}>
-          <Col span={24}>
-            <Form.Item name="registrationAddress" label="Адрес регистрации">
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {/* Патент и бланк - 3 столбца */}
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item name="patentNumber" label="Номер патента">
-              <Input />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="patentIssueDate" label="Дата выдачи патента">
-              <DatePicker
-                style={{ width: '100%' }}
-                format={DATE_FORMAT}
-                placeholder="ДД.ММ.ГГГГ"
-              />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="blankNumber" label="Номер бланка">
-              <Input />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {/* Контакты и статус - 3 столбца */}
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                { 
-                  type: 'email', 
-                  message: 'Введите корректный email (например: ivanov@example.com)' 
-                }
-              ]}
-            >
-              <Input placeholder="ivanov@example.com" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="phone" label="Телефон">
-              <Input placeholder="+7 (999) 123-45-67" />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item 
-              name="isActive" 
-              label="Статус" 
-              valuePropName="checked"
-            >
-              <Switch 
-                checkedChildren="Активен" 
-                unCheckedChildren="Неактивен"
-                style={{ width: 100 }}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        {/* Примечания - 1 столбец */}
-        <Row gutter={16}>
-          <Col span={24}>
-            <Form.Item name="notes" label="Примечания">
-              <TextArea rows={2} />
-            </Form.Item>
-          </Col>
-        </Row>
-          </Form>
-        </Tabs.TabPane>
-
-        {employee?.id && (
-          <Tabs.TabPane tab="Документы" key="2">
-            <EmployeeFileUpload employeeId={employee.id} readonly={false} />
+            {/* Примечания */}
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="notes" label="Примечания">
+                  <TextArea rows={2} />
+                </Form.Item>
+              </Col>
+            </Row>
           </Tabs.TabPane>
-        )}
-      </Tabs>
+
+          {/* Вкладка: Документы */}
+          <Tabs.TabPane 
+            tab={
+              <span style={getTabStyle()}>
+                {getTabIcon('2')}
+                Документы
+              </span>
+            } 
+            key="2"
+          >
+            <Row gutter={16}>
+              <Col span={requiresPatent ? 8 : 12}>
+                <Form.Item 
+                  name="inn" 
+                  label="ИНН"
+                  rules={[
+                    { required: true, message: 'Введите ИНН' },
+                    {
+                      pattern: /^\d{10}$|^\d{12}$/,
+                      message: 'ИНН должен содержать 10 или 12 цифр'
+                    }
+                  ]}
+                >
+                  <Input maxLength={12} placeholder="10 или 12 цифр" />
+                </Form.Item>
+              </Col>
+              <Col span={requiresPatent ? 8 : 12}>
+                <Form.Item 
+                  name="snils" 
+                  label="СНИЛС"
+                  rules={[
+                    { required: true, message: 'Введите СНИЛС' },
+                    {
+                      pattern: /^\d{3}-\d{3}-\d{3}\s\d{2}$/,
+                      message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX'
+                    }
+                  ]}
+                >
+                  <Input maxLength={14} placeholder="123-456-789 00" />
+                </Form.Item>
+              </Col>
+              {requiresPatent && (
+                <Col span={8}>
+                  <Form.Item 
+                    name="kig" 
+                    label="КИГ"
+                    rules={[{ required: true, message: 'Введите КИГ' }]}
+                  >
+                    <Input placeholder="КИГ" />
+                  </Form.Item>
+                </Col>
+              )}
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item 
+                  name="passportNumber" 
+                  label="№ паспорта"
+                  rules={[{ required: true, message: 'Введите номер паспорта' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item 
+                  name="passportDate" 
+                  label="Дата выдачи паспорта"
+                  rules={[{ required: true, message: 'Введите дату выдачи паспорта' }]}
+                >
+                  <DatePicker
+                    style={{ width: '100%' }}
+                    format={DATE_FORMAT}
+                    placeholder="ДД.ММ.ГГГГ"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item 
+                  name="passportIssuer" 
+                  label="Кем выдан паспорт"
+                  rules={[{ required: true, message: 'Введите кем выдан паспорт' }]}
+                >
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Tabs.TabPane>
+
+          {/* Вкладка: Патент (только если требуется) */}
+          {requiresPatent && (
+            <Tabs.TabPane 
+              tab={
+                <span style={getTabStyle()}>
+                  {getTabIcon('3')}
+                  Патент
+                </span>
+              } 
+              key="3"
+            >
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item 
+                    name="patentNumber" 
+                    label="Номер патента"
+                    rules={[{ required: true, message: 'Введите номер патента' }]}
+                  >
+                    <Input />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item 
+                    name="patentIssueDate" 
+                    label="Дата выдачи патента"
+                    rules={[{ required: true, message: 'Введите дату выдачи патента' }]}
+                  >
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      format={DATE_FORMAT}
+                      placeholder="ДД.ММ.ГГГГ"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item 
+                    name="blankNumber" 
+                    label="Номер бланка"
+                    rules={[{ required: true, message: 'Введите номер бланка' }]}
+                  >
+                    <Input />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Tabs.TabPane>
+          )}
+
+          {/* Вкладка: Файлы (только для существующих сотрудников) */}
+          {employee?.id && (
+            <Tabs.TabPane tab="Файлы" key="4">
+              <EmployeeFileUpload employeeId={employee.id} readonly={false} />
+            </Tabs.TabPane>
+          )}
+        </Tabs>
+      </Form>
     </Modal>
   );
 };
 
 export default EmployeeFormModal;
-

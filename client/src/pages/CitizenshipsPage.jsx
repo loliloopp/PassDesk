@@ -1,0 +1,343 @@
+import { useState, useEffect } from 'react';
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Switch,
+  Space,
+  message,
+  Popconfirm,
+  Tag,
+  Tooltip
+} from 'antd';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  GlobalOutlined
+} from '@ant-design/icons';
+import api from '../services/api';
+
+const CitizenshipsPage = () => {
+  const [citizenships, setCitizenships] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [synonymModalVisible, setSynonymModalVisible] = useState(false);
+  const [editingCitizenship, setEditingCitizenship] = useState(null);
+  const [selectedCitizenship, setSelectedCitizenship] = useState(null);
+  const [form] = Form.useForm();
+  const [synonymForm] = Form.useForm();
+
+  // Загрузка списка гражданств
+  const fetchCitizenships = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/citizenships');
+      setCitizenships(response.data.data.citizenships);
+    } catch (error) {
+      console.error('Error fetching citizenships:', error);
+      message.error('Ошибка при загрузке гражданств');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCitizenships();
+  }, []);
+
+  // Открыть модальное окно для создания/редактирования
+  const handleOpenModal = (citizenship = null) => {
+    setEditingCitizenship(citizenship);
+    if (citizenship) {
+      form.setFieldsValue({
+        name: citizenship.name,
+        code: citizenship.code,
+        requiresPatent: citizenship.requiresPatent
+      });
+    } else {
+      form.resetFields();
+      form.setFieldsValue({ requiresPatent: true });
+    }
+    setModalVisible(true);
+  };
+
+  // Закрыть модальное окно
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setEditingCitizenship(null);
+    form.resetFields();
+  };
+
+  // Сохранить гражданство
+  const handleSaveCitizenship = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      if (editingCitizenship) {
+        await api.put(`/citizenships/${editingCitizenship.id}`, values);
+        message.success('Гражданство обновлено');
+      } else {
+        await api.post('/citizenships', values);
+        message.success('Гражданство создано');
+      }
+      
+      handleCloseModal();
+      fetchCitizenships();
+    } catch (error) {
+      console.error('Error saving citizenship:', error);
+      const errorMessage = error.response?.data?.message || 'Ошибка при сохранении';
+      message.error(errorMessage);
+    }
+  };
+
+  // Открыть модальное окно для управления синонимами
+  const handleOpenSynonymModal = (citizenship) => {
+    setSelectedCitizenship(citizenship);
+    setSynonymModalVisible(true);
+  };
+
+  // Закрыть модальное окно синонимов
+  const handleCloseSynonymModal = () => {
+    setSynonymModalVisible(false);
+    setSelectedCitizenship(null);
+    synonymForm.resetFields();
+  };
+
+  // Добавить синоним
+  const handleAddSynonym = async () => {
+    try {
+      const values = await synonymForm.validateFields();
+      await api.post(`/citizenships/${selectedCitizenship.id}/synonyms`, values);
+      message.success('Синоним добавлен');
+      synonymForm.resetFields();
+      fetchCitizenships();
+    } catch (error) {
+      console.error('Error adding synonym:', error);
+      const errorMessage = error.response?.data?.message || 'Ошибка при добавлении синонима';
+      message.error(errorMessage);
+    }
+  };
+
+  // Удалить синоним
+  const handleDeleteSynonym = async (synonymId) => {
+    try {
+      await api.delete(`/citizenships/synonyms/${synonymId}`);
+      message.success('Синоним удален');
+      fetchCitizenships();
+    } catch (error) {
+      console.error('Error deleting synonym:', error);
+      message.error('Ошибка при удалении синонима');
+    }
+  };
+
+  // Колонки таблицы
+  const columns = [
+    {
+      title: 'Гражданство',
+      dataIndex: 'name',
+      key: 'name',
+      sorter: (a, b) => a.name.localeCompare(b.name),
+    },
+    {
+      title: 'Код',
+      dataIndex: 'code',
+      key: 'code',
+      width: 100,
+    },
+    {
+      title: 'Требуется патент',
+      dataIndex: 'requiresPatent',
+      key: 'requiresPatent',
+      width: 150,
+      align: 'center',
+      render: (requiresPatent) => (
+        <Tag color={requiresPatent ? 'orange' : 'green'}>
+          {requiresPatent ? 'Да' : 'Нет'}
+        </Tag>
+      ),
+      filters: [
+        { text: 'Требуется', value: true },
+        { text: 'Не требуется', value: false },
+      ],
+      onFilter: (value, record) => record.requiresPatent === value,
+    },
+    {
+      title: 'Синонимы',
+      key: 'synonyms',
+      render: (_, record) => (
+        <Space size={4} wrap>
+          {record.synonyms && record.synonyms.length > 0 ? (
+            record.synonyms.map(synonym => (
+              <Tag key={synonym.id} color="blue">
+                {synonym.synonym}
+              </Tag>
+            ))
+          ) : (
+            <span style={{ color: '#999' }}>Нет синонимов</span>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: 'Действия',
+      key: 'actions',
+      width: 180,
+      align: 'center',
+      render: (_, record) => (
+        <Space size={4}>
+          <Tooltip title="Редактировать">
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleOpenModal(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Управление синонимами">
+            <Button
+              type="link"
+              size="small"
+              icon={<GlobalOutlined />}
+              onClick={() => handleOpenSynonymModal(record)}
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => handleOpenModal()}
+        >
+          Добавить гражданство
+        </Button>
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={citizenships}
+        rowKey="id"
+        loading={loading}
+        size="small"
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true,
+          showTotal: (total) => `Всего: ${total}`,
+        }}
+      />
+
+      {/* Модальное окно для создания/редактирования гражданства */}
+      <Modal
+        title={editingCitizenship ? 'Редактировать гражданство' : 'Добавить гражданство'}
+        open={modalVisible}
+        onOk={handleSaveCitizenship}
+        onCancel={handleCloseModal}
+        okText="Сохранить"
+        cancelText="Отмена"
+        width={500}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ requiresPatent: true }}
+        >
+          <Form.Item
+            name="name"
+            label="Название"
+            rules={[{ required: true, message: 'Введите название гражданства' }]}
+          >
+            <Input placeholder="Например: Российская Федерация" />
+          </Form.Item>
+
+          <Form.Item
+            name="code"
+            label="Код страны"
+            rules={[
+              { len: 2, message: 'Код должен состоять из 2 символов' }
+            ]}
+          >
+            <Input placeholder="Например: RU" maxLength={2} />
+          </Form.Item>
+
+          <Form.Item
+            name="requiresPatent"
+            label="Требуется патент"
+            valuePropName="checked"
+          >
+            <Switch 
+              checkedChildren="Да" 
+              unCheckedChildren="Нет"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Модальное окно для управления синонимами */}
+      <Modal
+        title={`Синонимы для: ${selectedCitizenship?.name}`}
+        open={synonymModalVisible}
+        onCancel={handleCloseSynonymModal}
+        footer={null}
+        width={600}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          {/* Форма добавления синонима */}
+          <Form
+            form={synonymForm}
+            layout="inline"
+            onFinish={handleAddSynonym}
+          >
+            <Form.Item
+              name="synonym"
+              rules={[{ required: true, message: 'Введите синоним' }]}
+              style={{ flex: 1 }}
+            >
+              <Input placeholder="Введите синоним" />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
+                Добавить
+              </Button>
+            </Form.Item>
+          </Form>
+
+          {/* Список существующих синонимов */}
+          <div>
+            <strong>Существующие синонимы:</strong>
+            <div style={{ marginTop: 8 }}>
+              {selectedCitizenship?.synonyms && selectedCitizenship.synonyms.length > 0 ? (
+                <Space size={8} wrap>
+                  {selectedCitizenship.synonyms.map(synonym => (
+                    <Tag
+                      key={synonym.id}
+                      closable
+                      onClose={() => handleDeleteSynonym(synonym.id)}
+                      color="blue"
+                    >
+                      {synonym.synonym}
+                    </Tag>
+                  ))}
+                </Space>
+              ) : (
+                <div style={{ color: '#999', fontStyle: 'italic' }}>
+                  Синонимы не добавлены
+                </div>
+              )}
+            </div>
+          </div>
+        </Space>
+      </Modal>
+    </div>
+  );
+};
+
+export default CitizenshipsPage;
+

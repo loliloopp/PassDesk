@@ -21,6 +21,8 @@ import {
   UserOutlined,
   EyeOutlined,
   FileOutlined,
+  CheckCircleFilled,
+  CloseCircleFilled,
 } from '@ant-design/icons';
 import { employeeService } from '../services/employeeService';
 import { citizenshipService } from '../services/citizenshipService';
@@ -111,17 +113,20 @@ const EmployeesPage = () => {
   const handleFormSuccess = async (values) => {
     try {
       if (editingEmployee) {
+        // Обновление существующего сотрудника
         await employeeService.update(editingEmployee.id, values);
         message.success('Сотрудник обновлен');
-        setIsModalOpen(false);
-        setEditingEmployee(null); // Очищаем editingEmployee после обновления
+        // Обновляем данные editingEmployee для продолжения редактирования
+        const response = await employeeService.getById(editingEmployee.id);
+        setEditingEmployee(response.data.data);
       } else {
+        // Создание нового сотрудника
         const response = await employeeService.create(values);
         message.success('Сотрудник создан');
-        // После создания открываем сотрудника на редактирование для загрузки файлов
+        // После создания переключаемся в режим редактирования
         const newEmployee = response.data.data;
         setEditingEmployee(newEmployee);
-        message.info('Теперь вы можете загрузить файлы сотрудника на вкладке "Документы"');
+        message.info('Теперь вы можете продолжить заполнение данных сотрудника');
       }
       fetchEmployees();
     } catch (error) {
@@ -131,6 +136,8 @@ const EmployeesPage = () => {
                           error.response?.data?.errors?.map(e => e.message).join(', ') || 
                           'Ошибка при сохранении';
       message.error(errorMessage);
+      // Пробрасываем ошибку дальше, чтобы форма не закрывалась
+      throw error;
     }
   };
 
@@ -176,39 +183,29 @@ const EmployeesPage = () => {
       render: (name) => name || '-',
     },
     {
-      title: 'Документы',
-      key: 'documents',
-      width: 140,
+      title: 'Заполнен',
+      key: 'statusCard',
+      width: 100,
+      align: 'center',
       render: (_, record) => {
-        const documentFields = [
-          { field: 'birthDate', label: 'Дата рождения' },
-          { field: 'passportNumber', label: '№ паспорта' },
-          { field: 'passportDate', label: 'Дата выдачи паспорта' },
-          { field: 'passportIssuer', label: 'Кем выдан паспорт' },
-          { field: 'registrationAddress', label: 'Адрес регистрации' },
-          { field: 'patentNumber', label: 'Номер патента' },
-          { field: 'patentIssueDate', label: 'Дата выдачи патента' },
-          { field: 'blankNumber', label: 'Номер бланка' },
-          { field: 'inn', label: 'ИНН' },
-          { field: 'snils', label: 'СНИЛС' },
-          { field: 'kig', label: 'КИГ' },
-        ];
+        // Проверяем, заполнены ли все обязательные поля
+        const isCompleted = record.statusCard === 'completed';
         
         return (
-          <Space size={4} wrap style={{ maxWidth: 120 }}>
-            {documentFields.map(({ field, label }) => (
-              <Tooltip key={field} title={label}>
-                <div style={{
-                  width: 16,
-                  height: 16,
-                  backgroundColor: record[field] ? '#52c41a' : '#ff4d4f',
-                  borderRadius: 2,
-                }} />
-              </Tooltip>
-            ))}
-          </Space>
+          <Tooltip title={isCompleted ? 'Все обязательные поля заполнены' : 'Не все обязательные поля заполнены'}>
+            {isCompleted ? (
+              <CheckCircleFilled style={{ fontSize: 20, color: '#52c41a' }} />
+            ) : (
+              <CloseCircleFilled style={{ fontSize: 20, color: '#ff4d4f' }} />
+            )}
+          </Tooltip>
         );
       },
+      filters: [
+        { text: 'Заполнен', value: 'completed' },
+        { text: 'Не заполнен', value: 'draft' },
+      ],
+      onFilter: (value, record) => record.statusCard === value,
     },
     {
       title: 'Файлы',

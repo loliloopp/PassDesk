@@ -10,6 +10,7 @@ import Application from './Application.js';
 import ApplicationEmployeeMapping from './ApplicationEmployee.js';
 import ApplicationFileMapping from './ApplicationFileMapping.js';
 import Citizenship from './Citizenship.js';
+import CitizenshipSynonym from './CitizenshipSynonym.js';
 import Setting from './Setting.js';
 import UserEmployeeMapping from './UserEmployeeMapping.js';
 
@@ -28,6 +29,10 @@ Employee.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterpa
 // Citizenship -> Employee (гражданство -> сотрудники)
 Citizenship.hasMany(Employee, { foreignKey: 'citizenship_id', as: 'employees' });
 Employee.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship' });
+
+// Citizenship -> CitizenshipSynonym (гражданство -> синонимы)
+Citizenship.hasMany(CitizenshipSynonym, { foreignKey: 'citizenship_id', as: 'synonyms' });
+CitizenshipSynonym.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship' });
 
 // Counterparty -> User (контрагент -> пользователи контрагента)
 Counterparty.hasMany(User, { foreignKey: 'counterparty_id', as: 'users' });
@@ -179,6 +184,7 @@ export {
   ApplicationEmployeeMapping,
   ApplicationFileMapping,
   Citizenship,
+  CitizenshipSynonym,
   Setting,
   UserEmployeeMapping
 };
