@@ -13,6 +13,8 @@ import Citizenship from './Citizenship.js';
 import CitizenshipSynonym from './CitizenshipSynonym.js';
 import Setting from './Setting.js';
 import UserEmployeeMapping from './UserEmployeeMapping.js';
+import Department from './Department.js';
+import EmployeeCounterpartyMapping from './EmployeeCounterpartyMapping.js';
 
 // Define associations
 
@@ -22,10 +24,6 @@ User.hasMany(Employee, { foreignKey: 'updated_by', as: 'updatedEmployees' });
 Employee.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 Employee.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 
-// Counterparty -> Employee (подрядчик -> сотрудники подрядчика)
-Counterparty.hasMany(Employee, { foreignKey: 'counterparty_id', as: 'employees' });
-Employee.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
-
 // Citizenship -> Employee (гражданство -> сотрудники)
 Citizenship.hasMany(Employee, { foreignKey: 'citizenship_id', as: 'employees' });
 Employee.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship' });
@@ -33,6 +31,35 @@ Employee.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship
 // Citizenship -> CitizenshipSynonym (гражданство -> синонимы)
 Citizenship.hasMany(CitizenshipSynonym, { foreignKey: 'citizenship_id', as: 'synonyms' });
 CitizenshipSynonym.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship' });
+
+// Counterparty -> Department (контрагент -> подразделения)
+Counterparty.hasMany(Department, { foreignKey: 'counterparty_id', as: 'departments' });
+Department.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
+
+// Employee <-> Counterparty (many-to-many через EmployeeCounterpartyMapping)
+Employee.belongsToMany(Counterparty, {
+  through: EmployeeCounterpartyMapping,
+  foreignKey: 'employee_id',
+  otherKey: 'counterparty_id',
+  as: 'counterparties'
+});
+
+Counterparty.belongsToMany(Employee, {
+  through: EmployeeCounterpartyMapping,
+  foreignKey: 'counterparty_id',
+  otherKey: 'employee_id',
+  as: 'employees'
+});
+
+// Прямые связи для EmployeeCounterpartyMapping
+Employee.hasMany(EmployeeCounterpartyMapping, { foreignKey: 'employee_id', as: 'employeeCounterpartyMappings' });
+EmployeeCounterpartyMapping.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
+
+Counterparty.hasMany(EmployeeCounterpartyMapping, { foreignKey: 'counterparty_id', as: 'counterpartyEmployeeMappings' });
+EmployeeCounterpartyMapping.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
+
+Department.hasMany(EmployeeCounterpartyMapping, { foreignKey: 'department_id', as: 'departmentEmployeeMappings' });
+EmployeeCounterpartyMapping.belongsTo(Department, { foreignKey: 'department_id', as: 'department' });
 
 // Counterparty -> User (контрагент -> пользователи контрагента)
 Counterparty.hasMany(User, { foreignKey: 'counterparty_id', as: 'users' });
@@ -186,7 +213,9 @@ export {
   Citizenship,
   CitizenshipSynonym,
   Setting,
-  UserEmployeeMapping
+  UserEmployeeMapping,
+  Department,
+  EmployeeCounterpartyMapping
 };
 
 

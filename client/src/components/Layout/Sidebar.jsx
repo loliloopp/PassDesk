@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu } from 'antd'
 import {
@@ -12,9 +12,11 @@ import {
   FileTextOutlined,
   SettingOutlined,
   ProfileOutlined,
-  ControlOutlined
+  ControlOutlined,
+  BookOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
+import settingsService from '@/services/settingsService'
 
 const { Sider } = Layout
 
@@ -23,6 +25,24 @@ const Sidebar = () => {
   const location = useLocation()
   const { logout, user } = useAuthStore()
   const [collapsed, setCollapsed] = useState(false)
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
+
+  // Загружаем настройки при монтировании компонента
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await settingsService.getPublicSettings()
+        console.log('🔍 Sidebar: loaded settings', response.data)
+        setDefaultCounterpartyId(response.data.defaultCounterpartyId)
+      } catch (error) {
+        console.error('Error loading settings:', error)
+      }
+    }
+    
+    if (user) {
+      loadSettings()
+    }
+  }, [user])
 
   // Меню для обычных пользователей (role: user)
   const userMenuItems = [
@@ -33,13 +53,29 @@ const Sidebar = () => {
     }
   ]
 
+  // Проверяем, должен ли пользователь видеть дашборд
+  const canSeeDashboard = user?.counterpartyId === defaultCounterpartyId
+
+  console.log('🔍 Sidebar: dashboard access check', {
+    userCounterpartyId: user?.counterpartyId,
+    defaultCounterpartyId,
+    canSeeDashboard
+  })
+
   // Меню для администраторов и менеджеров
-  const adminManagerMenuItems = [
-    {
+  const adminManagerMenuItems = []
+
+  // Добавляем "Дашборд" только если пользователь принадлежит к контрагенту по умолчанию
+  if (canSeeDashboard) {
+    adminManagerMenuItems.push({
       key: '/dashboard',
       icon: <DashboardOutlined />,
       label: 'Дашборд',
-    },
+    })
+  }
+
+  // Остальные пункты меню
+  adminManagerMenuItems.push(
     {
       key: '/employees',
       icon: <UserOutlined />,
@@ -70,9 +106,14 @@ const Sidebar = () => {
           icon: <FileTextOutlined />,
           label: 'Договора',
         },
+        {
+          key: '/directories',
+          icon: <BookOutlined />,
+          label: 'Подразделения',
+        },
       ],
-    },
-  ]
+    }
+  )
 
   // Выбираем меню на основе роли пользователя
   let menuItems = []

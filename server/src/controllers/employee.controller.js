@@ -1,4 +1,4 @@
-import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import yandexDiskClient, { basePath } from '../config/storage.js';
@@ -65,11 +65,6 @@ export const getAllEmployees = async (req, res, next) => {
       order: [['lastName', 'ASC']],
       include: [
         {
-          model: Counterparty,
-          as: 'counterparty',
-          attributes: ['id', 'name', 'type']
-        },
-        {
           model: Citizenship,
           as: 'citizenship',
           attributes: ['id', 'name', 'code', 'requiresPatent']
@@ -78,6 +73,22 @@ export const getAllEmployees = async (req, res, next) => {
           model: User,
           as: 'creator',
           attributes: ['id', 'firstName', 'lastName']
+        },
+        {
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          include: [
+            {
+              model: Counterparty,
+              as: 'counterparty',
+              attributes: ['id', 'name', 'type']
+            },
+            {
+              model: Department,
+              as: 'department',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ],
       // Добавляем подсчет файлов для каждого сотрудника
@@ -174,16 +185,28 @@ export const createEmployee = async (req, res, next) => {
     console.log('=== CREATE EMPLOYEE REQUEST ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('User ID:', req.user?.id);
+    console.log('User Counterparty ID:', req.user?.counterpartyId);
     
     const employeeData = {
       ...req.body,
-      counterpartyId: req.user.counterpartyId,
       createdBy: req.user.id
     };
+    
+    // Удаляем counterpartyId из данных сотрудника, если он был передан
+    delete employeeData.counterpartyId;
     
     console.log('Employee data to create:', JSON.stringify(employeeData, null, 2));
 
     const employee = await Employee.create(employeeData);
+    
+    // Создаём запись в маппинге (сотрудник-контрагент)
+    await EmployeeCounterpartyMapping.create({
+      employeeId: employee.id,
+      counterpartyId: req.user.counterpartyId,
+      departmentId: null // Подразделение можно будет назначить позже
+    });
+    
+    console.log('✓ Employee-Counterparty mapping created');
     
     // Получаем созданного сотрудника с гражданством для правильного расчета statusCard
     const createdEmployee = await Employee.findByPk(employee.id, {
@@ -192,6 +215,22 @@ export const createEmployee = async (req, res, next) => {
           model: Citizenship,
           as: 'citizenship',
           attributes: ['id', 'name', 'code', 'requiresPatent']
+        },
+        {
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          include: [
+            {
+              model: Counterparty,
+              as: 'counterparty',
+              attributes: ['id', 'name']
+            },
+            {
+              model: Department,
+              as: 'department',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ]
     });
@@ -345,15 +384,7 @@ export const deleteEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const employee = await Employee.findByPk(id, {
-      include: [
-        {
-          model: Counterparty,
-          as: 'counterparty',
-          attributes: ['id', 'name']
-        }
-      ]
-    });
+    const employee = await Employee.findByPk(id);
 
     if (!employee) {
       await transaction.rollback();
@@ -366,8 +397,7 @@ export const deleteEmployee = async (req, res, next) => {
     console.log('=== DELETING EMPLOYEE ===');
     console.log('Employee:', {
       id: employee.id,
-      name: `${employee.lastName} ${employee.firstName} ${employee.middleName || ''}`,
-      counterparty: employee.counterparty?.name
+      name: `${employee.lastName} ${employee.firstName} ${employee.middleName || ''}`
     });
 
     // 1. Находим связанного пользователя (если есть)
@@ -379,19 +409,9 @@ export const deleteEmployee = async (req, res, next) => {
     if (userMapping) {
       console.log(`Found linked user: ${userMapping.userId}`);
       
-      // Удаляем связь
+      // Удаляем только связь, пользователь остаётся
       await userMapping.destroy({ transaction });
-      console.log('✓ User-Employee mapping deleted');
-      
-      // Удаляем пользователя
-      const deletedUserCount = await User.destroy({
-        where: { id: userMapping.userId },
-        transaction
-      });
-      
-      if (deletedUserCount > 0) {
-        console.log('✓ Linked user deleted');
-      }
+      console.log('✓ User-Employee mapping deleted (user remains intact)');
     }
 
     // 2. Получаем все файлы сотрудника из БД

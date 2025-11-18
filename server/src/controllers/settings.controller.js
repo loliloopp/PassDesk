@@ -21,6 +21,25 @@ export const getSettings = async (req, res, next) => {
 };
 
 /**
+ * Получить публичные настройки (доступно всем авторизованным пользователям)
+ */
+export const getPublicSettings = async (req, res, next) => {
+  try {
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+
+    res.json({
+      success: true,
+      data: {
+        defaultCounterpartyId: defaultCounterpartyId || null
+      }
+    });
+  } catch (error) {
+    console.error('Error getting public settings:', error);
+    next(error);
+  }
+};
+
+/**
  * Обновить настройку по ключу (только для администратора)
  */
 export const updateSetting = async (req, res, next) => {

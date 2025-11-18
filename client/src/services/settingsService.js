@@ -2,6 +2,14 @@ import api from './api';
 
 const settingsService = {
   /**
+   * Получить публичные настройки (доступно всем авторизованным пользователям)
+   */
+  getPublicSettings: async () => {
+    const response = await api.get('/settings/public');
+    return response.data;
+  },
+
+  /**
    * Получить все настройки (только для администратора)
    */
   getSettings: async () => {

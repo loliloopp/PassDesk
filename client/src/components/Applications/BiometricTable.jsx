@@ -62,19 +62,19 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       title: 'Организация',
       key: 'organization',
       width: 200,
-      render: (_, record) => record.counterparty?.name || '-',
+      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.name || '-',
     },
     {
       title: 'ИНН организации',
       key: 'organizationInn',
       width: 140,
-      render: (_, record) => record.counterparty?.inn || '-',
+      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.inn || '-',
     },
     {
       title: 'КПП организации',
       key: 'organizationKpp',
       width: 120,
-      render: (_, record) => record.counterparty?.kpp || '-',
+      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.kpp || '-',
     },
   ];
 

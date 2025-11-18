@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Menu, Layout } from 'antd'
+import { useState, useEffect } from 'react'
 import {
   DashboardOutlined,
   UserOutlined,
@@ -7,9 +8,11 @@ import {
   ControlOutlined,
   ProfileOutlined,
   LogoutOutlined,
-  ShopOutlined
+  ShopOutlined,
+  BookOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
+import settingsService from '@/services/settingsService'
 
 const { Footer } = Layout
 
@@ -17,6 +20,23 @@ const MobileMenu = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { logout, user } = useAuthStore()
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
+
+  // Загружаем настройки при монтировании компонента
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await settingsService.getPublicSettings()
+        setDefaultCounterpartyId(response.data.defaultCounterpartyId)
+      } catch (error) {
+        console.error('Error loading settings:', error)
+      }
+    }
+    
+    if (user) {
+      loadSettings()
+    }
+  }, [user])
 
   // Меню для обычных пользователей
   const userMenuItems = [
@@ -33,13 +53,23 @@ const MobileMenu = () => {
     }
   ]
 
+  // Проверяем, должен ли пользователь видеть дашборд
+  const canSeeDashboard = user?.counterpartyId === defaultCounterpartyId
+
   // Меню для админов и менеджеров
-  const adminManagerMenuItems = [
-    {
+  const adminManagerMenuItems = []
+
+  // Добавляем "Дашборд" только если пользователь принадлежит к контрагенту по умолчанию
+  if (canSeeDashboard) {
+    adminManagerMenuItems.push({
       key: '/dashboard',
       icon: <DashboardOutlined />,
       label: 'Дашборд',
-    },
+    })
+  }
+
+  // Остальные пункты меню
+  adminManagerMenuItems.push(
     {
       key: '/employees',
       icon: <UserOutlined />,
@@ -54,8 +84,13 @@ const MobileMenu = () => {
       key: '/counterparties',
       icon: <ShopOutlined />,
       label: 'Справочники',
+    },
+    {
+      key: '/directories',
+      icon: <BookOutlined />,
+      label: 'Подразделения',
     }
-  ]
+  )
 
   // Добавляем Администрирование для админов
   if (user?.role === 'admin') {

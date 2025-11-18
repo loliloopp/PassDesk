@@ -13,20 +13,51 @@ import ContractsPage from './pages/ContractsPage'
 import ApplicationsPage from './pages/ApplicationsPage'
 import UserProfilePage from './pages/UserProfilePage'
 import AdministrationPage from './pages/AdministrationPage'
+import DirectoriesPage from './pages/DirectoriesPage'
 import DebugPage from './pages/DebugPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
+import DashboardProtectedRoute from './components/Auth/DashboardProtectedRoute'
 import { useAuthStore } from './store/authStore'
+import { useState, useEffect } from 'react'
+import settingsService from './services/settingsService'
 
 // Компонент для перенаправления на основе роли
 const RoleBasedRedirect = () => {
   const { user } = useAuthStore()
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await settingsService.getPublicSettings()
+        setDefaultCounterpartyId(response.data.defaultCounterpartyId)
+      } catch (error) {
+        console.error('Error loading settings:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadSettings()
+  }, [])
+
+  if (loading) {
+    return null
+  }
   
   if (user?.role === 'user') {
     return <Navigate to="/my-profile" replace />
   }
+
+  // Для admin и manager проверяем доступ к дашборду
+  const canSeeDashboard = user?.counterpartyId === defaultCounterpartyId
   
-  return <Navigate to="/dashboard" replace />
+  if (canSeeDashboard) {
+    return <Navigate to="/dashboard" replace />
+  }
+  
+  return <Navigate to="/employees" replace />
 }
 
 function App() {
@@ -44,7 +75,13 @@ function App() {
           {/* Routes for admin and manager */}
           <Route 
             path="dashboard" 
-            element={<ProtectedRoute allowedRoles={['admin', 'manager']}><DashboardPage /></ProtectedRoute>} 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                <DashboardProtectedRoute>
+                  <DashboardPage />
+                </DashboardProtectedRoute>
+              </ProtectedRoute>
+            } 
           />
           <Route 
             path="employees" 
@@ -69,6 +106,12 @@ function App() {
           <Route 
             path="contracts" 
             element={<ProtectedRoute allowedRoles={['admin', 'manager']}><ContractsPage /></ProtectedRoute>} 
+          />
+          
+          {/* Route for directories (admin and manager) */}
+          <Route 
+            path="directories" 
+            element={<ProtectedRoute allowedRoles={['admin', 'manager']}><DirectoriesPage /></ProtectedRoute>} 
           />
           
           {/* Route for admin only */}

@@ -34,6 +34,20 @@ import dayjs from 'dayjs';
 const { Title } = Typography;
 const DATE_FORMAT = 'DD.MM.YYYY';
 
+// CSS для чередующихся цветов строк
+const tableStyles = `
+  .table-row-light {
+    background-color: #ffffff;
+  }
+  .table-row-dark {
+    background-color: #f5f5f5;
+  }
+  .table-row-light:hover,
+  .table-row-dark:hover {
+    background-color: #e6f7ff !important;
+  }
+`;
+
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
   const [citizenships, setCitizenships] = useState([]);
@@ -162,12 +176,9 @@ const EmployeesPage = () => {
       title: 'ФИО',
       key: 'fullName',
       render: (_, record) => (
-        <Space>
-          <UserOutlined style={{ color: '#2563eb' }} />
-          <span>
-            {record.lastName} {record.firstName} {record.middleName || ''}
-          </span>
-        </Space>
+        <span>
+          {record.lastName} {record.firstName} {record.middleName || ''}
+        </span>
       ),
       sorter: (a, b) => a.lastName.localeCompare(b.lastName),
     },
@@ -175,6 +186,16 @@ const EmployeesPage = () => {
       title: 'Должность',
       dataIndex: 'position',
       key: 'position',
+    },
+    {
+      title: 'Подразделение',
+      key: 'department',
+      render: (_, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        if (mappings.length === 0) return '-';
+        const departmentName = mappings[0]?.department?.name;
+        return departmentName || '-';
+      },
     },
     {
       title: 'Гражданство',
@@ -276,56 +297,68 @@ const EmployeesPage = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+      {/* Вставляем стили для чередующихся строк */}
+      <style>{tableStyles}</style>
+      
+      {/* Заголовок с поиском и фильтром в одну строку */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 16, 
+        flexWrap: 'wrap', 
+        gap: 16 
+      }}>
         <Title level={2} style={{ margin: 0 }}>
           Сотрудники
         </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Добавить сотрудника
-        </Button>
+        
+        <Space size="middle">
+          <Input
+            placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ width: 350 }}
+            allowClear
+          />
+          <Select
+            placeholder="Гражданство"
+            allowClear
+            value={selectedCitizenship}
+            onChange={setSelectedCitizenship}
+            style={{ width: 200 }}
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
+          >
+            {citizenships.map((c) => (
+              <Select.Option key={c.id} value={c.id}>
+                {c.name}
+              </Select.Option>
+            ))}
+          </Select>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            Добавить сотрудника
+          </Button>
+        </Space>
       </div>
-
-      <Space style={{ marginBottom: 16 }}>
-        <Input
-          placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          size="large"
-          style={{ width: 400 }}
-          allowClear
-        />
-        <Select
-          placeholder="Гражданство"
-          allowClear
-          value={selectedCitizenship}
-          onChange={setSelectedCitizenship}
-          style={{ width: 200 }}
-          showSearch
-          optionFilterProp="children"
-          filterOption={(input, option) =>
-            option.children.toLowerCase().includes(input.toLowerCase())
-          }
-        >
-          {citizenships.map((c) => (
-            <Select.Option key={c.id} value={c.id}>
-              {c.name}
-            </Select.Option>
-          ))}
-        </Select>
-      </Space>
 
       <Table
         columns={columns}
         dataSource={filteredEmployees}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1200 }}
+        size="small"
+        scroll={{ x: 1400 }}
         pagination={{
-          pageSize: 10,
+          pageSize: 20,
           showSizeChanger: true,
           showTotal: (total) => `Всего: ${total}`,
         }}
+        rowClassName={(record, index) => index % 2 === 0 ? 'table-row-light' : 'table-row-dark'}
       />
 
       <EmployeeFormModal

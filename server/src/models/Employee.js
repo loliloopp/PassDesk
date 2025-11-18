@@ -28,25 +28,16 @@ Employee.init(
       type: DataTypes.STRING,
       allowNull: false
     },
-  counterpartyId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    field: 'counterparty_id',
-    references: {
-      model: 'counterparties',
-      key: 'id'
-    }
-  },
-  citizenshipId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    field: 'citizenship_id',
-    references: {
-      model: 'citizenships',
-      key: 'id'
+    citizenshipId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'citizenship_id',
+      references: {
+        model: 'citizenships',
+        key: 'id'
+      },
+      comment: 'Гражданство'
     },
-    comment: 'Гражданство'
-  },
   birthDate: {
     type: DataTypes.DATE,
     allowNull: true,

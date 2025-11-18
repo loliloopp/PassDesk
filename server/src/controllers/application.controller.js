@@ -1,4 +1,4 @@
-import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, sequelize } from '../models/index.js';
+import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Функция генерации номера заявки
@@ -111,10 +111,16 @@ export const getAllApplications = async (req, res) => {
               as: 'citizenship', 
               attributes: ['name'] 
             },
-            { 
-              model: Counterparty, 
-              as: 'counterparty', 
-              attributes: ['name', 'inn', 'kpp'] 
+            {
+              model: EmployeeCounterpartyMapping,
+              as: 'employeeCounterpartyMappings',
+              include: [
+                {
+                  model: Counterparty,
+                  as: 'counterparty',
+                  attributes: ['name', 'inn', 'kpp']
+                }
+              ]
             }
           ],
           attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'position'],
@@ -194,10 +200,16 @@ export const getApplicationById = async (req, res) => {
               as: 'citizenship', 
               attributes: ['name'] 
             },
-            { 
-              model: Counterparty, 
-              as: 'counterparty', 
-              attributes: ['name', 'inn', 'kpp'] 
+            {
+              model: EmployeeCounterpartyMapping,
+              as: 'employeeCounterpartyMappings',
+              include: [
+                {
+                  model: Counterparty,
+                  as: 'counterparty',
+                  attributes: ['name', 'inn', 'kpp']
+                }
+              ]
             }
           ],
           attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'position'],
@@ -628,11 +640,18 @@ export const getEmployeesForApplication = async (req, res) => {
       });
     }
     
+    // Теперь сотрудники связаны с контрагентами через маппинг
     const employees = await Employee.findAll({
-      where: {
-        counterparty_id: counterpartyId,
-        is_active: true
-      },
+      include: [
+        {
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          where: {
+            counterpartyId: counterpartyId
+          },
+          attributes: []
+        }
+      ],
       attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
       order: [['lastName', 'ASC']]
     });

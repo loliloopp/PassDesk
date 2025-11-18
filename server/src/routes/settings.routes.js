@@ -1,10 +1,13 @@
 import express from 'express';
-import { getSettings, updateSetting } from '../controllers/settings.controller.js';
+import { getSettings, updateSetting, getPublicSettings } from '../controllers/settings.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Все маршруты доступны только администраторам
+// GET /api/v1/settings/public - получить публичные настройки (доступно всем авторизованным пользователям)
+router.get('/public', authenticate, getPublicSettings);
+
+// Все остальные маршруты доступны только администраторам
 router.use(authenticate, authorize('admin'));
 
 // GET /api/v1/settings - получить все настройки

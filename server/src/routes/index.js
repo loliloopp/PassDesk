@@ -10,6 +10,7 @@ import contractRoutes from './contract.routes.js';
 import applicationRoutes from './application.routes.js';
 import citizenshipRoutes from './citizenship.routes.js';
 import settingsRoutes from './settings.routes.js';
+import departmentRoutes from './department.routes.js';
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router.use('/contracts', contractRoutes);
 router.use('/applications', applicationRoutes);
 router.use('/citizenships', citizenshipRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/departments', departmentRoutes);
 
 export default router;
 
