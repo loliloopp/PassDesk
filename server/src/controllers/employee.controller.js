@@ -486,42 +486,10 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
       }
     }
     
-    // Получаем обновленного сотрудника с маппингами
-    const updatedEmployee = await Employee.findByPk(id, {
-      include: [
-        {
-          model: Citizenship,
-          as: 'citizenship',
-          attributes: ['id', 'name', 'code', 'requiresPatent']
-        },
-        {
-          model: EmployeeCounterpartyMapping,
-          as: 'employeeCounterpartyMappings',
-          include: [
-            {
-              model: Counterparty,
-              as: 'counterparty',
-              attributes: ['id', 'name']
-            },
-            {
-              model: Department,
-              as: 'department',
-              attributes: ['id', 'name']
-            },
-            {
-              model: ConstructionSite,
-              as: 'constructionSite',
-              attributes: ['id', 'shortName', 'fullName']
-            }
-          ]
-        }
-      ]
-    });
-    
+    // Просто возвращаем успех без лишней загрузки данных
     res.json({
       success: true,
-      message: 'Объекты обновлены',
-      data: updatedEmployee
+      message: 'Объекты обновлены'
     });
   } catch (error) {
     console.error('Error updating construction sites:', error);

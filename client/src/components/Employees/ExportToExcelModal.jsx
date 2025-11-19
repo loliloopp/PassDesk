@@ -48,6 +48,8 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
     try {
       const values = form.getFieldsValue(['constructionSiteId', 'counterpartyId', 'filterType']);
       
+      console.log('🔍 Filter values:', values);
+      
       if (!values.constructionSiteId || !values.counterpartyId) {
         setEmployees([]);
         setSelectedEmployees([]);
@@ -59,25 +61,46 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
       // Получаем всех сотрудников
       const response = await employeeService.getAll();
       const allEmployees = response.data.employees || [];
+      
+      console.log('📋 All employees count:', allEmployees.length);
 
       // Фильтруем сотрудников по условиям
       const filtered = allEmployees.filter((emp) => {
-        const mapping = emp.employeeCounterpartyMappings?.[0];
+        const mappings = emp.employeeCounterpartyMappings || [];
         
-        // Фильтр по объекту и контрагенту
-        const matchesSite = mapping?.constructionSiteId === values.constructionSiteId;
-        const matchesCounterparty = mapping?.counterpartyId === values.counterpartyId;
+        console.log(`👤 Employee ${emp.lastName}: mappings count = ${mappings.length}`);
         
-        if (!matchesSite || !matchesCounterparty) return false;
+        // Проверяем, есть ли хотя бы один маппинг, который соответствует фильтрам
+        const hasMatchingMapping = mappings.some(mapping => {
+          const siteMatch = mapping?.constructionSiteId === values.constructionSiteId;
+          const counterpartyMatch = mapping?.counterpartyId === values.counterpartyId;
+          
+          console.log(`  Mapping: site ${mapping?.constructionSiteId} === ${values.constructionSiteId} ? ${siteMatch}, counterparty ${mapping?.counterpartyId} === ${values.counterpartyId} ? ${counterpartyMatch}`);
+          
+          return siteMatch && counterpartyMatch;
+        });
+        
+        if (!hasMatchingMapping) return false;
 
         // Фильтр по типу
         if (values.filterType === 'tb_passed') {
-          return emp.status === 'tb_passed';
+          const match = emp.status === 'tb_passed';
+          console.log(`  Status filter (tb_passed): ${emp.status} === 'tb_passed' ? ${match}`);
+          return match;
+        } else if (values.filterType === 'blocked') {
+          // 'blocked': статусы fired, inactive, block
+          const match = emp.statusActive === 'fired' || emp.statusActive === 'inactive' || emp.statusSecure === 'block';
+          console.log(`  Status filter (blocked): statusActive=${emp.statusActive}, statusSecure=${emp.statusSecure}, match=${match}`);
+          return match;
         } else {
           // 'all': статусы 'tb_passed' или 'processed'
-          return emp.status === 'tb_passed' || emp.status === 'processed';
+          const match = emp.status === 'tb_passed' || emp.status === 'processed';
+          console.log(`  Status filter (all): ${emp.status} in ['tb_passed', 'processed'] ? ${match}`);
+          return match;
         }
       });
+      
+      console.log('✅ Filtered employees count:', filtered.length);
 
       setEmployees(filtered);
       // По умолчанию все сотрудники выбраны
@@ -102,10 +125,17 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
 
       // Фильтруем только выбранных сотрудников
       const employeesToExport = employees.filter(emp => selectedEmployees.includes(emp.id));
+      
+      // Получаем значения фильтров из формы
+      const formValues = form.getFieldsValue();
 
       // Формируем данные для Excel (такая же структура, как в BiometricTable)
       const excelData = employeesToExport.map((emp, index) => {
-        const mapping = emp.employeeCounterpartyMappings?.[0];
+        // Находим правильный маппинг по выбранному объекту и контрагенту
+        const mapping = emp.employeeCounterpartyMappings?.find(m => 
+          m.constructionSiteId === formValues.constructionSiteId &&
+          m.counterpartyId === formValues.counterpartyId
+        );
         
         return {
           '№': index + 1,
@@ -133,13 +163,38 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
       // Сохраняем файл
       XLSX.writeFile(workbook, fileName);
 
-      // Обновляем статусы сотрудников (с 'tb_passed' на 'processed')
-      const employeesToUpdate = employeesToExport.filter(emp => emp.status === 'tb_passed');
+      // Получаем тип фильтра
+      const filterType = formValues.filterType;
+
+      // Обновляем статусы сотрудников в зависимости от типа
+      const employeesToUpdate = [];
+      
+      if (filterType === 'tb_passed') {
+        // Для типа "Новые сотрудники (прошедшие ТБ)": меняем status с 'tb_passed' на 'processed'
+        employeesToUpdate.push(
+          ...employeesToExport
+            .filter(emp => emp.status === 'tb_passed')
+            .map(emp => ({ id: emp.id, status: 'processed' }))
+        );
+      } else if (filterType === 'blocked') {
+        // Для типа "Заблокированные": 
+        // - fired -> fired_compl
+        // - block -> block_compl
+        // inactive остается без изменений
+        employeesToUpdate.push(
+          ...employeesToExport
+            .filter(emp => emp.statusActive === 'fired')
+            .map(emp => ({ id: emp.id, statusActive: 'fired_compl' })),
+          ...employeesToExport
+            .filter(emp => emp.statusSecure === 'block')
+            .map(emp => ({ id: emp.id, statusSecure: 'block_compl' }))
+        );
+      }
       
       if (employeesToUpdate.length > 0) {
         await Promise.all(
-          employeesToUpdate.map(emp =>
-            employeeService.update(emp.id, { status: 'processed' })
+          employeesToUpdate.map(({ id, ...updates }) =>
+            employeeService.update(id, updates)
           )
         );
       }
@@ -248,8 +303,9 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
 
             <Form.Item name="filterType" label="Тип сотрудников" initialValue="all" style={{ marginBottom: 0 }}>
               <Radio.Group onChange={(e) => setFilterType(e.target.value)}>
-                <Radio.Button value="all">Все сотрудники</Radio.Button>
+                <Radio.Button value="all">Действующие сотрудники</Radio.Button>
                 <Radio.Button value="tb_passed">Новые сотрудники (прошедшие ТБ)</Radio.Button>
+                <Radio.Button value="blocked">Заблокированные</Radio.Button>
               </Radio.Group>
             </Form.Item>
           </Space>

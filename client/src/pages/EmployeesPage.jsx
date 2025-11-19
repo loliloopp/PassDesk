@@ -23,6 +23,7 @@ import {
   CheckCircleFilled,
   CloseCircleFilled,
   FileExcelOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
 import { employeeService } from '../services/employeeService';
 import { citizenshipService } from '../services/citizenshipService';
@@ -33,6 +34,7 @@ import EmployeeViewModal from '../components/Employees/EmployeeViewModal';
 import EmployeeFilesModal from '../components/Employees/EmployeeFilesModal';
 import EmployeeSitesModal from '../components/Employees/EmployeeSitesModal';
 import ExportToExcelModal from '../components/Employees/ExportToExcelModal';
+import SecurityModal from '../components/Employees/SecurityModal';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -63,6 +65,7 @@ const EmployeesPage = () => {
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
   const [isSitesModalOpen, setIsSitesModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewingEmployee, setViewingEmployee] = useState(null);
   const [filesEmployee, setFilesEmployee] = useState(null);
@@ -238,6 +241,19 @@ const EmployeesPage = () => {
         return departmentName || '-';
       },
     },
+    // Столбец "Контрагент" виден только для пользователей контрагента по умолчанию
+    ...(canExport ? [{
+      title: 'Контрагент',
+      key: 'counterparty',
+      ellipsis: true,
+      render: (_, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        if (mappings.length === 0) return '-';
+        // Показываем все уникальные контрагенты
+        const counterparties = [...new Set(mappings.map(m => m.counterparty?.name).filter(Boolean))];
+        return counterparties.join(', ') || '-';
+      },
+    }] : []),
     {
       title: 'Объект',
       key: 'constructionSite',
@@ -464,6 +480,15 @@ const EmployeesPage = () => {
               Импорт в Excel
             </Button>
           )}
+          {canExport && (
+            <Button 
+              type="default" 
+              icon={<LockOutlined />} 
+              onClick={() => setIsSecurityModalOpen(true)}
+            >
+              Блокировка
+            </Button>
+          )}
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             Добавить сотрудника
           </Button>
@@ -526,6 +551,12 @@ const EmployeesPage = () => {
           // Обновляем список сотрудников после экспорта
           fetchEmployees();
         }}
+      />
+
+      <SecurityModal
+        visible={isSecurityModalOpen}
+        onCancel={() => setIsSecurityModalOpen(false)}
+        onSuccess={() => fetchEmployees()}
       />
     </div>
   );

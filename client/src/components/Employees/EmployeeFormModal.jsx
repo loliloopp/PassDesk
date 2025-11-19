@@ -56,11 +56,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       fetchConstructionSites();
       fetchDefaultCounterparty();
       
+      console.log('📝 EmployeeFormModal: opening with employee:', employee);
+      
       if (employee) {
         // Получаем данные из маппинга для установки в форму
         const mapping = employee.employeeCounterpartyMappings?.[0];
         
-        form.setFieldsValue({
+        const formData = {
           ...employee,
           birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
           passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
@@ -68,16 +70,32 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           constructionSiteId: mapping?.constructionSiteId || null,
           // Преобразуем статусы в булевы значения для чекбоксов
           isTbPassed: employee.status === 'tb_passed' || employee.status === 'processed',
-          isFired: employee.statusActive === 'fired',
+          isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
           isInactive: employee.statusActive === 'inactive',
-        });
+        };
+        
+        console.log('📝 EmployeeFormModal: setting form data:', formData);
+        form.setFieldsValue(formData);
+        
         // Устанавливаем выбранное гражданство
         if (employee.citizenshipId) {
           updateSelectedCitizenship(employee.citizenshipId);
         }
         // Проверяем валидность вкладок при загрузке существующего сотрудника
-        setTimeout(() => validateAllTabs(), 100);
+        // Делаем это с небольшой задержкой, чтобы форма успела заполниться
+        setTimeout(() => {
+          validateAllTabs();
+        }, 100);
+        // И еще раз через 500ms для гарантии
+        setTimeout(() => {
+          validateAllTabs();
+        }, 500);
+        // И еще раз через 1000ms для полной уверенности (после обновления requiresPatent)
+        setTimeout(() => {
+          validateAllTabs();
+        }, 1000);
       } else {
+        console.log('📝 EmployeeFormModal: resetting form (no employee)');
         form.resetFields();
         setActiveTab('1');
         setTabsValidation({ '1': false, '2': false, '3': false });
@@ -90,6 +108,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   useEffect(() => {
     if (employee?.citizenshipId && citizenships.length > 0) {
       updateSelectedCitizenship(employee.citizenshipId);
+      // Запускаем валидацию после обновления гражданства
+      setTimeout(() => validateAllTabs(), 200);
     }
   }, [citizenships, employee]);
 
@@ -195,7 +215,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     }
     window.validationTimeout = setTimeout(() => {
       validateAllTabs();
-    }, 300);
+    }, 100); // Уменьшили задержку до 100ms для более быстрой реакции
   };
 
   // Переход на следующую вкладку
@@ -253,6 +273,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
       formattedValues.statusCard = 'draft';
       await onSuccess(formattedValues);
+      // Закрываем модальное окно после успешного сохранения черновика
+      onCancel();
     } catch (error) {
       console.error('Save draft error:', error);
       // Ошибка уже показана в родительском компоненте через message.error
@@ -383,7 +405,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             Сохранить черновик
           </Button>
           {allTabsValid() ? (
-            <Button type="primary" onClick={handleSave} loading={loading}>
+            <Button 
+              type="primary" 
+              onClick={handleSave} 
+              loading={loading}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            >
               Сохранить
             </Button>
           ) : (
@@ -401,7 +428,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       >
         <Tabs 
           activeKey={activeTab}
-          onChange={setActiveTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            // Немедленно проверяем валидацию при смене вкладки
+            setTimeout(() => validateAllTabs(), 0);
+          }}
           style={{ marginTop: 16 }}
         >
           {/* Вкладка: Основная информация */}
