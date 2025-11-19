@@ -136,7 +136,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [constructionSites, setConstructionSites] = useState([]);
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(false); // Флаг инициализации модального окна
+  const [checkingCitizenship, setCheckingCitizenship] = useState(false); // Флаг проверки гражданства
   const [dataLoaded, setDataLoaded] = useState(false); // Новый флаг: данные полностью загружены
   const [activeTab, setActiveTab] = useState('1');
   const [tabsValidation, setTabsValidation] = useState({
@@ -254,60 +254,27 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       if (!visible) {
         // Сбрасываем состояние при закрытии
         setDataLoaded(false);
-        setInitializing(false);
+        setCheckingCitizenship(false);
+        setSelectedCitizenship(null);
         return;
       }
 
-      // Устанавливаем флаг инициализации
-      setInitializing(true);
       setDataLoaded(false);
       setActiveTab('1');
       
       console.log('📝 EmployeeFormModal: opening with employee:', employee);
       
       try {
-        // Шаг 1: Загружаем справочники и ждем их завершения
-        await Promise.all([
+        // Загружаем справочники параллельно (без блокировки UI)
+        const loadReferencesPromise = Promise.all([
           fetchCitizenships(),
           fetchConstructionSites(),
           fetchPositions(),
           fetchDefaultCounterparty()
         ]);
-        
-        // Шаг 2: Ждем, пока React обновит состояние citizenships
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        console.log('📝 EmployeeFormModal: citizenships loaded', {
-          count: citizenships.length,
-          employeeCitizenshipId: employee?.citizenshipId
-        });
-        
-        // Локальная переменная для хранения выбранного гражданства в рамках этой функции
-        let currentCitizenship = null;
 
         if (employee) {
-          // Шаг 3: СНАЧАЛА устанавливаем гражданство (для определения requiresPatent)
-          if (employee.citizenshipId) {
-            const citizenship = citizenships.find(c => c.id === employee.citizenshipId);
-            console.log('📝 EmployeeFormModal: looking for citizenship', {
-              citizenshipId: employee.citizenshipId,
-              found: !!citizenship,
-              citizenship
-            });
-            
-            if (citizenship) {
-              currentCitizenship = citizenship;
-              setSelectedCitizenship(citizenship);
-              console.log('📝 EmployeeFormModal: citizenship set BEFORE form data', {
-                citizenshipId: employee.citizenshipId,
-                requiresPatent: citizenship.requiresPatent
-              });
-              // Ждем, пока React применит изменение selectedCitizenship
-              await new Promise(resolve => setTimeout(resolve, 150));
-            }
-          }
-          
-          // Шаг 4: Теперь устанавливаем данные сотрудника в форму
+          // Сразу устанавливаем данные сотрудника в форму (без ожидания гражданства)
           const mapping = employee.employeeCounterpartyMappings?.[0];
           
           const formData = {
@@ -325,45 +292,58 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             kig: employee.kig ? formatKig(employee.kig) : null,
           };
           
-          console.log('📝 EmployeeFormModal: setting form data:', formData);
+          console.log('📝 EmployeeFormModal: setting form data immediately');
           form.setFieldsValue(formData);
           
-          // Шаг 5: Ждем применения всех изменений
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Теперь асинхронно проверяем гражданство
+          setCheckingCitizenship(true);
           
-          // Шаг 6: Завершаем инициализацию и устанавливаем флаг загрузки
-          setInitializing(false);
+          // Ждем загрузки справочников
+          await loadReferencesPromise;
+          
+          // Небольшая задержка для обновления состояния citizenships
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+          // Определяем гражданство после загрузки справочника
+          if (employee.citizenshipId) {
+            const citizenship = citizenships.find(c => c.id === employee.citizenshipId);
+            console.log('📝 EmployeeFormModal: citizenship determined', {
+              citizenshipId: employee.citizenshipId,
+              found: !!citizenship,
+              requiresPatent: citizenship?.requiresPatent
+            });
+            
+            if (citizenship) {
+              setSelectedCitizenship(citizenship);
+              // Ждем применения изменения
+              await new Promise(resolve => setTimeout(resolve, 50));
+              
+              // Запускаем валидацию с учетом гражданства
+              const validation = computeValidation(true, citizenship);
+              setTabsValidation(validation);
+              console.log('✅ EmployeeFormModal: citizenship check complete', {
+                validation,
+                requiresPatent: citizenship?.requiresPatent
+              });
+            }
+          }
+          
+          setCheckingCitizenship(false);
           setDataLoaded(true);
-          console.log('📝 EmployeeFormModal: initialization complete', {
-            selectedCitizenship: currentCitizenship,
-            requiresPatent: currentCitizenship?.requiresPatent
-          });
-          
-          // Шаг 7: Ждем, пока React применит setDataLoaded(true)
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Шаг 8: Теперь запускаем валидацию (с forceCompute=true)
-          // Передаем currentCitizenship явно, чтобы computeValidation использовала актуальные данные
-          
-          const validation = computeValidation(true, currentCitizenship);
-          setTabsValidation(validation);
-          console.log('✅ EmployeeFormModal: initial validation complete', {
-            validation,
-            requiresPatent: currentCitizenship?.requiresPatent,
-            selectedCitizenship: currentCitizenship
-          });
         } else {
+          // Для нового сотрудника просто загружаем справочники
+          await loadReferencesPromise;
+          
           console.log('📝 EmployeeFormModal: resetting form (no employee)');
           form.resetFields();
           setActiveTab('1');
           setTabsValidation({ '1': false, '2': false, '3': false });
           setSelectedCitizenship(null);
-          setInitializing(false);
           setDataLoaded(true);
         }
       } catch (error) {
         console.error('❌ EmployeeFormModal: initialization error', error);
-        setInitializing(false);
+        setCheckingCitizenship(false);
         setDataLoaded(true);
       }
     };
@@ -373,8 +353,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
   // Обновляем валидацию при изменении requiresPatent
   useEffect(() => {
-    // Не запускаем во время инициализации
-    if (initializing) return;
+    // Не запускаем во время проверки гражданства
+    if (checkingCitizenship) return;
     
     if (!requiresPatent && activeTab === '3') {
       // Если патент больше не требуется и мы на вкладке "Патент", переключаемся на первую вкладку
@@ -696,50 +676,43 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       maskClosable={false}
       width={1200}
       footer={
-        initializing ? null : ( // Не показываем footer во время инициализации
-          <Space>
-            <Button onClick={handleModalCancel}>
-              {employee ? 'Закрыть' : 'Отмена'}
+        <Space>
+          <Button onClick={handleModalCancel}>
+            {employee ? 'Закрыть' : 'Отмена'}
+          </Button>
+          <Button onClick={handleSaveDraft} loading={loading}>
+            Сохранить черновик
+          </Button>
+          {allTabsValid() ? (
+            <Button 
+              type="primary" 
+              onClick={handleSave} 
+              loading={loading}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            >
+              Сохранить
             </Button>
-            <Button onClick={handleSaveDraft} loading={loading}>
-              Сохранить черновик
+          ) : (
+            <Button type="primary" onClick={handleNext}>
+              Следующая
             </Button>
-            {allTabsValid() ? (
-              <Button 
-                type="primary" 
-                onClick={handleSave} 
-                loading={loading}
-                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-              >
-                Сохранить
-              </Button>
-            ) : (
-              <Button type="primary" onClick={handleNext}>
-                Следующая
-              </Button>
-            )}
-          </Space>
-        )
+          )}
+        </Space>
       }
     >
-      {initializing ? (
-        <div style={{ textAlign: 'center', padding: '40px 0' }}>
-          <div style={{ fontSize: 14, color: '#999' }}>Загрузка данных...</div>
-        </div>
-      ) : (
-        <Form 
-          form={form} 
-          layout="vertical"
-          onFieldsChange={handleFieldsChange}
-          validateTrigger={['onChange', 'onBlur']}
-          autoComplete="off"
-          requiredMark={(label, { required }) => (
-            <>
-              {label}
-              {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
-            </>
-          )}
-        >
+      <Form 
+        form={form} 
+        layout="vertical"
+        onFieldsChange={handleFieldsChange}
+        validateTrigger={['onChange', 'onBlur']}
+        autoComplete="off"
+        requiredMark={(label, { required }) => (
+          <>
+            {label}
+            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+          </>
+        )}
+      >
         <Tabs 
           activeKey={activeTab}
           onChange={(key) => {
@@ -1076,49 +1049,59 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           </Tabs.TabPane>
 
           {/* Вкладка: Патент (только если требуется) */}
-          {requiresPatent && (
+          {(requiresPatent || checkingCitizenship) && (
             <Tabs.TabPane 
               tab={
                 <span style={getTabStyle()}>
                   {getTabIcon('3')}
                   Патент
+                  {checkingCitizenship && ' (проверка...)'}
                 </span>
               } 
               key="3"
+              disabled={checkingCitizenship}
             >
-              <Row gutter={16}>
-                <Col span={8}>
-                  <Form.Item 
-                    name="patentNumber" 
-                    label="Номер патента"
-                    rules={[{ required: true, message: 'Введите номер патента' }]}
-                  >
-                    <Input autoComplete="off" />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item 
-                    name="patentIssueDate" 
-                    label="Дата выдачи патента"
-                    rules={[{ required: true, message: 'Введите дату выдачи патента' }]}
-                  >
-                    <DatePicker
-                      style={{ width: '100%' }}
-                      format={DATE_FORMAT}
-                      placeholder="ДД.ММ.ГГГГ"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item 
-                    name="blankNumber" 
-                    label="Номер бланка"
-                    rules={[{ required: true, message: 'Введите номер бланка' }]}
-                  >
-                    <Input autoComplete="off" />
-                  </Form.Item>
-                </Col>
-              </Row>
+              {checkingCitizenship ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                  Проверка необходимости патента...
+                </div>
+              ) : (
+                <>
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Form.Item 
+                        name="patentNumber" 
+                        label="Номер патента"
+                        rules={[{ required: true, message: 'Введите номер патента' }]}
+                      >
+                        <Input autoComplete="off" />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item 
+                        name="patentIssueDate" 
+                        label="Дата выдачи патента"
+                        rules={[{ required: true, message: 'Введите дату выдачи патента' }]}
+                      >
+                        <DatePicker
+                          style={{ width: '100%' }}
+                          format={DATE_FORMAT}
+                          placeholder="ДД.ММ.ГГГГ"
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item 
+                        name="blankNumber" 
+                        label="Номер бланка"
+                        rules={[{ required: true, message: 'Введите номер бланка' }]}
+                      >
+                        <Input autoComplete="off" />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </>
+              )}
             </Tabs.TabPane>
           )}
 
@@ -1130,7 +1113,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           )}
         </Tabs>
       </Form>
-      )}
     </Modal>
   );
 };
