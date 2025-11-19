@@ -24,9 +24,15 @@ Employee.init(
       type: DataTypes.STRING,
       field: 'middle_name'
     },
-    position: {
-      type: DataTypes.STRING,
-      allowNull: false
+    positionId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'position_id',
+      references: {
+        model: 'positions',
+        key: 'id'
+      },
+      comment: 'Должность сотрудника'
     },
     citizenshipId: {
       type: DataTypes.INTEGER,
@@ -209,7 +215,7 @@ Employee.init(
     underscored: true,
     indexes: [
       {
-        fields: ['position']
+        fields: ['position_id']
       },
       {
         fields: ['is_active']

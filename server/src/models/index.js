@@ -15,6 +15,7 @@ import Setting from './Setting.js';
 import UserEmployeeMapping from './UserEmployeeMapping.js';
 import Department from './Department.js';
 import EmployeeCounterpartyMapping from './EmployeeCounterpartyMapping.js';
+import Position from './Position.js';
 
 // Define associations
 
@@ -201,6 +202,16 @@ UserEmployeeMapping.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 Employee.hasMany(UserEmployeeMapping, { foreignKey: 'employee_id', as: 'employeeUsersMapping' });
 UserEmployeeMapping.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
 
+// Position -> Employee (должность -> сотрудники)
+Position.hasMany(Employee, { foreignKey: 'position_id', as: 'employees' });
+Employee.belongsTo(Position, { foreignKey: 'position_id', as: 'position' });
+
+// User -> Position (создатель/редактор)
+User.hasMany(Position, { foreignKey: 'created_by', as: 'createdPositions' });
+User.hasMany(Position, { foreignKey: 'updated_by', as: 'updatedPositions' });
+Position.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+Position.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
 export {
   sequelize,
   User,
@@ -218,7 +229,8 @@ export {
   Setting,
   UserEmployeeMapping,
   Department,
-  EmployeeCounterpartyMapping
+  EmployeeCounterpartyMapping,
+  Position
 };
 
 

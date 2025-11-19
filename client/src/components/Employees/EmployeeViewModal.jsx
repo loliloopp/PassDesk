@@ -77,7 +77,7 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
               {employee.middleName || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Должность" span={1}>
-              {employee.position}
+              {employee.position?.name || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Гражданство" span={1}>
               {employee.citizenship?.name || '-'}

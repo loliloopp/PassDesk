@@ -33,7 +33,7 @@ const api = axios.create({
     'Cache-Control': 'no-cache',
     'Pragma': 'no-cache'
   },
-  timeout: 10000
+  timeout: 60000 // Увеличиваем до 60 секунд для импорта больших файлов
 })
 
 // Логируем информацию при инициализации

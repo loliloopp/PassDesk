@@ -11,6 +11,7 @@ import applicationRoutes from './application.routes.js';
 import citizenshipRoutes from './citizenship.routes.js';
 import settingsRoutes from './settings.routes.js';
 import departmentRoutes from './department.routes.js';
+import positionRoutes from './position.routes.js';
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ router.use('/applications', applicationRoutes);
 router.use('/citizenships', citizenshipRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/departments', departmentRoutes);
+router.use('/positions', positionRoutes);
 
 export default router;
 

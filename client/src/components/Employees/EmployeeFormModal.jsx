@@ -3,6 +3,7 @@ import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Tabs, Button
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
 import { constructionSiteService } from '../../services/constructionSiteService';
+import positionService from '../../services/positionService';
 import settingsService from '../../services/settingsService';
 import { useAuthStore } from '../../store/authStore';
 import EmployeeFileUpload from './EmployeeFileUpload';
@@ -54,6 +55,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(false); // Флаг инициализации модального окна
   const [dataLoaded, setDataLoaded] = useState(false); // Новый флаг: данные полностью загружены
@@ -73,7 +75,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   // Определяем обязательные поля для каждой вкладки (динамически)
   const getRequiredFieldsByTab = () => {
     const baseFields = {
-      '1': ['lastName', 'firstName', 'position', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': requiresPatent 
         ? ['inn', 'snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
         : ['inn', 'snils', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
@@ -115,7 +117,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     
     // Пересчитываем requiredFieldsByTab с учетом актуального гражданства
     const currentRequiredFieldsByTab = {
-      '1': ['lastName', 'firstName', 'position', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': currentRequiresPatent 
         ? ['inn', 'snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
         : ['inn', 'snils', 'passportNumber', 'passportDate', 'passportIssuer'],
@@ -189,6 +191,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         await Promise.all([
           fetchCitizenships(),
           fetchConstructionSites(),
+          fetchPositions(),
           fetchDefaultCounterparty()
         ]);
         
@@ -329,6 +332,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       setConstructionSites(data.data.constructionSites || []);
     } catch (error) {
       console.error('Error loading construction sites:', error);
+    }
+  };
+
+  const fetchPositions = async () => {
+    try {
+      const { data } = await positionService.getAll({ limit: 1000 });
+      setPositions(data.data.positions || []);
+    } catch (error) {
+      console.error('Error loading positions:', error);
     }
   };
 
@@ -697,11 +709,25 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               </Col>
               <Col span={6}>
                 <Form.Item
-                  name="position"
+                  name="positionId"
                   label="Должность"
-                  rules={[{ required: true, message: 'Введите должность' }]}
+                  rules={[{ required: true, message: 'Выберите должность' }]}
                 >
-                  <Input />
+                  <Select
+                    placeholder="Выберите должность"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    filterOption={(input, option) =>
+                      option.children.toLowerCase().includes(input.toLowerCase())
+                    }
+                  >
+                    {positions.map((p) => (
+                      <Option key={p.id} value={p.id}>
+                        {p.name}
+                      </Option>
+                    ))}
+                  </Select>
                 </Form.Item>
               </Col>
             </Row>

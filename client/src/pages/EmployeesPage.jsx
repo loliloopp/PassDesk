@@ -202,7 +202,7 @@ const EmployeesPage = () => {
       employee.firstName?.toLowerCase().includes(searchLower) ||
       employee.lastName?.toLowerCase().includes(searchLower) ||
       employee.middleName?.toLowerCase().includes(searchLower) ||
-      employee.position?.toLowerCase().includes(searchLower) ||
+      employee.position?.name?.toLowerCase().includes(searchLower) || // Изменено для связанной таблицы
       employee.inn?.toLowerCase().includes(searchLower) ||
       employee.snils?.toLowerCase().includes(searchLower)
     );
@@ -225,7 +225,7 @@ const EmployeesPage = () => {
     },
     {
       title: 'Должность',
-      dataIndex: 'position',
+      dataIndex: ['position', 'name'], // Путь к вложенному значению
       key: 'position',
       width: 120,
       ellipsis: true,

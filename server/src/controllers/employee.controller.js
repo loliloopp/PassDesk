@@ -1,4 +1,4 @@
-import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import yandexDiskClient, { basePath } from '../config/storage.js';
@@ -13,7 +13,7 @@ const calculateStatusCard = (employee) => {
   const baseRequiredFields = [
     employee.lastName,
     employee.firstName,
-    employee.position,
+    employee.positionId, // Изменено с position на positionId
     employee.citizenshipId,
     employee.birthDate,
     employee.inn,
@@ -46,13 +46,12 @@ export const getAllEmployees = async (req, res, next) => {
 
     const where = {};
     
-    // Поиск по ФИО, должности, email, телефону
+    // Поиск по ФИО, email, телефону
     if (search) {
       where[Op.or] = [
         { firstName: { [Op.iLike]: `%${search}%` } },
         { lastName: { [Op.iLike]: `%${search}%` } },
         { middleName: { [Op.iLike]: `%${search}%` } },
-        { position: { [Op.iLike]: `%${search}%` } },
         { email: { [Op.iLike]: `%${search}%` } },
         { phone: { [Op.iLike]: `%${search}%` } }
       ];
@@ -73,6 +72,11 @@ export const getAllEmployees = async (req, res, next) => {
           model: User,
           as: 'creator',
           attributes: ['id', 'firstName', 'lastName']
+        },
+        {
+          model: Position, // Добавлена связь с Position
+          as: 'position',
+          attributes: ['id', 'name']
         },
         {
           model: EmployeeCounterpartyMapping,
@@ -156,6 +160,11 @@ export const getEmployeeById = async (req, res, next) => {
         {
           model: User,
           as: 'updater'
+        },
+        {
+          model: Position, // Добавлена связь с Position
+          as: 'position',
+          attributes: ['id', 'name']
         },
         {
           model: EmployeeCounterpartyMapping,
@@ -256,6 +265,11 @@ export const createEmployee = async (req, res, next) => {
           model: Citizenship,
           as: 'citizenship',
           attributes: ['id', 'name', 'code', 'requiresPatent']
+        },
+        {
+          model: Position, // Добавлена связь с Position
+          as: 'position',
+          attributes: ['id', 'name']
         },
         {
           model: EmployeeCounterpartyMapping,
@@ -381,6 +395,11 @@ export const updateEmployee = async (req, res, next) => {
           model: Citizenship,
           as: 'citizenship',
           attributes: ['id', 'name', 'code', 'requiresPatent']
+        },
+        {
+          model: Position, // Добавлена связь с Position
+          as: 'position',
+          attributes: ['id', 'name']
         }
       ]
     });
@@ -800,7 +819,7 @@ export const updateMyProfile = async (req, res, next) => {
 
     // Пользователи не могут изменять контрагента и некоторые системные поля
     const allowedFields = [
-      'firstName', 'lastName', 'middleName', 'position',
+      'firstName', 'lastName', 'middleName', 'positionId', // Изменено с position на positionId
       'citizenshipId', 'birthDate',
       'inn', 'snils', 'kig',
       'passportNumber', 'passportDate', 'passportIssuer', 'registrationAddress',
@@ -833,6 +852,11 @@ export const updateMyProfile = async (req, res, next) => {
         {
           model: Citizenship,
           as: 'citizenship'
+        },
+        {
+          model: Position, // Добавлена связь с Position
+          as: 'position',
+          attributes: ['id', 'name']
         }
       ]
     });

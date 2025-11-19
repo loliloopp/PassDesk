@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Card, Tabs, Typography, Space } from 'antd';
-import { BookOutlined, ApartmentOutlined } from '@ant-design/icons';
+import { BookOutlined, ApartmentOutlined, TeamOutlined } from '@ant-design/icons';
 import DepartmentsPage from './DepartmentsPage';
+import PositionsPage from './PositionsPage';
 
 const { Title } = Typography;
 
@@ -18,6 +19,16 @@ const DirectoriesPage = () => {
         </span>
       ),
       children: <DepartmentsPage />
+    },
+    {
+      key: 'positions',
+      label: (
+        <span>
+          <TeamOutlined />
+          Должности
+        </span>
+      ),
+      children: <PositionsPage />
     }
   ];
 
