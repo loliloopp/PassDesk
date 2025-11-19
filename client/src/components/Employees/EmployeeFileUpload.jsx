@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Button, List, Popconfirm, message, Space, Tooltip, Modal } from 'antd';
+import { Upload, Button, List, Popconfirm, message, Space, Tooltip, Modal, Select, Form } from 'antd';
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -13,6 +13,17 @@ import {
 } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 
+const { Option } = Select;
+
+// Типы документов
+const DOCUMENT_TYPES = [
+  { value: 'passport', label: 'Паспорт' },
+  { value: 'patent_front', label: 'Лицевая сторона патента (с фото)' },
+  { value: 'patent_back', label: 'Задняя сторона патента' },
+  { value: 'biometric_consent', label: 'Согласие на обработку биометрических данных' },
+  { value: 'other', label: 'Другое' }
+];
+
 const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,6 +31,9 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
   const [fileList, setFileList] = useState([]);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
+  const [documentTypeModalVisible, setDocumentTypeModalVisible] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [form] = Form.useForm();
 
   useEffect(() => {
     if (employeeId) {
@@ -40,31 +54,56 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
     }
   };
 
-  const handleUpload = async () => {
+  // Открываем модальное окно выбора типа документа
+  const handleSelectFiles = () => {
     if (fileList.length === 0) {
       message.warning('Выберите файлы для загрузки');
       return;
     }
+    setSelectedFiles(fileList);
+    setDocumentTypeModalVisible(true);
+  };
 
-    const formData = new FormData();
-    fileList.forEach(fileObj => {
-      // fileObj из Upload имеет структуру { originFileObj: File, ... }
-      const actualFile = fileObj.originFileObj || fileObj;
-      formData.append('files', actualFile);
-    });
-
-    setUploading(true);
+  // Загрузка файлов с типом документа
+  const handleUploadWithDocumentType = async () => {
     try {
+      const values = await form.validateFields();
+      const documentType = values.documentType;
+
+      const formData = new FormData();
+      selectedFiles.forEach(fileObj => {
+        const actualFile = fileObj.originFileObj || fileObj;
+        formData.append('files', actualFile);
+      });
+      
+      // Добавляем тип документа в formData
+      formData.append('documentType', documentType);
+
+      setUploading(true);
       await employeeService.uploadFiles(employeeId, formData);
       message.success('Файлы успешно загружены');
       setFileList([]);
+      setSelectedFiles([]);
+      setDocumentTypeModalVisible(false);
+      form.resetFields();
       fetchFiles();
     } catch (error) {
+      if (error.errorFields) {
+        // Ошибка валидации формы
+        return;
+      }
       console.error('Error uploading files:', error);
       message.error(error.response?.data?.message || 'Ошибка загрузки файлов');
     } finally {
       setUploading(false);
     }
+  };
+
+  // Отмена выбора типа документа
+  const handleCancelDocumentType = () => {
+    setDocumentTypeModalVisible(false);
+    setSelectedFiles([]);
+    form.resetFields();
   };
 
   const handleDelete = async (fileId) => {
@@ -139,6 +178,12 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  // Получить название типа документа
+  const getDocumentTypeName = (documentType) => {
+    const type = DOCUMENT_TYPES.find(t => t.value === documentType);
+    return type ? type.label : 'Не указан';
+  };
+
   const uploadProps = {
     multiple: true,
     accept: '.jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx',
@@ -194,7 +239,7 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
               type="primary"
               icon={<UploadOutlined />}
               loading={uploading}
-              onClick={handleUpload}
+              onClick={handleSelectFiles}
             >
               Загрузить {fileList.length} файл(ов)
             </Button>
@@ -250,15 +295,64 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
               avatar={getFileIcon(file.mimeType)}
               title={file.fileName}
               description={
-                <Space split="|">
-                  <span>{formatFileSize(file.fileSize)}</span>
-                  <span>{new Date(file.createdAt).toLocaleDateString('ru-RU')}</span>
+                <Space direction="vertical" size={0}>
+                  <Space split="|">
+                    <span>{formatFileSize(file.fileSize)}</span>
+                    <span>{new Date(file.createdAt).toLocaleDateString('ru-RU')}</span>
+                  </Space>
+                  {file.documentType && (
+                    <span style={{ color: '#1890ff', fontSize: '12px' }}>
+                      📄 {getDocumentTypeName(file.documentType)}
+                    </span>
+                  )}
                 </Space>
               }
             />
           </List.Item>
         )}
       />
+
+      {/* Модальное окно для выбора типа документа */}
+      <Modal
+        title="Выбор типа документа"
+        open={documentTypeModalVisible}
+        onOk={handleUploadWithDocumentType}
+        onCancel={handleCancelDocumentType}
+        okText="Загрузить"
+        cancelText="Отмена"
+        confirmLoading={uploading}
+        width={500}
+        centered
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          autoComplete="off"
+        >
+          <Form.Item
+            label="Тип документа"
+            name="documentType"
+            rules={[
+              { required: true, message: 'Пожалуйста, выберите тип документа' }
+            ]}
+          >
+            <Select
+              placeholder="Выберите тип документа"
+              size="large"
+              autoComplete="off"
+            >
+              {DOCUMENT_TYPES.map(type => (
+                <Option key={type.value} value={type.value}>
+                  {type.label}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <div style={{ marginTop: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+            <strong>Выбрано файлов:</strong> {selectedFiles.length}
+          </div>
+        </Form>
+      </Modal>
 
       {/* Модальное окно для предпросмотра изображений */}
       <Modal

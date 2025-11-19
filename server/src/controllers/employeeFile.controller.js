@@ -10,11 +10,13 @@ import axios from 'axios';
 export const uploadEmployeeFiles = async (req, res, next) => {
   try {
     const { employeeId } = req.params;
+    const { documentType } = req.body; // Получаем тип документа из тела запроса
     
     console.log('📤 Upload request:', {
       employeeId,
       filesCount: req.files?.length,
-      user: req.user?.id
+      user: req.user?.id,
+      documentType
     });
     
     if (!req.files || req.files.length === 0) {
@@ -27,6 +29,12 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     // Проверяем аутентификацию
     if (!req.user || !req.user.id) {
       throw new AppError('Пользователь не аутентифицирован', 401);
+    }
+    
+    // Валидация типа документа (опционально)
+    const validDocumentTypes = ['passport', 'patent_front', 'patent_back', 'biometric_consent', 'other'];
+    if (documentType && !validDocumentTypes.includes(documentType)) {
+      throw new AppError(`Неверный тип документа. Допустимые значения: ${validDocumentTypes.join(', ')}`, 400);
     }
     
     // Загружаем данные сотрудника с контрагентом через маппинг
@@ -161,7 +169,8 @@ export const uploadEmployeeFiles = async (req, res, next) => {
           entityType: 'employee',
           entityId: employeeId,
           employeeId: employeeId, // Явная связь с сотрудником
-          uploadedBy: req.user.id
+          uploadedBy: req.user.id,
+          documentType: documentType || null // Сохраняем тип документа
         });
         
         console.log(`✅ File record saved to DB: ${fileRecord.id}`);

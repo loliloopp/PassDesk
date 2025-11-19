@@ -63,6 +63,12 @@ File.init(
       field: 'entity_id',
       comment: 'ID связанной сущности'
     },
+    documentType: {
+      type: DataTypes.ENUM('passport', 'patent_front', 'patent_back', 'biometric_consent', 'other'),
+      field: 'document_type',
+      allowNull: true,
+      comment: 'Тип документа: passport (Паспорт), patent_front (Лицевая сторона патента), patent_back (Задняя сторона патента), biometric_consent (Согласие на обработку биометрических данных), other (Другое)'
+    },
     employeeId: {
       type: DataTypes.UUID,
       field: 'employee_id',

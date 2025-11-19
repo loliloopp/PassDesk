@@ -510,8 +510,18 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
       formattedValues.statusCard = 'draft';
       await onSuccess(formattedValues);
-      // Закрываем модальное окно после успешного сохранения черновика
-      onCancel();
+      
+      // Если это добавление нового сотрудника - НЕ закрываем окно
+      if (!employee) {
+        // Сбрасываем форму для добавления следующего сотрудника
+        form.resetFields();
+        setActiveTab('1');
+        setTabsValidation({ '1': false, '2': false, '3': false });
+        setSelectedCitizenship(null);
+      } else {
+        // Если это редактирование - закрываем окно
+        onCancel();
+      }
     } catch (error) {
       console.error('Save draft error:', error);
       // Ошибка уже показана в родительском компоненте через message.error
@@ -572,8 +582,18 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
       formattedValues.statusCard = 'completed';
       await onSuccess(formattedValues);
-      // Закрываем модальное окно ТОЛЬКО после успешного сохранения
-      onCancel();
+      
+      // Если это добавление нового сотрудника - НЕ закрываем окно
+      if (!employee) {
+        // Сбрасываем форму для добавления следующего сотрудника
+        form.resetFields();
+        setActiveTab('1');
+        setTabsValidation({ '1': false, '2': false, '3': false });
+        setSelectedCitizenship(null);
+      } else {
+        // Если это редактирование - закрываем окно
+        onCancel();
+      }
     } catch (error) {
       console.error('Validation or save error:', error);
       // Если это ошибка валидации формы, показываем сообщение
@@ -773,6 +793,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                       option.children.toLowerCase().includes(input.toLowerCase())
                     }
                     autoComplete="off"
+                    dropdownMatchSelectWidth={false}
+                    dropdownStyle={{ minWidth: 300 }}
                   >
                     {positions.map((p) => (
                       <Option key={p.id} value={p.id}>
