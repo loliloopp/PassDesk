@@ -216,10 +216,11 @@ const EmployeesPage = () => {
     {
       title: 'ФИО',
       key: 'fullName',
+      width: 200,
       render: (_, record) => (
-        <span style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+        <div style={{ whiteSpace: 'normal', wordBreak: 'normal', overflowWrap: 'break-word' }}>
           {record.lastName} {record.firstName} {record.middleName || ''}
-        </span>
+        </div>
       ),
       sorter: (a, b) => a.lastName.localeCompare(b.lastName),
     },
@@ -519,6 +520,7 @@ const EmployeesPage = () => {
           showTotal: (total) => `Всего: ${total}`,
         }}
         rowClassName={(record, index) => index % 2 === 0 ? 'table-row-light' : 'table-row-dark'}
+        scroll={{ x: 1300 }}
       />
 
       <EmployeeFormModal
