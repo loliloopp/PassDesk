@@ -17,6 +17,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [citizenships, setCitizenships] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(false); // Флаг инициализации модального окна
+  const [dataLoaded, setDataLoaded] = useState(false); // Новый флаг: данные полностью загружены
   const [activeTab, setActiveTab] = useState('1');
   const [tabsValidation, setTabsValidation] = useState({
     '1': false, // Основная информация
@@ -50,73 +52,217 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   
   const requiredFieldsByTab = getRequiredFieldsByTab();
 
+  const computeValidation = (forceCompute = false, citizenshipOverride = null) => {
+    if (!forceCompute && !dataLoaded) {
+      console.log('⏸️ computeValidation: data not loaded yet, skipping');
+      return tabsValidation; // Не валидируем, пока данные не загружены
+    }
+    
+    // ВАЖНО: передаем true, чтобы получить все значения из store, даже для скрытых полей
+    const values = form.getFieldsValue(true);
+    const validation = {};
+    
+    // Используем переданное гражданство или текущее из стейта
+    const currentCitizenship = citizenshipOverride || selectedCitizenship;
+    const currentRequiresPatent = currentCitizenship?.requiresPatent !== false;
+    
+    // Логируем входящие значения для отладки
+    console.log('🔍 computeValidation details:', {
+      forceCompute,
+      dataLoaded,
+      currentCitizenship,
+      currentRequiresPatent,
+      formValues: values
+    });
+    
+    // Пересчитываем requiredFieldsByTab с учетом актуального гражданства
+    const currentRequiredFieldsByTab = {
+      '1': ['lastName', 'firstName', 'position', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '2': currentRequiresPatent 
+        ? ['inn', 'snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
+        : ['inn', 'snils', 'passportNumber', 'passportDate', 'passportIssuer'],
+      '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
+    };
+    
+    if (!currentRequiresPatent) {
+      delete currentRequiredFieldsByTab['3'];
+    }
+    
+    Object.entries(currentRequiredFieldsByTab).forEach(([tabKey, fields]) => {
+      if (!fields) {
+        validation[tabKey] = true;
+        return;
+      }
+      
+      const fieldsStatus = fields.map(field => {
+        const value = values[field];
+        const isValid = Array.isArray(value) 
+          ? value.length > 0 
+          : value !== undefined && value !== null && value !== '';
+        
+        if (!isValid) {
+          console.log(`❌ Field invalid: Tab ${tabKey}, Field '${field}', Value:`, value);
+        }
+          
+        return { field, value, isValid };
+      });
+      
+      validation[tabKey] = fieldsStatus.every(f => f.isValid);
+    });
+    
+    console.log('🔍 computeValidation result:', validation);
+    return validation;
+  };
+
+  const scheduleValidation = () => {
+    if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          const validation = computeValidation();
+          setTabsValidation(validation);
+        });
+      });
+    } else {
+      setTimeout(() => {
+        const validation = computeValidation();
+        setTabsValidation(validation);
+      }, 0);
+    }
+  };
+
   useEffect(() => {
-    if (visible) {
-      fetchCitizenships();
-      fetchConstructionSites();
-      fetchDefaultCounterparty();
+    const initializeModal = async () => {
+      if (!visible) {
+        // Сбрасываем состояние при закрытии
+        setDataLoaded(false);
+        setInitializing(false);
+        return;
+      }
+
+      // Устанавливаем флаг инициализации
+      setInitializing(true);
+      setDataLoaded(false);
+      setActiveTab('1');
       
       console.log('📝 EmployeeFormModal: opening with employee:', employee);
       
-      if (employee) {
-        // Получаем данные из маппинга для установки в форму
-        const mapping = employee.employeeCounterpartyMappings?.[0];
+      try {
+        // Шаг 1: Загружаем справочники и ждем их завершения
+        await Promise.all([
+          fetchCitizenships(),
+          fetchConstructionSites(),
+          fetchDefaultCounterparty()
+        ]);
         
-        const formData = {
-          ...employee,
-          birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
-          passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
-          patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
-          constructionSiteId: mapping?.constructionSiteId || null,
-          // Преобразуем статусы в булевы значения для чекбоксов
-          isTbPassed: employee.status === 'tb_passed' || employee.status === 'processed',
-          isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
-          isInactive: employee.statusActive === 'inactive',
-        };
+        // Шаг 2: Ждем, пока React обновит состояние citizenships
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        console.log('📝 EmployeeFormModal: setting form data:', formData);
-        form.setFieldsValue(formData);
+        console.log('📝 EmployeeFormModal: citizenships loaded', {
+          count: citizenships.length,
+          employeeCitizenshipId: employee?.citizenshipId
+        });
         
-        // Устанавливаем выбранное гражданство
-        if (employee.citizenshipId) {
-          updateSelectedCitizenship(employee.citizenshipId);
-        }
-        // Проверяем валидность вкладок при загрузке существующего сотрудника
-        // Делаем это с небольшой задержкой, чтобы форма успела заполниться
-        setTimeout(() => {
-          validateAllTabs();
-        }, 100);
-        // И еще раз через 500ms для гарантии
-        setTimeout(() => {
-          validateAllTabs();
-        }, 500);
-        // И еще раз через 1000ms для полной уверенности (после обновления requiresPatent)
-        setTimeout(() => {
-          validateAllTabs();
-        }, 1000);
-      } else {
-        console.log('📝 EmployeeFormModal: resetting form (no employee)');
-        form.resetFields();
-        setActiveTab('1');
-        setTabsValidation({ '1': false, '2': false, '3': false });
-        setSelectedCitizenship(null);
-      }
-    }
-  }, [visible, employee]);
+        // Локальная переменная для хранения выбранного гражданства в рамках этой функции
+        let currentCitizenship = null;
 
-  // Обновляем selectedCitizenship при изменении списка citizenships
-  useEffect(() => {
-    if (employee?.citizenshipId && citizenships.length > 0) {
-      updateSelectedCitizenship(employee.citizenshipId);
-      // Запускаем валидацию после обновления гражданства
-      setTimeout(() => validateAllTabs(), 200);
-    }
-  }, [citizenships, employee]);
+        if (employee) {
+          // Шаг 3: СНАЧАЛА устанавливаем гражданство (для определения requiresPatent)
+          if (employee.citizenshipId) {
+            const citizenship = citizenships.find(c => c.id === employee.citizenshipId);
+            console.log('📝 EmployeeFormModal: looking for citizenship', {
+              citizenshipId: employee.citizenshipId,
+              found: !!citizenship,
+              citizenship
+            });
+            
+            if (citizenship) {
+              currentCitizenship = citizenship;
+              setSelectedCitizenship(citizenship);
+              console.log('📝 EmployeeFormModal: citizenship set BEFORE form data', {
+                citizenshipId: employee.citizenshipId,
+                requiresPatent: citizenship.requiresPatent
+              });
+              // Ждем, пока React применит изменение selectedCitizenship
+              await new Promise(resolve => setTimeout(resolve, 150));
+            }
+          }
+          
+          // Шаг 4: Теперь устанавливаем данные сотрудника в форму
+          const mapping = employee.employeeCounterpartyMappings?.[0];
+          
+          const formData = {
+            ...employee,
+            birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
+            passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
+            patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+            constructionSiteId: mapping?.constructionSiteId || null,
+            isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
+            isInactive: employee.statusActive === 'inactive',
+          };
+          
+          console.log('📝 EmployeeFormModal: setting form data:', formData);
+          form.setFieldsValue(formData);
+          
+          // Шаг 5: Ждем применения всех изменений
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Шаг 6: Завершаем инициализацию и устанавливаем флаг загрузки
+          setInitializing(false);
+          setDataLoaded(true);
+          console.log('📝 EmployeeFormModal: initialization complete', {
+            selectedCitizenship: currentCitizenship,
+            requiresPatent: currentCitizenship?.requiresPatent
+          });
+          
+          // Шаг 7: Ждем, пока React применит setDataLoaded(true)
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Шаг 8: Теперь запускаем валидацию (с forceCompute=true)
+          // Передаем currentCitizenship явно, чтобы computeValidation использовала актуальные данные
+          
+          const validation = computeValidation(true, currentCitizenship);
+          setTabsValidation(validation);
+          console.log('✅ EmployeeFormModal: initial validation complete', {
+            validation,
+            requiresPatent: currentCitizenship?.requiresPatent,
+            selectedCitizenship: currentCitizenship
+          });
+        } else {
+          console.log('📝 EmployeeFormModal: resetting form (no employee)');
+          form.resetFields();
+          setActiveTab('1');
+          setTabsValidation({ '1': false, '2': false, '3': false });
+          setSelectedCitizenship(null);
+          setInitializing(false);
+          setDataLoaded(true);
+        }
+      } catch (error) {
+        console.error('❌ EmployeeFormModal: initialization error', error);
+        setInitializing(false);
+        setDataLoaded(true);
+      }
+    };
+
+    initializeModal();
+  }, [visible, employee]);
 
   // Обновляем валидацию при изменении requiresPatent
   useEffect(() => {
-    if (visible) {
-      validateAllTabs();
+    // Не запускаем во время инициализации
+    if (initializing) return;
+    
+    if (!requiresPatent && activeTab === '3') {
+      // Если патент больше не требуется и мы на вкладке "Патент", переключаемся на первую вкладку
+      setActiveTab('1');
+    }
+    
+    // Запускаем валидацию только если данные загружены и форма открыта
+    // НЕ запускаем при первой загрузке (это делается в initializeModal)
+    if (visible && dataLoaded && selectedCitizenship !== null) {
+      // Небольшая задержка, чтобы дать React обновить DOM
+      setTimeout(() => {
+        scheduleValidation();
+      }, 50);
     }
   }, [requiresPatent]);
 
@@ -127,8 +273,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
   const handleCitizenshipChange = (citizenshipId) => {
     updateSelectedCitizenship(citizenshipId);
-    // Сбрасываем валидацию
-    validateAllTabs();
+    // Валидация запустится автоматически через handleFieldsChange
   };
 
   const fetchCitizenships = async () => {
@@ -183,10 +328,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
   // Проверяем все вкладки
   const validateAllTabs = async () => {
-    const validation = {};
-    for (const tabKey of Object.keys(requiredFieldsByTab)) {
-      validation[tabKey] = await validateTab(tabKey);
-    }
+    const validation = computeValidation();
     setTabsValidation(validation);
     // Логируем только если включен debug режим
     if (window.DEBUG_VALIDATION) {
@@ -207,15 +349,16 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     return requiredTabs.every(tabKey => tabsValidation[tabKey] === true);
   };
 
-  // Обработчик изменения полей формы (с debounce для оптимизации)
+  // Обработчик изменения полей формы
   const handleFieldsChange = () => {
-    // Используем setTimeout для debounce, чтобы не вызывать валидацию слишком часто
+    if (!dataLoaded) return; // Не запускаем валидацию, пока данные не загружены
+    
     if (window.validationTimeout) {
       clearTimeout(window.validationTimeout);
     }
     window.validationTimeout = setTimeout(() => {
-      validateAllTabs();
-    }, 100); // Уменьшили задержку до 100ms для более быстрой реакции
+      scheduleValidation();
+    }, 100);
   };
 
   // Переход на следующую вкладку
@@ -232,12 +375,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const handleSaveDraft = async () => {
     try {
       setLoading(true);
-      const values = form.getFieldsValue();
+      // Получаем ВСЕ значения, включая скрытые поля
+      const values = form.getFieldsValue(true);
       
       const formattedValues = {};
       Object.keys(values).forEach(key => {
         // Пропускаем чекбоксы статусов - они не сохраняются напрямую
-        if (key === 'isTbPassed' || key === 'isFired' || key === 'isInactive') {
+        if (key === 'isFired' || key === 'isInactive') {
           return;
         }
         
@@ -252,15 +396,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       });
 
       // Обрабатываем статусы
-      // status: логика зависит от чекбокса isTbPassed
-      if (values.isTbPassed) {
-        formattedValues.status = 'tb_passed';
-      } else if (employee?.status === 'processed') {
-        // Если сотрудник уже обработан, не меняем статус
-        formattedValues.status = 'processed';
-      } else {
-        formattedValues.status = employee?.status || 'new';
-      }
+      // status: сохраняем существующий статус сотрудника, не изменяем его
+      formattedValues.status = employee?.status || 'new';
       
       // statusActive: взаимоисключающие статусы
       if (values.isFired) {
@@ -288,12 +425,16 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      const values = await form.validateFields();
+      // Сначала валидируем видимые поля
+      await form.validateFields();
+      
+      // Получаем ВСЕ значения для отправки, включая скрытые
+      const values = form.getFieldsValue(true);
       
       const formattedValues = {};
       Object.keys(values).forEach(key => {
         // Пропускаем чекбоксы статусов - они не сохраняются напрямую
-        if (key === 'isTbPassed' || key === 'isFired' || key === 'isInactive') {
+        if (key === 'isFired' || key === 'isInactive') {
           return;
         }
         
@@ -308,15 +449,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       });
 
       // Обрабатываем статусы
-      // status: логика зависит от чекбокса isTbPassed
-      if (values.isTbPassed) {
-        formattedValues.status = 'tb_passed';
-      } else if (employee?.status === 'processed') {
-        // Если сотрудник уже обработан, не меняем статус
-        formattedValues.status = 'processed';
-      } else {
-        formattedValues.status = employee?.status || 'new';
-      }
+      // status: сохраняем существующий статус сотрудника, не изменяем его
+      formattedValues.status = employee?.status || 'new';
       
       // statusActive: взаимоисключающие статусы
       if (values.isFired) {
@@ -328,7 +462,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       }
 
       console.log('💾 Saving employee with statuses:', {
-        isTbPassed: values.isTbPassed,
         isFired: values.isFired,
         isInactive: values.isInactive,
         status: formattedValues.status,
@@ -397,43 +530,50 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       maskClosable={false}
       width={1200}
       footer={
-        <Space>
-          <Button onClick={handleModalCancel}>
-            {employee ? 'Закрыть' : 'Отмена'}
-          </Button>
-          <Button onClick={handleSaveDraft} loading={loading}>
-            Сохранить черновик
-          </Button>
-          {allTabsValid() ? (
-            <Button 
-              type="primary" 
-              onClick={handleSave} 
-              loading={loading}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Сохранить
+        initializing ? null : ( // Не показываем footer во время инициализации
+          <Space>
+            <Button onClick={handleModalCancel}>
+              {employee ? 'Закрыть' : 'Отмена'}
             </Button>
-          ) : (
-            <Button type="primary" onClick={handleNext}>
-              Следующая
+            <Button onClick={handleSaveDraft} loading={loading}>
+              Сохранить черновик
             </Button>
-          )}
-        </Space>
+            {allTabsValid() ? (
+              <Button 
+                type="primary" 
+                onClick={handleSave} 
+                loading={loading}
+                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              >
+                Сохранить
+              </Button>
+            ) : (
+              <Button type="primary" onClick={handleNext}>
+                Следующая
+              </Button>
+            )}
+          </Space>
+        )
       }
     >
-      <Form 
-        form={form} 
-        layout="vertical"
-        onFieldsChange={handleFieldsChange}
-      >
+      {initializing ? (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <div style={{ fontSize: 14, color: '#999' }}>Загрузка данных...</div>
+        </div>
+      ) : (
+        <Form 
+          form={form} 
+          layout="vertical"
+          onFieldsChange={handleFieldsChange}
+        >
         <Tabs 
           activeKey={activeTab}
           onChange={(key) => {
             setActiveTab(key);
-            // Немедленно проверяем валидацию при смене вкладки
-            setTimeout(() => validateAllTabs(), 0);
+            // Валидация запустится через useEffect при изменении activeTab
           }}
           style={{ marginTop: 16 }}
+          destroyInactiveTabPane={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
         >
           {/* Вкладка: Основная информация */}
           <Tabs.TabPane 
@@ -450,17 +590,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={24}>
                   <Space size="large">
-                    <Form.Item name="isTbPassed" valuePropName="checked" noStyle>
-                      <Checkbox
-                        disabled={!defaultCounterpartyId || user?.counterpartyId !== defaultCounterpartyId}
-                        onChange={(e) => {
-                          form.setFieldsValue({ isTbPassed: e.target.checked });
-                        }}
-                        style={{ color: '#52c41a', fontWeight: 'bold' }}
-                      >
-                        Проведен инструктаж ТБ
-                      </Checkbox>
-                    </Form.Item>
                     <Form.Item name="isFired" valuePropName="checked" noStyle>
                       <Checkbox
                         disabled={employee?.employeeCounterpartyMappings?.[0]?.counterpartyId !== user?.counterpartyId}
@@ -764,6 +893,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           )}
         </Tabs>
       </Form>
+      )}
     </Modal>
   );
 };

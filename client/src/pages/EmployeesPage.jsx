@@ -363,7 +363,14 @@ const EmployeesPage = () => {
       key: 'status',
       width: 120,
       render: (_, record) => {
-        // Приоритет: statusActive (Уволен/Неактивный) > status (Новый/Проведен ТБ/Обработан)
+        // Приоритет: statusSecure (Заблокирован) > statusActive (Уволен/Неактивный) > status (Новый/Проведен ТБ/Обработан)
+        
+        // Самый высокий приоритет - заблокирован
+        if (record.statusSecure === 'block' || record.statusSecure === 'block_compl') {
+          return <Tag color="red">Заблокирован</Tag>;
+        }
+        
+        // Второй приоритет - statusActive (Уволен/Неактивный)
         if (record.statusActive === 'fired') {
           return <Tag color="red">Уволен</Tag>;
         }
@@ -371,7 +378,7 @@ const EmployeesPage = () => {
           return <Tag color="blue">Неактивный</Tag>;
         }
         
-        // Если statusActive пустой, показываем status
+        // Третий приоритет - status (Новый/Проведен ТБ/Обработан)
         const statusMap = {
           'new': { text: 'Новый', color: 'default' },
           'tb_passed': { text: 'Проведен ТБ', color: 'green' },
@@ -382,6 +389,7 @@ const EmployeesPage = () => {
         return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
       },
       filters: [
+        { text: 'Заблокирован', value: 'blocked' },
         { text: 'Уволен', value: 'fired' },
         { text: 'Неактивный', value: 'inactive' },
         { text: 'Новый', value: 'new' },
@@ -389,12 +397,16 @@ const EmployeesPage = () => {
         { text: 'Обработан', value: 'processed' },
       ],
       onFilter: (value, record) => {
+        // Для фильтрации "Заблокирован"
+        if (value === 'blocked') {
+          return record.statusSecure === 'block' || record.statusSecure === 'block_compl';
+        }
         // Для фильтрации statusActive
         if (value === 'fired' || value === 'inactive') {
           return record.statusActive === value;
         }
-        // Для фильтрации status (только если statusActive пустой)
-        return !record.statusActive && record.status === value;
+        // Для фильтрации status (только если statusSecure и statusActive пустые)
+        return !record.statusSecure || record.statusSecure === 'allow' && !record.statusActive && record.status === value;
       },
     },
     {
@@ -486,7 +498,7 @@ const EmployeesPage = () => {
               icon={<LockOutlined />} 
               onClick={() => setIsSecurityModalOpen(true)}
             >
-              Блокировка
+              Блокировка и ТБ
             </Button>
           )}
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>

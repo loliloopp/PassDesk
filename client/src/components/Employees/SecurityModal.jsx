@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Tabs, Table, Input, Select, Space, Button, message } from 'antd';
+import { Modal, Tabs, Table, Input, Select, Space, Button, message, Tooltip } from 'antd';
 import { SearchOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 import { counterpartyService } from '../../services/counterpartyService';
@@ -41,7 +41,8 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       
       if (activeTab === 'active') {
         // Вкладка "Просмотр" - показываем всех сотрудников (allow, block, block_compl)
-        filtered = allEmployees;
+        // НО исключаем сотрудников со статусом карточки 'draft'
+        filtered = allEmployees.filter(emp => emp.statusCard !== 'draft');
       } else {
         // Вкладка "Заблокированные" - показываем сотрудников со статусами 'block' или 'block_compl'
         filtered = allEmployees.filter(emp => emp.statusSecure === 'block' || emp.statusSecure === 'block_compl');
@@ -97,6 +98,30 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
     }
   };
 
+  const handleTbPassed = async (employeeId) => {
+    try {
+      await employeeService.update(employeeId, { status: 'tb_passed' });
+      message.success('Статус обновлен: Проведен инструктаж ТБ');
+      fetchEmployees();
+      onSuccess && onSuccess();
+    } catch (error) {
+      console.error('Error updating TB status:', error);
+      message.error('Ошибка при обновлении статуса ТБ');
+    }
+  };
+
+  const handleTbRevoke = async (employeeId) => {
+    try {
+      await employeeService.update(employeeId, { status: 'new' });
+      message.success('Статус обновлен: Новый');
+      fetchEmployees();
+      onSuccess && onSuccess();
+    } catch (error) {
+      console.error('Error revoking TB status:', error);
+      message.error('Ошибка при отмене статуса ТБ');
+    }
+  };
+
   const columns = [
     {
       title: 'ФИО',
@@ -129,9 +154,48 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       render: (text) => text || '-',
     },
     {
+      title: 'Инструктаж ТБ',
+      key: 'tbStatus',
+      align: 'center',
+      width: 120,
+      render: (_, record) => {
+        // Если статус "Новый" - показываем "НЕТ" с оранжевым контуром
+        if (record.status === 'new') {
+          return (
+            <Button
+              size="small"
+              onClick={() => handleTbPassed(record.id)}
+              style={{
+                color: '#fa8c16',
+                borderColor: '#fa8c16',
+                backgroundColor: 'transparent',
+              }}
+            >
+              НЕТ
+            </Button>
+          );
+        }
+        // Если статус "Проведен ТБ" или "Обработан" - показываем "ДА" с зеленым контуром
+        return (
+          <Button
+            size="small"
+            onClick={() => handleTbRevoke(record.id)}
+            style={{
+              color: '#52c41a',
+              borderColor: '#52c41a',
+              backgroundColor: 'transparent',
+            }}
+          >
+            ДА
+          </Button>
+        );
+      },
+    },
+    {
       title: 'Действие',
       key: 'action',
-      width: 150,
+      width: 120,
+      align: 'center',
       render: (_, record) => {
         // На вкладке "Просмотр": если allow - показываем "Заблокировать", иначе "Разблокировать"
         // На вкладке "Заблокированные": всегда показываем "Разблокировать"
@@ -141,29 +205,31 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
         if (activeTab === 'active' && !isBlocked) {
           // На вкладке "Просмотр" для сотрудников со статусом 'allow' - кнопка "Заблокировать"
           return (
-            <Button
-              type="primary"
-              danger
-              size="small"
-              icon={<LockOutlined />}
-              onClick={() => handleBlock(record.id)}
-            >
-              Заблокировать
-            </Button>
+            <Tooltip title="Заблокировать">
+              <Button
+                type="primary"
+                danger
+                size="small"
+                shape="circle"
+                icon={<LockOutlined />}
+                onClick={() => handleBlock(record.id)}
+              />
+            </Tooltip>
           );
         } else {
           // Для всех заблокированных сотрудников - зеленая кнопка "Разблокировать"
           return (
-            <Button
-              type="primary"
-              size="small"
-              icon={<UnlockOutlined />}
-              onClick={() => handleUnblock(record.id)}
-              disabled={isBlockCompleted}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Разблокировать
-            </Button>
+            <Tooltip title="Разблокировать">
+              <Button
+                type="primary"
+                size="small"
+                shape="circle"
+                icon={<UnlockOutlined />}
+                onClick={() => handleUnblock(record.id)}
+                disabled={isBlockCompleted}
+                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              />
+            </Tooltip>
           );
         }
       },
@@ -172,7 +238,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
 
   return (
     <Modal
-      title="Блокировка сотрудников"
+      title="Блокировка и Инструктаж ТБ"
       open={visible}
       onCancel={onCancel}
       width={1200}
