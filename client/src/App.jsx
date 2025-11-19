@@ -47,6 +47,10 @@ const RoleBasedRedirect = () => {
   }
   
   if (user?.role === 'user') {
+    // Для пользователей контрагента по умолчанию (сотрудников) даем доступ к дашборду
+    if (user?.counterpartyId === defaultCounterpartyId) {
+      return <Navigate to="/dashboard" replace />
+    }
     return <Navigate to="/my-profile" replace />
   }
 
@@ -76,7 +80,7 @@ function App() {
           <Route 
             path="dashboard" 
             element={
-              <ProtectedRoute allowedRoles={['admin', 'manager']}>
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'user']}>
                 <DashboardProtectedRoute>
                   <DashboardPage />
                 </DashboardProtectedRoute>
@@ -89,7 +93,7 @@ function App() {
           />
           <Route 
             path="applications" 
-            element={<ProtectedRoute allowedRoles={['admin', 'manager']}><ApplicationsPage /></ProtectedRoute>} 
+            element={<ProtectedRoute allowedRoles={['admin', 'manager', 'user']}><ApplicationsPage /></ProtectedRoute>} 
           />
           <Route 
             path="passes" 

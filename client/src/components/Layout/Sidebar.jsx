@@ -74,7 +74,7 @@ const Sidebar = () => {
     })
   }
 
-  // Остальные пункты меню
+  // Остальные пункты меню для админов и менеджеров
   adminManagerMenuItems.push(
     {
       key: '/employees',
@@ -118,7 +118,25 @@ const Sidebar = () => {
   // Выбираем меню на основе роли пользователя
   let menuItems = []
   if (user?.role === 'user') {
-    menuItems = userMenuItems
+    
+    // Если пользователь имеет доступ к дашборду (сотрудник компании), добавляем ему соответствующие пункты
+    if (canSeeDashboard) {
+      menuItems = [
+        {
+          key: '/dashboard',
+          icon: <DashboardOutlined />,
+          label: 'Дашборд',
+        },
+        {
+          key: '/applications',
+          icon: <FileTextOutlined />,
+          label: 'Заявки',
+        },
+        ...userMenuItems
+      ]
+    } else {
+      menuItems = [...userMenuItems]
+    }
   } else {
     menuItems = [...adminManagerMenuItems]
     

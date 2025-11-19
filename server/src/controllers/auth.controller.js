@@ -114,6 +114,8 @@ export const register = async (req, res, next) => {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          counterpartyId: user.counterpartyId,
+          isActive: user.isActive,
         },
         employee: {
           id: employee.id,
@@ -173,6 +175,7 @@ export const login = async (req, res, next) => {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role,
+          counterpartyId: user.counterpartyId,
           isActive: user.isActive,
         },
         token,
