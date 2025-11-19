@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Tabs, Table, Input, Select, Space, Button, message, Tooltip } from 'antd';
+import { Modal, Table, Input, Select, Space, Button, message, Tooltip } from 'antd';
 import { SearchOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 import { counterpartyService } from '../../services/counterpartyService';
@@ -7,7 +7,6 @@ import { counterpartyService } from '../../services/counterpartyService';
 const { Option } = Select;
 
 const SecurityModal = ({ visible, onCancel, onSuccess }) => {
-  const [activeTab, setActiveTab] = useState('active');
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [counterparties, setCounterparties] = useState([]);
@@ -20,7 +19,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       fetchCounterparties();
       fetchEmployees();
     }
-  }, [visible, activeTab, selectedCounterparty, searchText, statusFilters]);
+  }, [visible, selectedCounterparty, searchText, statusFilters]);
 
   const fetchCounterparties = async () => {
     try {
@@ -37,17 +36,8 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       const response = await employeeService.getAll();
       const allEmployees = response.data.employees || [];
 
-      // Фильтруем по статусу безопасности в зависимости от активной вкладки
-      let filtered = allEmployees;
-      
-      if (activeTab === 'active') {
-        // Вкладка "Просмотр" - показываем всех сотрудников (allow, block, block_compl)
-        // НО исключаем сотрудников со статусом карточки 'draft'
-        filtered = allEmployees.filter(emp => emp.statusCard !== 'draft');
-      } else {
-        // Вкладка "Заблокированные" - показываем сотрудников со статусами 'block' или 'block_compl'
-        filtered = allEmployees.filter(emp => emp.statusSecure === 'block' || emp.statusSecure === 'block_compl');
-      }
+      // Показываем всех сотрудников, исключая черновики
+      let filtered = allEmployees.filter(emp => emp.statusCard !== 'draft');
 
       // Фильтруем по контрагенту
       if (selectedCounterparty) {
@@ -219,13 +209,11 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       width: 120,
       align: 'center',
       render: (_, record) => {
-        // На вкладке "Просмотр": если allow - показываем "Заблокировать", иначе "Разблокировать"
-        // На вкладке "Заблокированные": всегда показываем "Разблокировать"
         const isBlocked = record.statusSecure === 'block' || record.statusSecure === 'block_compl';
         const isBlockCompleted = record.statusSecure === 'block_compl';
 
-        if (activeTab === 'active' && !isBlocked) {
-          // На вкладке "Просмотр" для сотрудников со статусом 'allow' - кнопка "Заблокировать"
+        if (!isBlocked) {
+          // Сотрудник не заблокирован - показываем кнопку "Заблокировать"
           return (
             <Tooltip title="Заблокировать">
               <Button
@@ -239,7 +227,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
             </Tooltip>
           );
         } else {
-          // Для всех заблокированных сотрудников - зеленая кнопка "Разблокировать"
+          // Сотрудник заблокирован - показываем кнопку "Разблокировать"
           return (
             <Tooltip title="Разблокировать">
               <Button
@@ -309,43 +297,22 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
         </Select>
       </Space>
 
-      {/* Вкладки */}
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <Tabs.TabPane tab="Просмотр" key="active">
-          <Table
-            columns={columns}
-            dataSource={employees}
-            rowKey="id"
-            loading={loading}
-            size="small"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
-            }}
-            rowClassName={(record, index) => 
-              index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
-            }
-          />
-        </Tabs.TabPane>
-        <Tabs.TabPane tab="Заблокированные" key="blocked">
-          <Table
-            columns={columns}
-            dataSource={employees}
-            rowKey="id"
-            loading={loading}
-            size="small"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
-            }}
-            rowClassName={(record, index) => 
-              index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
-            }
-          />
-        </Tabs.TabPane>
-      </Tabs>
+      {/* Таблица */}
+      <Table
+        columns={columns}
+        dataSource={employees}
+        rowKey="id"
+        loading={loading}
+        size="small"
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
+        }}
+        rowClassName={(record, index) => 
+          index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+        }
+      />
       
       <style jsx>{`
         .table-row-light {
