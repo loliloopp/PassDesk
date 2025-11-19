@@ -13,13 +13,14 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
   const [counterparties, setCounterparties] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [selectedCounterparty, setSelectedCounterparty] = useState(null);
+  const [statusFilters, setStatusFilters] = useState([]);
 
   useEffect(() => {
     if (visible) {
       fetchCounterparties();
       fetchEmployees();
     }
-  }, [visible, activeTab, selectedCounterparty, searchText]);
+  }, [visible, activeTab, selectedCounterparty, searchText, statusFilters]);
 
   const fetchCounterparties = async () => {
     try {
@@ -63,6 +64,27 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
           emp.lastName?.toLowerCase().includes(searchLower) ||
           emp.middleName?.toLowerCase().includes(searchLower)
         );
+      }
+
+      // Фильтруем по статусам (множественный выбор)
+      if (statusFilters.length > 0) {
+        filtered = filtered.filter(emp => {
+          return statusFilters.some(filter => {
+            if (filter === 'tb_passed') {
+              return emp.status === 'tb_passed' || emp.status === 'processed';
+            }
+            if (filter === 'tb_not_passed') {
+              return emp.status === 'new';
+            }
+            if (filter === 'not_blocked') {
+              return emp.statusSecure === 'allow' || !emp.statusSecure;
+            }
+            if (filter === 'blocked') {
+              return emp.statusSecure === 'block' || emp.statusSecure === 'block_compl';
+            }
+            return false;
+          });
+        });
       }
 
       setEmployees(filtered);
@@ -192,7 +214,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       },
     },
     {
-      title: 'Действие',
+      title: 'Блокировка',
       key: 'action',
       width: 120,
       align: 'center',
@@ -242,6 +264,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       open={visible}
       onCancel={onCancel}
       width={1200}
+      maskClosable={false}
       footer={[
         <Button key="close" onClick={onCancel}>
           Закрыть
@@ -271,6 +294,19 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
+        <Select
+          mode="multiple"
+          placeholder="Фильтр по статусу"
+          allowClear
+          style={{ width: 300 }}
+          value={statusFilters}
+          onChange={setStatusFilters}
+        >
+          <Option value="tb_passed">Прошел ТБ</Option>
+          <Option value="tb_not_passed">Не прошел ТБ</Option>
+          <Option value="not_blocked">Не заблокирован</Option>
+          <Option value="blocked">Заблокирован</Option>
+        </Select>
       </Space>
 
       {/* Вкладки */}
@@ -282,7 +318,14 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
             rowKey="id"
             loading={loading}
             size="small"
-            pagination={{ pageSize: 10 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
+            rowClassName={(record, index) => 
+              index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+            }
           />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Заблокированные" key="blocked">
@@ -292,10 +335,26 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
             rowKey="id"
             loading={loading}
             size="small"
-            pagination={{ pageSize: 10 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
+            }}
+            rowClassName={(record, index) => 
+              index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+            }
           />
         </Tabs.TabPane>
       </Tabs>
+      
+      <style jsx>{`
+        .table-row-light {
+          background-color: #ffffff;
+        }
+        .table-row-dark {
+          background-color: #fafafa;
+        }
+      `}</style>
     </Modal>
   );
 };
