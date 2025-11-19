@@ -350,6 +350,10 @@ export const updateEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
     
+    console.log('=== UPDATE EMPLOYEE REQUEST ===');
+    console.log('Employee ID:', id);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     // Не перезаписываем counterpartyId при обновлении, constructionSiteId идет в маппинг
     const { counterpartyId, constructionSiteId, ...updateData } = req.body;
     
@@ -357,6 +361,8 @@ export const updateEmployee = async (req, res, next) => {
       ...updateData,
       updatedBy: req.user.id
     };
+    
+    console.log('Updates to apply:', JSON.stringify(updates, null, 2));
 
     const employee = await Employee.findByPk(id);
 
@@ -413,7 +419,10 @@ export const updateEmployee = async (req, res, next) => {
       data: employeeDataWithStatus
     });
   } catch (error) {
-    console.error('Error updating employee:', error);
+    console.error('=== ERROR UPDATING EMPLOYEE ===');
+    console.error('Error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
     
     // Обработка ошибки уникальности
     if (error.name === 'SequelizeUniqueConstraintError') {
@@ -443,12 +452,15 @@ export const updateEmployee = async (req, res, next) => {
     }
     
     if (error.name === 'SequelizeValidationError') {
+      console.error('=== VALIDATION ERRORS ===');
+      console.error('Validation errors:', JSON.stringify(error.errors, null, 2));
       return res.status(400).json({
         success: false,
-        message: 'Ошибка валидации',
+        message: 'Validation failed',
         errors: error.errors.map(e => ({
           field: e.path,
-          message: e.message
+          message: e.message,
+          value: e.value
         }))
       });
     }

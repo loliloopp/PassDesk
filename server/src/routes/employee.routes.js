@@ -16,7 +16,7 @@ const createEmployeeValidation = [
   body('firstName').notEmpty().trim(),
   body('lastName').notEmpty().trim(),
   body('middleName').optional().trim(),
-  body('position').notEmpty().trim(),
+  body('positionId').notEmpty().withMessage('Должность обязательна'), // Изменено с position на positionId
   body('email').optional().trim(),
   body('phone').optional().trim()
 ];
@@ -25,7 +25,7 @@ const updateEmployeeValidation = [
   body('firstName').optional().notEmpty().trim(),
   body('lastName').optional().notEmpty().trim(),
   body('middleName').optional().trim(),
-  body('position').optional().notEmpty().trim(),
+  body('positionId').optional().notEmpty().withMessage('Должность обязательна'), // Изменено с position на positionId
   body('email').optional().trim(),
   body('phone').optional().trim()
 ];
@@ -35,7 +35,7 @@ const updateMyProfileValidation = [
   body('firstName').optional().trim(),
   body('lastName').optional().trim(),
   body('middleName').optional().trim(),
-  body('position').optional().trim(),
+  body('positionId').optional().trim(), // Изменено с position на positionId
   body('email').optional().isEmail().withMessage('Введите корректный email'),
   body('phone').optional().trim(),
   body('inn').optional().trim(),

@@ -51,6 +51,56 @@ const normalizePhoneNumber = (value) => {
   return value.replace(/[^\d]/g, '');
 };
 
+// Маска для СНИЛС: форматирует ввод в 123-456-789 00
+const formatSnils = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр
+  const snils = value.replace(/[^\d]/g, '');
+  
+  // Ограничиваем длину до 11 цифр
+  const snilsLength = snils.length;
+  
+  if (snilsLength < 4) {
+    return snils;
+  }
+  if (snilsLength < 7) {
+    return `${snils.slice(0, 3)}-${snils.slice(3)}`;
+  }
+  if (snilsLength < 10) {
+    return `${snils.slice(0, 3)}-${snils.slice(3, 6)}-${snils.slice(6)}`;
+  }
+  return `${snils.slice(0, 3)}-${snils.slice(3, 6)}-${snils.slice(6, 9)} ${snils.slice(9, 11)}`;
+};
+
+// Маска для КИГ: форматирует ввод в АА 1234567
+const formatKig = (value) => {
+  if (!value) return value;
+  
+  // Преобразуем в верхний регистр
+  let kig = value.toUpperCase();
+  
+  // Убираем все символы кроме букв и цифр
+  kig = kig.replace(/[^A-ZА-Я0-9]/g, '');
+  
+  // Разделяем на буквы и цифры
+  const letters = kig.replace(/[^A-ZА-Я]/g, '');
+  const numbers = kig.replace(/[^0-9]/g, '');
+  
+  // Ограничиваем: 2 буквы + 7 цифр
+  const limitedLetters = letters.slice(0, 2);
+  const limitedNumbers = numbers.slice(0, 7);
+  
+  // Форматируем: АА 1234567
+  if (limitedLetters.length === 0) {
+    return '';
+  }
+  if (limitedNumbers.length === 0) {
+    return limitedLetters;
+  }
+  return `${limitedLetters} ${limitedNumbers}`;
+};
+
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
@@ -616,6 +666,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           layout="vertical"
           onFieldsChange={handleFieldsChange}
           validateTrigger={['onChange', 'onBlur']}
+          autoComplete="off"
           requiredMark={(label, { required }) => (
             <>
               {label}
@@ -690,7 +741,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Фамилия"
                   rules={[{ required: true, message: 'Введите фамилию' }]}
                 >
-                  <Input />
+                  <Input autoComplete="off" />
                 </Form.Item>
               </Col>
               <Col span={6}>
@@ -699,12 +750,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Имя"
                   rules={[{ required: true, message: 'Введите имя' }]}
                 >
-                  <Input />
+                  <Input autoComplete="off" />
                 </Form.Item>
               </Col>
               <Col span={6}>
                 <Form.Item name="middleName" label="Отчество">
-                  <Input />
+                  <Input autoComplete="off" />
                 </Form.Item>
               </Col>
               <Col span={6}>
@@ -721,6 +772,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     filterOption={(input, option) =>
                       option.children.toLowerCase().includes(input.toLowerCase())
                     }
+                    autoComplete="off"
                   >
                     {positions.map((p) => (
                       <Option key={p.id} value={p.id}>
@@ -746,6 +798,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     showSearch
                     optionFilterProp="children"
                     onChange={handleCitizenshipChange}
+                    autoComplete="off"
                   >
                     {citizenships.map((c) => (
                       <Option key={c.id} value={c.id}>
@@ -795,7 +848,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Адрес регистрации"
                   rules={[{ required: true, message: 'Введите адрес регистрации' }]}
                 >
-                  <Input placeholder="г. Москва, ул. Тверская, д.21, кв.11" />
+                  <Input placeholder="г. Москва, ул. Тверская, д.21, кв.11" autoComplete="off" />
                 </Form.Item>
               </Col>
             </Row>
@@ -813,7 +866,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     }
                   ]}
                 >
-                  <Input placeholder="ivanov@example.com" />
+                  <Input placeholder="ivanov@example.com" autoComplete="off" />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -834,6 +887,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Input 
                     placeholder="+7 (999) 123-45-67"
                     maxLength={18}
+                    autoComplete="off"
                   />
                 </Form.Item>
               </Col>
@@ -843,7 +897,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             <Row gutter={16}>
               <Col span={24}>
                 <Form.Item name="notes" label="Примечания">
-                  <TextArea rows={2} />
+                  <TextArea rows={2} autoComplete="off" />
                 </Form.Item>
               </Col>
             </Row>
@@ -872,7 +926,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     }
                   ]}
                 >
-                  <Input maxLength={12} placeholder="10 или 12 цифр" />
+                  <Input maxLength={12} placeholder="10 или 12 цифр" autoComplete="off" />
                 </Form.Item>
               </Col>
               <Col span={requiresPatent ? 8 : 12}>
@@ -886,8 +940,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                       message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX'
                     }
                   ]}
+                  normalize={(value) => {
+                    return formatSnils(value);
+                  }}
                 >
-                  <Input maxLength={14} placeholder="123-456-789 00" />
+                  <Input maxLength={14} placeholder="123-456-789 00" autoComplete="off" />
                 </Form.Item>
               </Col>
               {requiresPatent && (
@@ -895,9 +952,18 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Form.Item 
                     name="kig" 
                     label="КИГ"
-                    rules={[{ required: true, message: 'Введите КИГ' }]}
+                    rules={[
+                      { required: true, message: 'Введите КИГ' },
+                      {
+                        pattern: /^[A-ZА-Я]{2}\s\d{7}$/,
+                        message: 'КИГ должен быть в формате АА 1234567'
+                      }
+                    ]}
+                    normalize={(value) => {
+                      return formatKig(value);
+                    }}
                   >
-                    <Input placeholder="КИГ" />
+                    <Input maxLength={10} placeholder="АА 1234567" autoComplete="off" />
                   </Form.Item>
                 </Col>
               )}
@@ -910,7 +976,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="№ паспорта"
                   rules={[{ required: true, message: 'Введите номер паспорта' }]}
                 >
-                  <Input />
+                  <Input autoComplete="off" />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -932,7 +998,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Кем выдан паспорт"
                   rules={[{ required: true, message: 'Введите кем выдан паспорт' }]}
                 >
-                  <Input />
+                  <Input placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20" autoComplete="off" />
                 </Form.Item>
               </Col>
             </Row>
@@ -956,7 +1022,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     label="Номер патента"
                     rules={[{ required: true, message: 'Введите номер патента' }]}
                   >
-                    <Input />
+                    <Input autoComplete="off" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
@@ -978,7 +1044,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     label="Номер бланка"
                     rules={[{ required: true, message: 'Введите номер бланка' }]}
                   >
-                    <Input />
+                    <Input autoComplete="off" />
                   </Form.Item>
                 </Col>
               </Row>

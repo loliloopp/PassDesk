@@ -57,13 +57,15 @@ Employee.init(
     field: 'inn',
     validate: {
       isValidInn(value) {
-        if (value && value.length > 0) {
-          if (value.length !== 10 && value.length !== 12) {
-            throw new Error('ИНН должен содержать 10 или 12 цифр');
-          }
-          if (!/^\d+$/.test(value)) {
-            throw new Error('ИНН должен содержать только цифры');
-          }
+        // Пропускаем пустые значения (null, undefined, пустая строка)
+        if (!value || value.trim() === '') {
+          return;
+        }
+        if (value.length !== 10 && value.length !== 12) {
+          throw new Error('ИНН должен содержать 10 или 12 цифр');
+        }
+        if (!/^\d+$/.test(value)) {
+          throw new Error('ИНН должен содержать только цифры');
         }
       }
     },
@@ -76,10 +78,12 @@ Employee.init(
     field: 'snils',
     validate: {
       isValidSnils(value) {
-        if (value && value.length > 0) {
-          if (!/^\d{3}-\d{3}-\d{3}\s\d{2}$/.test(value)) {
-            throw new Error('СНИЛС должен быть в формате XXX-XXX-XXX XX');
-          }
+        // Пропускаем пустые значения (null, undefined, пустая строка)
+        if (!value || value.trim() === '') {
+          return;
+        }
+        if (!/^\d{3}-\d{3}-\d{3}\s\d{2}$/.test(value)) {
+          throw new Error('СНИЛС должен быть в формате XXX-XXX-XXX XX');
         }
       }
     },
