@@ -87,50 +87,74 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
   };
 
   const handleBlock = async (employeeId) => {
+    // Оптимистичное обновление UI
+    setEmployees(prev => prev.map(emp => 
+      emp.id === employeeId ? { ...emp, statusSecure: 'block' } : emp
+    ));
+
     try {
       await employeeService.update(employeeId, { statusSecure: 'block' });
       message.success('Сотрудник заблокирован');
-      fetchEmployees();
       onSuccess && onSuccess();
     } catch (error) {
       console.error('Error blocking employee:', error);
       message.error('Ошибка при блокировке сотрудника');
+      // Откатываем изменения при ошибке
+      fetchEmployees();
     }
   };
 
   const handleUnblock = async (employeeId) => {
+    // Оптимистичное обновление UI
+    setEmployees(prev => prev.map(emp => 
+      emp.id === employeeId ? { ...emp, statusSecure: 'allow' } : emp
+    ));
+
     try {
       await employeeService.update(employeeId, { statusSecure: 'allow' });
       message.success('Сотрудник разблокирован');
-      fetchEmployees();
       onSuccess && onSuccess();
     } catch (error) {
       console.error('Error unblocking employee:', error);
       message.error('Ошибка при разблокировке сотрудника');
+      // Откатываем изменения при ошибке
+      fetchEmployees();
     }
   };
 
   const handleTbPassed = async (employeeId) => {
+    // Оптимистичное обновление UI
+    setEmployees(prev => prev.map(emp => 
+      emp.id === employeeId ? { ...emp, status: 'tb_passed' } : emp
+    ));
+
     try {
       await employeeService.update(employeeId, { status: 'tb_passed' });
       message.success('Статус обновлен: Проведен инструктаж ТБ');
-      fetchEmployees();
       onSuccess && onSuccess();
     } catch (error) {
       console.error('Error updating TB status:', error);
       message.error('Ошибка при обновлении статуса ТБ');
+      // Откатываем изменения при ошибке
+      fetchEmployees();
     }
   };
 
   const handleTbRevoke = async (employeeId) => {
+    // Оптимистичное обновление UI
+    setEmployees(prev => prev.map(emp => 
+      emp.id === employeeId ? { ...emp, status: 'new' } : emp
+    ));
+
     try {
       await employeeService.update(employeeId, { status: 'new' });
       message.success('Статус обновлен: Новый');
-      fetchEmployees();
       onSuccess && onSuccess();
     } catch (error) {
       console.error('Error revoking TB status:', error);
       message.error('Ошибка при отмене статуса ТБ');
+      // Откатываем изменения при ошибке
+      fetchEmployees();
     }
   };
 
