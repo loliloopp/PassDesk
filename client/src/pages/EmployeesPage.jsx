@@ -11,7 +11,6 @@ import {
   message,
   Popconfirm,
   Select,
-  Badge,
 } from 'antd';
 import {
   PlusOutlined,
@@ -166,6 +165,12 @@ const EmployeesPage = () => {
     } catch (error) {
       console.error('Error saving employee:', error);
       console.error('Error response:', error.response?.data);
+      console.error('Error details:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        errors: error.response?.data?.errors,
+        data: error.response?.data
+      });
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.errors?.map(e => e.message).join(', ') || 
                           'Ошибка при сохранении';
@@ -272,15 +277,29 @@ const EmployeesPage = () => {
         const filesCount = record.filesCount || 0;
         return (
           <Tooltip title={filesCount > 0 ? `Просмотр файлов (${filesCount})` : 'Нет файлов'}>
-            <Badge count={filesCount} showZero={false}>
-              <Button
-                type="text"
-                icon={<FileOutlined />}
-                onClick={() => handleViewFiles(record)}
-                disabled={filesCount === 0}
-                style={{ color: filesCount > 0 ? '#1890ff' : '#d9d9d9' }}
-              />
-            </Badge>
+            <Button
+              type="text"
+              icon={<FileOutlined />}
+              onClick={() => handleViewFiles(record)}
+              disabled={filesCount === 0}
+              style={{ 
+                color: filesCount > 0 ? '#1890ff' : '#d9d9d9',
+                position: 'relative'
+              }}
+            >
+              {filesCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: '#000'
+                }}>
+                  {filesCount}
+                </span>
+              )}
+            </Button>
           </Tooltip>
         );
       },
@@ -328,7 +347,6 @@ const EmployeesPage = () => {
       title: 'Действия',
       key: 'actions',
       width: 150,
-      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Tooltip title="Просмотр">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Tabs, Button, Space, Checkbox } from 'antd';
-import { CheckCircleFilled, CheckCircleOutlined } from '@ant-design/icons';
+import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import settingsService from '../../services/settingsService';
@@ -26,10 +26,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const { user } = useAuthStore();
-  
-  // Определяем, может ли текущий пользователь изменять статусы
-  const canEditTbStatus = user?.counterpartyId === defaultCounterpartyId;
-  const canEditActiveStatus = employee?.employeeCounterpartyMappings?.[0]?.counterpartyId === user?.counterpartyId;
 
   // Определяем, требуется ли патент для выбранного гражданства
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
@@ -136,7 +132,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const fetchDefaultCounterparty = async () => {
     try {
       const response = await settingsService.getPublicSettings();
-      setDefaultCounterpartyId(response.data.defaultCounterpartyId);
+      const dcId = response.data.defaultCounterpartyId;
+      setDefaultCounterpartyId(dcId);
+      console.log('🔍 EmployeeFormModal: Default Counterparty loaded', {
+        defaultCounterpartyId: dcId,
+        userCounterpartyId: user?.counterpartyId,
+        canEditTb: user?.counterpartyId === dcId
+      });
     } catch (error) {
       console.error('Error loading default counterparty:', error);
     }
@@ -145,7 +147,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   // Проверяем, заполнены ли все обязательные поля на вкладке
   const validateTab = async (tabKey) => {
     const requiredFields = requiredFieldsByTab[tabKey];
-    if (!requiredFields) return false;
+    if (!requiredFields) return true; // Если нет обязательных полей, считаем вкладку валидной
 
     try {
       const values = form.getFieldsValue();
@@ -166,22 +168,40 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       validation[tabKey] = await validateTab(tabKey);
     }
     setTabsValidation(validation);
+    // Логируем только если включен debug режим
+    if (window.DEBUG_VALIDATION) {
+      console.log('🔍 Tab validation:', {
+        requiresPatent,
+        requiredFieldsByTab,
+        validation,
+        allValid: Object.keys(requiredFieldsByTab).every(tabKey => validation[tabKey] === true)
+      });
+    }
     return validation;
   };
 
   // Проверяем, все ли вкладки валидны
   const allTabsValid = () => {
-    return Object.values(tabsValidation).every(valid => valid === true);
+    // Проверяем только те вкладки, которые существуют в requiredFieldsByTab
+    const requiredTabs = Object.keys(requiredFieldsByTab);
+    return requiredTabs.every(tabKey => tabsValidation[tabKey] === true);
   };
 
-  // Обработчик изменения полей формы
+  // Обработчик изменения полей формы (с debounce для оптимизации)
   const handleFieldsChange = () => {
-    validateAllTabs();
+    // Используем setTimeout для debounce, чтобы не вызывать валидацию слишком часто
+    if (window.validationTimeout) {
+      clearTimeout(window.validationTimeout);
+    }
+    window.validationTimeout = setTimeout(() => {
+      validateAllTabs();
+    }, 300);
   };
 
   // Переход на следующую вкладку
   const handleNext = () => {
-    const tabOrder = ['1', '2', '3'];
+    // Определяем доступные вкладки в зависимости от requiresPatent
+    const tabOrder = requiresPatent ? ['1', '2', '3'] : ['1', '2'];
     const currentIndex = tabOrder.indexOf(activeTab);
     if (currentIndex < tabOrder.length - 1) {
       setActiveTab(tabOrder[currentIndex + 1]);
@@ -219,7 +239,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         // Если сотрудник уже обработан, не меняем статус
         formattedValues.status = 'processed';
       } else {
-        formattedValues.status = 'new';
+        formattedValues.status = employee?.status || 'new';
       }
       
       // statusActive: взаимоисключающие статусы
@@ -273,7 +293,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         // Если сотрудник уже обработан, не меняем статус
         formattedValues.status = 'processed';
       } else {
-        formattedValues.status = 'new';
+        formattedValues.status = employee?.status || 'new';
       }
       
       // statusActive: взаимоисключающие статусы
@@ -284,6 +304,16 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       } else {
         formattedValues.statusActive = null;
       }
+
+      console.log('💾 Saving employee with statuses:', {
+        isTbPassed: values.isTbPassed,
+        isFired: values.isFired,
+        isInactive: values.isInactive,
+        status: formattedValues.status,
+        statusActive: formattedValues.statusActive,
+        statusCard: 'completed',
+        allFormValues: JSON.stringify(formattedValues, null, 2)
+      });
 
       formattedValues.statusCard = 'completed';
       await onSuccess(formattedValues);
@@ -299,6 +329,28 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       // Не закрываем модальное окно
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Обработчик закрытия модального окна с подтверждением
+  const handleModalCancel = () => {
+    // Проверяем, есть ли несохраненные изменения
+    const hasChanges = form.isFieldsTouched();
+    
+    if (hasChanges) {
+      Modal.confirm({
+        title: 'Закрыть окно?',
+        icon: <ExclamationCircleOutlined />,
+        content: 'При закрытии окна введенные данные пропадут. Закрыть окно?',
+        okText: 'ОК',
+        cancelText: 'Отмена',
+        onOk: () => {
+          onCancel();
+        },
+      });
+    } else {
+      // Если изменений нет, просто закрываем
+      onCancel();
     }
   };
 
@@ -319,11 +371,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     <Modal
       title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
       open={visible}
-      onCancel={onCancel}
+      onCancel={handleModalCancel}
+      maskClosable={false}
       width={1200}
       footer={
         <Space>
-          <Button onClick={onCancel}>
+          <Button onClick={handleModalCancel}>
             {employee ? 'Закрыть' : 'Отмена'}
           </Button>
           <Button onClick={handleSaveDraft} loading={loading}>
@@ -366,44 +419,47 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={24}>
                   <Space size="large">
-                    <Checkbox
-                      checked={form.getFieldValue('isTbPassed')}
-                      disabled={!canEditTbStatus}
-                      onChange={(e) => {
-                        form.setFieldsValue({ isTbPassed: e.target.checked });
-                      }}
-                      style={{ color: '#52c41a', fontWeight: 'bold' }}
-                    >
-                      Проведен инструктаж ТБ
-                    </Checkbox>
-                    <Checkbox
-                      checked={form.getFieldValue('isFired')}
-                      disabled={!canEditActiveStatus}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          form.setFieldsValue({ isFired: true, isInactive: false });
-                        } else {
-                          form.setFieldsValue({ isFired: false });
-                        }
-                      }}
-                      style={{ color: '#ff4d4f', fontWeight: 'bold' }}
-                    >
-                      Уволен
-                    </Checkbox>
-                    <Checkbox
-                      checked={form.getFieldValue('isInactive')}
-                      disabled={!canEditActiveStatus}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          form.setFieldsValue({ isInactive: true, isFired: false });
-                        } else {
-                          form.setFieldsValue({ isInactive: false });
-                        }
-                      }}
-                      style={{ color: '#1890ff', fontWeight: 'bold' }}
-                    >
-                      Неактивный
-                    </Checkbox>
+                    <Form.Item name="isTbPassed" valuePropName="checked" noStyle>
+                      <Checkbox
+                        disabled={!defaultCounterpartyId || user?.counterpartyId !== defaultCounterpartyId}
+                        onChange={(e) => {
+                          form.setFieldsValue({ isTbPassed: e.target.checked });
+                        }}
+                        style={{ color: '#52c41a', fontWeight: 'bold' }}
+                      >
+                        Проведен инструктаж ТБ
+                      </Checkbox>
+                    </Form.Item>
+                    <Form.Item name="isFired" valuePropName="checked" noStyle>
+                      <Checkbox
+                        disabled={employee?.employeeCounterpartyMappings?.[0]?.counterpartyId !== user?.counterpartyId}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            form.setFieldsValue({ isFired: true, isInactive: false });
+                          } else {
+                            form.setFieldsValue({ isFired: false });
+                          }
+                        }}
+                        style={{ color: '#ff4d4f', fontWeight: 'bold' }}
+                      >
+                        Уволен
+                      </Checkbox>
+                    </Form.Item>
+                    <Form.Item name="isInactive" valuePropName="checked" noStyle>
+                      <Checkbox
+                        disabled={employee?.employeeCounterpartyMappings?.[0]?.counterpartyId !== user?.counterpartyId}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            form.setFieldsValue({ isInactive: true, isFired: false });
+                          } else {
+                            form.setFieldsValue({ isInactive: false });
+                          }
+                        }}
+                        style={{ color: '#1890ff', fontWeight: 'bold' }}
+                      >
+                        Неактивный
+                      </Checkbox>
+                    </Form.Item>
                   </Space>
                 </Col>
               </Row>

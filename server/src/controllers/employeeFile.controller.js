@@ -1,4 +1,4 @@
-import { File, Employee, Counterparty } from '../models/index.js';
+import { File, Employee, Counterparty, EmployeeCounterpartyMapping } from '../models/index.js';
 import yandexDiskClient, { basePath } from '../config/storage.js';
 import { buildEmployeeFilePath, sanitizeFileName } from '../utils/transliterate.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -29,12 +29,16 @@ export const uploadEmployeeFiles = async (req, res, next) => {
       throw new AppError('Пользователь не аутентифицирован', 401);
     }
     
-    // Загружаем данные сотрудника с контрагентом
+    // Загружаем данные сотрудника с контрагентом через маппинг
     const employee = await Employee.findByPk(employeeId, {
       include: [{
-        model: Counterparty,
-        as: 'counterparty',
-        attributes: ['id', 'name']
+        model: EmployeeCounterpartyMapping,
+        as: 'employeeCounterpartyMappings',
+        include: [{
+          model: Counterparty,
+          as: 'counterparty',
+          attributes: ['id', 'name']
+        }]
       }]
     });
     
@@ -42,9 +46,12 @@ export const uploadEmployeeFiles = async (req, res, next) => {
       throw new AppError('Сотрудник не найден', 404);
     }
     
-    if (!employee.counterparty) {
+    const mapping = employee.employeeCounterpartyMappings?.[0];
+    if (!mapping || !mapping.counterparty) {
       throw new AppError('У сотрудника не указан контрагент', 400);
     }
+    
+    const counterparty = mapping.counterparty;
     
     // Проверка лимитов для обычных пользователей
     if (req.user.role === 'user') {
@@ -76,7 +83,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     // Формируем путь: /PassDesk/Counterparty_Name/Employee_LastName_FirstName_MiddleName/
     const employeeFullName = `${employee.lastName}_${employee.firstName}${employee.middleName ? '_' + employee.middleName : ''}`;
     const relativePath = buildEmployeeFilePath(
-      employee.counterparty.name,
+      counterparty.name,
       employeeFullName
     );
     const fullPath = `${basePath}${relativePath}`;

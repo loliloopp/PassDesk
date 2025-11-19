@@ -145,10 +145,6 @@ export const getEmployeeById = async (req, res, next) => {
     const employee = await Employee.findByPk(id, {
       include: [
         {
-          model: Counterparty,
-          as: 'counterparty'
-        },
-        {
           model: Citizenship,
           as: 'citizenship',
           attributes: ['id', 'name', 'code', 'requiresPatent']
@@ -160,8 +156,44 @@ export const getEmployeeById = async (req, res, next) => {
         {
           model: User,
           as: 'updater'
+        },
+        {
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          include: [
+            {
+              model: Counterparty,
+              as: 'counterparty',
+              attributes: ['id', 'name', 'type']
+            },
+            {
+              model: Department,
+              as: 'department',
+              attributes: ['id', 'name']
+            },
+            {
+              model: ConstructionSite,
+              as: 'constructionSite',
+              attributes: ['id', 'shortName', 'fullName']
+            }
+          ]
         }
-      ]
+      ],
+      // Добавляем подсчет файлов
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)::int
+              FROM files
+              WHERE files.entity_type = 'employee'
+                AND files.entity_id = "Employee"."id"
+                AND files.is_deleted = false
+            )`),
+            'filesCount'
+          ]
+        ]
+      }
     });
 
     if (!employee) {
