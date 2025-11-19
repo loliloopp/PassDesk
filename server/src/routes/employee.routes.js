@@ -56,6 +56,7 @@ router.get('/', employeeController.getAllEmployees);
 router.get('/:id', employeeController.getEmployeeById);
 router.post('/', authorize('admin', 'manager'), createEmployeeValidation, validate, employeeController.createEmployee);
 router.put('/:id', authorize('admin', 'manager'), updateEmployeeValidation, validate, employeeController.updateEmployee);
+router.put('/:id/construction-sites', authorize('admin', 'manager'), employeeController.updateEmployeeConstructionSites);
 router.delete('/:id', authorize('admin'), employeeController.deleteEmployee);
 router.get('/search', employeeController.searchEmployees);
 

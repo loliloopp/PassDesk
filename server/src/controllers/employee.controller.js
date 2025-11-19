@@ -224,18 +224,20 @@ export const createEmployee = async (req, res, next) => {
     console.log('User ID:', req.user?.id);
     console.log('User Counterparty ID:', req.user?.counterpartyId);
     
+    // Удаляем counterpartyId, constructionSiteId и status из данных сотрудника
+    // status ВСЕГДА должен быть 'new' при создании
+    const { counterpartyId, constructionSiteId, status, statusActive, ...cleanEmployeeData } = req.body;
+    
     const employeeData = {
-      ...req.body,
+      ...cleanEmployeeData,
       createdBy: req.user.id,
-      status: 'new' // При создании сотрудника статус всегда "Новый"
+      status: 'new', // При создании сотрудника статус всегда "Новый"
+      statusActive: null // При создании statusActive всегда null
     };
     
-    // Удаляем counterpartyId и constructionSiteId из данных сотрудника
-    const { counterpartyId, constructionSiteId, ...cleanEmployeeData } = employeeData;
-    
-    console.log('Employee data to create:', JSON.stringify(cleanEmployeeData, null, 2));
+    console.log('Employee data to create:', JSON.stringify(employeeData, null, 2));
 
-    const employee = await Employee.create(cleanEmployeeData);
+    const employee = await Employee.create(employeeData);
     
     // Создаём запись в маппинге (сотрудник-контрагент-объект)
     await EmployeeCounterpartyMapping.create({
@@ -426,6 +428,103 @@ export const updateEmployee = async (req, res, next) => {
       });
     }
     
+    next(error);
+  }
+};
+
+// Обновить объекты строительства для сотрудника
+export const updateEmployeeConstructionSites = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { siteIds } = req.body;
+    
+    const employee = await Employee.findByPk(id);
+    
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сотрудник не найден'
+      });
+    }
+    
+    // Получаем существующие маппинги сотрудника для текущего контрагента
+    const existingMappings = await EmployeeCounterpartyMapping.findAll({
+      where: {
+        employeeId: id,
+        counterpartyId: req.user.counterpartyId
+      }
+    });
+    
+    // Если нет маппингов, создаем базовый
+    if (existingMappings.length === 0) {
+      // Создаем маппинги для каждого выбранного объекта
+      for (const siteId of siteIds) {
+        await EmployeeCounterpartyMapping.create({
+          employeeId: id,
+          counterpartyId: req.user.counterpartyId,
+          constructionSiteId: siteId,
+          departmentId: null
+        });
+      }
+    } else {
+      // Удаляем все старые маппинги с объектами для этого контрагента
+      await EmployeeCounterpartyMapping.destroy({
+        where: {
+          employeeId: id,
+          counterpartyId: req.user.counterpartyId
+        }
+      });
+      
+      // Создаем новые маппинги для каждого выбранного объекта
+      for (const siteId of siteIds) {
+        await EmployeeCounterpartyMapping.create({
+          employeeId: id,
+          counterpartyId: req.user.counterpartyId,
+          constructionSiteId: siteId,
+          departmentId: null
+        });
+      }
+    }
+    
+    // Получаем обновленного сотрудника с маппингами
+    const updatedEmployee = await Employee.findByPk(id, {
+      include: [
+        {
+          model: Citizenship,
+          as: 'citizenship',
+          attributes: ['id', 'name', 'code', 'requiresPatent']
+        },
+        {
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          include: [
+            {
+              model: Counterparty,
+              as: 'counterparty',
+              attributes: ['id', 'name']
+            },
+            {
+              model: Department,
+              as: 'department',
+              attributes: ['id', 'name']
+            },
+            {
+              model: ConstructionSite,
+              as: 'constructionSite',
+              attributes: ['id', 'shortName', 'fullName']
+            }
+          ]
+        }
+      ]
+    });
+    
+    res.json({
+      success: true,
+      message: 'Объекты обновлены',
+      data: updatedEmployee
+    });
+  } catch (error) {
+    console.error('Error updating construction sites:', error);
     next(error);
   }
 };

@@ -725,38 +725,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             </Tabs.TabPane>
           )}
 
-          {/* Вкладка: Объект (без обязательных полей, без галочки) */}
-          <Tabs.TabPane 
-            tab={
-              <span style={getTabStyle()}>
-                Объект
-              </span>
-            } 
-            key="5"
-          >
-            <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item 
-                  name="constructionSiteId" 
-                  label="Объект строительства"
-                >
-                  <Select
-                    placeholder="Выберите объект"
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                  >
-                    {constructionSites.map((site) => (
-                      <Option key={site.id} value={site.id}>
-                        {site.shortName || site.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-          </Tabs.TabPane>
-
           {/* Вкладка: Файлы (только для существующих сотрудников) */}
           {employee?.id && (
             <Tabs.TabPane tab="Файлы" key="4">

@@ -69,6 +69,12 @@ export const employeeService = {
   getFileViewLink: async (employeeId, fileId) => {
     const response = await api.get(`/employees/${employeeId}/files/${fileId}/view`)
     return response.data
+  },
+
+  // Обновить объекты строительства для сотрудника
+  updateConstructionSites: async (employeeId, siteIds) => {
+    const response = await api.put(`/employees/${employeeId}/construction-sites`, { siteIds })
+    return response.data
   }
 }
 
