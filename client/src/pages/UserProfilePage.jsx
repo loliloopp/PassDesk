@@ -60,6 +60,85 @@ const formatDateInput = (value) => {
   return result;
 };
 
+// Маска для СНИЛС: форматирует ввод в 123-456-789 00
+const formatSnils = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр
+  const snils = value.replace(/[^\d]/g, '');
+  
+  // Ограничиваем длину до 11 цифр
+  const snilsLength = snils.length;
+  
+  if (snilsLength < 4) {
+    return snils;
+  }
+  if (snilsLength < 7) {
+    return `${snils.slice(0, 3)}-${snils.slice(3)}`;
+  }
+  if (snilsLength < 10) {
+    return `${snils.slice(0, 3)}-${snils.slice(3, 6)}-${snils.slice(6)}`;
+  }
+  return `${snils.slice(0, 3)}-${snils.slice(3, 6)}-${snils.slice(6, 9)} ${snils.slice(9, 11)}`;
+};
+
+// Маска для КИГ: форматирует ввод в АА 1234567
+const formatKig = (value) => {
+  if (!value) return value;
+  
+  // Преобразуем в верхний регистр
+  let kig = value.toUpperCase();
+  
+  // Убираем все символы кроме букв и цифр
+  kig = kig.replace(/[^A-ZА-Я0-9]/g, '');
+  
+  // Разделяем на буквы и цифры
+  const letters = kig.replace(/[^A-ZА-Я]/g, '');
+  const numbers = kig.replace(/[^0-9]/g, '');
+  
+  // Ограничиваем: 2 буквы + 7 цифр
+  const limitedLetters = letters.slice(0, 2);
+  const limitedNumbers = numbers.slice(0, 7);
+  
+  // Форматируем: АА 1234567
+  if (limitedLetters.length === 0) {
+    return '';
+  }
+  if (limitedNumbers.length === 0) {
+    return limitedLetters;
+  }
+  return `${limitedLetters} ${limitedNumbers}`;
+};
+
+// Маска для ИНН: форматирует ввод в XXXX-XXXXX-X (10 цифр) или XXXX-XXXXXX-XX (12 цифр)
+const formatInn = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр
+  const inn = value.replace(/[^\d]/g, '');
+  
+  // Ограничиваем длину до 12 цифр
+  const innLength = inn.length;
+  
+  if (innLength <= 4) {
+    return inn;
+  }
+  if (innLength <= 9) {
+    // Начинаем форматировать для 10-значного ИНН
+    return `${inn.slice(0, 4)}-${inn.slice(4)}`;
+  }
+  if (innLength === 10) {
+    // 10-значный ИНН: XXXX-XXXXX-X
+    return `${inn.slice(0, 4)}-${inn.slice(4, 9)}-${inn.slice(9)}`;
+  }
+  if (innLength <= 10) {
+    // Промежуточное состояние для 12-значного ИНН
+    return `${inn.slice(0, 4)}-${inn.slice(4, 10)}`;
+  }
+  // 12-значный ИНН: XXXX-XXXXXX-XX
+  return `${inn.slice(0, 4)}-${inn.slice(4, 10)}-${inn.slice(10, 12)}`;
+};
+
 const UserProfilePage = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
@@ -102,6 +181,10 @@ const UserProfilePage = () => {
           birthDate: formatDate(data.employee.birthDate),
           passportDate: formatDate(data.employee.passportDate),
           patentIssueDate: formatDate(data.employee.patentIssueDate),
+          // Форматируем ИНН, СНИЛС и КИГ
+          inn: data.employee.inn ? formatInn(data.employee.inn) : '',
+          snils: data.employee.snils ? formatSnils(data.employee.snils) : '',
+          kig: data.employee.kig ? formatKig(data.employee.kig) : '',
         });
         
         // Загружаем файлы
@@ -157,6 +240,10 @@ const UserProfilePage = () => {
         birthDate: formatDate(employee.birthDate),
         passportDate: formatDate(employee.passportDate),
         patentIssueDate: formatDate(employee.patentIssueDate),
+        // Форматируем ИНН, СНИЛС и КИГ
+        inn: employee.inn ? formatInn(employee.inn) : '',
+        snils: employee.snils ? formatSnils(employee.snils) : '',
+        kig: employee.kig ? formatKig(employee.kig) : '',
       });
     }
   };
@@ -202,6 +289,10 @@ const UserProfilePage = () => {
         birthDate: parseDate(values.birthDate),
         passportDate: parseDate(values.passportDate),
         patentIssueDate: parseDate(values.patentIssueDate),
+        // Убираем дефисы и пробелы из ИНН, СНИЛС, КИГ перед отправкой
+        inn: values.inn ? values.inn.replace(/[^\d]/g, '') : null,
+        snils: values.snils ? values.snils.replace(/[^\d]/g, '') : null,
+        kig: values.kig ? values.kig.replace(/[^A-ZА-Я0-9]/g, '') : null,
       };
 
       console.log('💾 Saving profile:', formattedValues);
@@ -608,17 +699,38 @@ const UserProfilePage = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="inn" label="ИНН">
-                <Input />
+                <Input 
+                  maxLength={14}
+                  placeholder="XXXX-XXXXX-X или XXXX-XXXXXX-XX"
+                  onChange={(e) => {
+                    const formatted = formatInn(e.target.value);
+                    form.setFieldValue('inn', formatted);
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="snils" label="СНИЛС">
-                <Input />
+                <Input 
+                  maxLength={14}
+                  placeholder="123-456-789 00"
+                  onChange={(e) => {
+                    const formatted = formatSnils(e.target.value);
+                    form.setFieldValue('snils', formatted);
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="kig" label="КИГ">
-                <Input />
+                <Input 
+                  maxLength={10}
+                  placeholder="АА 1234567"
+                  onChange={(e) => {
+                    const formatted = formatKig(e.target.value);
+                    form.setFieldValue('kig', formatted);
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>

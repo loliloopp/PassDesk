@@ -101,6 +101,35 @@ const formatKig = (value) => {
   return `${limitedLetters} ${limitedNumbers}`;
 };
 
+// Маска для ИНН: форматирует ввод в XXXX-XXXXX-X (10 цифр) или XXXX-XXXXXX-XX (12 цифр)
+const formatInn = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр
+  const inn = value.replace(/[^\d]/g, '');
+  
+  // Ограничиваем длину до 12 цифр
+  const innLength = inn.length;
+  
+  if (innLength <= 4) {
+    return inn;
+  }
+  if (innLength <= 9) {
+    // Начинаем форматировать для 10-значного ИНН
+    return `${inn.slice(0, 4)}-${inn.slice(4)}`;
+  }
+  if (innLength === 10) {
+    // 10-значный ИНН: XXXX-XXXXX-X
+    return `${inn.slice(0, 4)}-${inn.slice(4, 9)}-${inn.slice(9)}`;
+  }
+  if (innLength <= 10) {
+    // Промежуточное состояние для 12-значного ИНН
+    return `${inn.slice(0, 4)}-${inn.slice(4, 10)}`;
+  }
+  // 12-значный ИНН: XXXX-XXXXXX-XX
+  return `${inn.slice(0, 4)}-${inn.slice(4, 10)}-${inn.slice(10, 12)}`;
+};
+
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
@@ -289,6 +318,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             constructionSiteId: mapping?.constructionSiteId || null,
             isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
             isInactive: employee.statusActive === 'inactive',
+            // Форматируем ИНН, СНИЛС, телефон и КИГ при загрузке
+            inn: employee.inn ? formatInn(employee.inn) : null,
+            snils: employee.snils ? formatSnils(employee.snils) : null,
+            phone: employee.phone ? formatPhoneNumber(employee.phone) : null,
+            kig: employee.kig ? formatKig(employee.kig) : null,
           };
           
           console.log('📝 EmployeeFormModal: setting form data:', formData);
@@ -490,6 +524,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           formattedValues[key] = null;
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
           formattedValues[key] = value ? value.format('YYYY-MM-DD') : null;
+        } else if (key === 'phone') {
+          // Убираем форматирование телефона (оставляем только цифры)
+          formattedValues[key] = normalizePhoneNumber(value);
+        } else if (key === 'inn' || key === 'snils') {
+          // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
+          formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
         } else {
           formattedValues[key] = value;
         }
@@ -553,6 +593,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           formattedValues[key] = null;
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
           formattedValues[key] = value ? value.format('YYYY-MM-DD') : null;
+        } else if (key === 'phone') {
+          // Убираем форматирование телефона (оставляем только цифры)
+          formattedValues[key] = normalizePhoneNumber(value);
+        } else if (key === 'inn' || key === 'snils') {
+          // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
+          formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
         } else {
           formattedValues[key] = value;
         }
@@ -943,12 +989,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   rules={[
                     { required: true, message: 'Введите ИНН' },
                     {
-                      pattern: /^\d{10}$|^\d{12}$/,
-                      message: 'ИНН должен содержать 10 или 12 цифр'
+                      pattern: /^\d{4}-\d{5}-\d{1}$|^\d{4}-\d{6}-\d{2}$/,
+                      message: 'ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX'
                     }
                   ]}
+                  normalize={(value) => {
+                    return formatInn(value);
+                  }}
                 >
-                  <Input maxLength={12} placeholder="10 или 12 цифр" autoComplete="off" />
+                  <Input maxLength={14} placeholder="XXXX-XXXXX-X или XXXX-XXXXXX-XX" autoComplete="off" />
                 </Form.Item>
               </Col>
               <Col span={requiresPatent ? 8 : 12}>
