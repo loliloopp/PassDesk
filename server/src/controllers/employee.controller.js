@@ -357,15 +357,21 @@ export const updateEmployee = async (req, res, next) => {
     
     // Если был передан constructionSiteId, обновляем маппинг
     if (constructionSiteId !== undefined) {
-      await EmployeeCounterpartyMapping.update(
-        { constructionSiteId: constructionSiteId || null },
-        { 
-          where: { 
-            employeeId: id,
-            counterpartyId: req.user.counterpartyId 
-          } 
+      // Сначала получаем текущий маппинг
+      const currentMapping = await EmployeeCounterpartyMapping.findOne({
+        where: { 
+          employeeId: id,
+          counterpartyId: req.user.counterpartyId 
         }
-      );
+      });
+      
+      // Проверяем, нужно ли обновлять (если значение изменилось)
+      const newConstructionSiteId = constructionSiteId || null;
+      if (currentMapping && currentMapping.constructionSiteId !== newConstructionSiteId) {
+        await currentMapping.update({
+          constructionSiteId: newConstructionSiteId
+        });
+      }
     }
     
     // Получаем обновленного сотрудника с гражданством для правильного расчета statusCard

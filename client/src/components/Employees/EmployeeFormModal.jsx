@@ -12,6 +12,44 @@ const { TextArea } = Input;
 const { Option } = Select;
 const DATE_FORMAT = 'DD.MM.YYYY';
 
+// Маска для телефона: форматирует ввод в +7 (123) 456-78-90
+const formatPhoneNumber = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр
+  const phoneNumber = value.replace(/[^\d]/g, '');
+  
+  // Ограничиваем длину до 11 цифр
+  const phoneNumberLength = phoneNumber.length;
+  
+  // Если число начинается с 8, заменяем на 7
+  let formattedNumber = phoneNumber;
+  if (phoneNumber.startsWith('8')) {
+    formattedNumber = '7' + phoneNumber.slice(1);
+  }
+  
+  // Форматируем: +7 (123) 456-78-90
+  if (phoneNumberLength < 2) {
+    return formattedNumber;
+  }
+  if (phoneNumberLength < 5) {
+    return `+7 (${formattedNumber.slice(1)}`;
+  }
+  if (phoneNumberLength < 8) {
+    return `+7 (${formattedNumber.slice(1, 4)}) ${formattedNumber.slice(4)}`;
+  }
+  if (phoneNumberLength < 10) {
+    return `+7 (${formattedNumber.slice(1, 4)}) ${formattedNumber.slice(4, 7)}-${formattedNumber.slice(7)}`;
+  }
+  return `+7 (${formattedNumber.slice(1, 4)}) ${formattedNumber.slice(4, 7)}-${formattedNumber.slice(7, 9)}-${formattedNumber.slice(9, 11)}`;
+};
+
+// Функция для удаления форматирования телефона перед отправкой
+const normalizePhoneNumber = (value) => {
+  if (!value) return value;
+  return value.replace(/[^\d]/g, '');
+};
+
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
@@ -565,6 +603,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           form={form} 
           layout="vertical"
           onFieldsChange={handleFieldsChange}
+          validateTrigger={['onChange', 'onBlur']}
+          requiredMark={(label, { required }) => (
+            <>
+              {label}
+              {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+            </>
+          )}
         >
         <Tabs 
           activeKey={activeTab}
@@ -688,7 +733,24 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 <Form.Item 
                   name="birthDate" 
                   label="Дата рождения"
-                  rules={[{ required: true, message: 'Введите дату рождения' }]}
+                  rules={[
+                    { required: true, message: 'Введите дату рождения' },
+                    {
+                      validator: (_, value) => {
+                        if (!value) {
+                          return Promise.resolve();
+                        }
+                        const age = dayjs().diff(value, 'year');
+                        if (age < 16) {
+                          return Promise.reject(new Error('Возраст сотрудника должен быть не менее 16 лет'));
+                        }
+                        if (age > 80) {
+                          return Promise.reject(new Error('Возраст сотрудника должен быть не более 80 лет'));
+                        }
+                        return Promise.resolve();
+                      }
+                    }
+                  ]}
                 >
                   <DatePicker
                     style={{ width: '100%' }}
@@ -707,7 +769,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Адрес регистрации"
                   rules={[{ required: true, message: 'Введите адрес регистрации' }]}
                 >
-                  <Input />
+                  <Input placeholder="г. Москва, ул. Тверская, д.21, кв.11" />
                 </Form.Item>
               </Col>
             </Row>
@@ -732,9 +794,21 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 <Form.Item 
                   name="phone" 
                   label="Телефон"
-                  rules={[{ required: true, message: 'Введите телефон' }]}
+                  rules={[
+                    { required: true, message: 'Введите телефон' },
+                    {
+                      pattern: /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/,
+                      message: 'Телефон должен быть в формате +7 (999) 123-45-67'
+                    }
+                  ]}
+                  normalize={(value) => {
+                    return formatPhoneNumber(value);
+                  }}
                 >
-                  <Input placeholder="+7 (999) 123-45-67" />
+                  <Input 
+                    placeholder="+7 (999) 123-45-67"
+                    maxLength={18}
+                  />
                 </Form.Item>
               </Col>
             </Row>

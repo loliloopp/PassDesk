@@ -5,6 +5,26 @@ import dayjs from 'dayjs';
 
 const DATE_FORMAT = 'DD.MM.YYYY';
 
+// Функция для форматирования телефона при отображении
+const formatPhoneDisplay = (phone) => {
+  if (!phone) return '-';
+  
+  // Если телефон уже отформатирован, возвращаем как есть
+  if (phone.includes('(') && phone.includes(')')) {
+    return phone;
+  }
+  
+  // Убираем все символы кроме цифр
+  const phoneNumber = phone.replace(/[^\d]/g, '');
+  
+  // Форматируем: +7 (123) 456-78-90
+  if (phoneNumber.length === 11 && phoneNumber.startsWith('7')) {
+    return `+7 (${phoneNumber.slice(1, 4)}) ${phoneNumber.slice(4, 7)}-${phoneNumber.slice(7, 9)}-${phoneNumber.slice(9, 11)}`;
+  }
+  
+  return phone; // Возвращаем как есть, если формат не подходит
+};
+
 const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
   if (!employee) return null;
 
@@ -72,7 +92,7 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
               {employee.email || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Телефон" span={1}>
-              {employee.phone}
+              {formatPhoneDisplay(employee.phone)}
             </Descriptions.Item>
             <Descriptions.Item label="Примечания" span={1}>
               {employee.notes || '-'}

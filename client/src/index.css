@@ -21,3 +21,21 @@ code {
 #root {
   min-height: 100vh;
 }
+
+/* Красная рамка для незаполненных обязательных полей */
+.ant-form-item-required .ant-input:not(:focus):invalid,
+.ant-form-item-required .ant-picker:not(.ant-picker-focused) .ant-picker-input > input:invalid,
+.ant-form-item-required .ant-select:not(.ant-select-focused) .ant-select-selector:invalid {
+  border-color: #ff4d4f !important;
+}
+
+/* Красная рамка для пустых обязательных полей при первом рендере */
+.ant-form-item-has-error .ant-input,
+.ant-form-item-has-error .ant-input-affix-wrapper,
+.ant-form-item-has-error .ant-input:focus,
+.ant-form-item-has-error .ant-input-affix-wrapper:focus,
+.ant-form-item-has-error .ant-picker,
+.ant-form-item-has-error .ant-picker-focused,
+.ant-form-item-has-error .ant-select:not(.ant-select-disabled) .ant-select-selector {
+  border-color: #ff4d4f !important;
+}
