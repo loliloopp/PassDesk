@@ -4,7 +4,6 @@ import {
   Form,
   Select,
   Checkbox,
-  message,
   Spin,
   Space,
   Typography,
@@ -12,6 +11,7 @@ import {
   Input,
   Collapse,
   DatePicker,
+  App,
 } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
@@ -25,6 +25,7 @@ const { Text } = Typography;
 const { TextArea } = Input;
 
 const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState([]);
