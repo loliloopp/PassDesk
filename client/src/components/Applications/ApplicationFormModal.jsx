@@ -356,7 +356,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
                   <Space direction="vertical" style={{ width: '100%' }}>
                     {employees.map(emp => (
                       <Checkbox key={emp.id} value={emp.id}>
-                        {emp.lastName} {emp.firstName} {emp.middleName || ''} - {emp.position}
+                        {emp.lastName} {emp.firstName} {emp.middleName || ''} - {emp.position?.name || 'Не указано'}
                       </Checkbox>
                     ))}
                     {employees.length === 0 && selectedCounterparty && !loadingEmployees && (

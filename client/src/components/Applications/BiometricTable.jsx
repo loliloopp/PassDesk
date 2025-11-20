@@ -46,10 +46,9 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
     },
     {
       title: 'Должность',
-      dataIndex: 'position',
       key: 'position',
       width: 150,
-      render: (value) => value || '-',
+      render: (_, record) => record.position?.name || '-',
     },
     {
       title: 'ИНН сотрудника',

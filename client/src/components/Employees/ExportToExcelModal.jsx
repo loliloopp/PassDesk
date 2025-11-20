@@ -174,7 +174,7 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
           'Гражданство': emp.citizenship?.name || '-',
           'Дата рождения': emp.birthDate ? dayjs(emp.birthDate).format('DD.MM.YYYY') : '-',
           'СНИЛС': formatSnilsDisplay(emp.snils),
-          'Должность': emp.position || '-',
+          'Должность': emp.position?.name || '-',
           'ИНН сотрудника': emp.inn || '-',
           'Организация': mapping?.counterparty?.name || '-',
           'ИНН организации': mapping?.counterparty?.inn || '-',

@@ -1,4 +1,4 @@
-import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, sequelize } from '../models/index.js';
+import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, Position, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Функция генерации номера заявки
@@ -121,9 +121,14 @@ export const getAllApplications = async (req, res) => {
                   attributes: ['name', 'inn', 'kpp']
                 }
               ]
+            },
+            {
+              model: Position,
+              as: 'position',
+              attributes: ['id', 'name']
             }
           ],
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'position'],
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'positionId'],
           through: { attributes: [] } // Не включать поля из связующей таблицы
         },
         {
@@ -210,9 +215,14 @@ export const getApplicationById = async (req, res) => {
                   attributes: ['name', 'inn', 'kpp']
                 }
               ]
+            },
+            {
+              model: Position,
+              as: 'position',
+              attributes: ['id', 'name']
             }
           ],
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'position'],
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'positionId'],
           through: { attributes: [] }
         }
       ]
@@ -294,7 +304,14 @@ export const createApplication = async (req, res) => {
         {
           model: Employee,
           as: 'employees',
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
+          include: [
+            {
+              model: Position,
+              as: 'position',
+              attributes: ['id', 'name']
+            }
+          ],
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
           through: { attributes: [] }
         },
         {
@@ -402,7 +419,14 @@ export const updateApplication = async (req, res) => {
         {
           model: Employee,
           as: 'employees',
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
+          include: [
+            {
+              model: Position,
+              as: 'position',
+              attributes: ['id', 'name']
+            }
+          ],
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
           through: { attributes: [] }
         }
       ]
@@ -525,7 +549,14 @@ export const copyApplication = async (req, res) => {
         {
           model: Employee,
           as: 'employees',
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
+          include: [
+            {
+              model: Position,
+              as: 'position',
+              attributes: ['id', 'name']
+            }
+          ],
+          attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
           through: { attributes: [] }
         }
       ]
@@ -650,9 +681,14 @@ export const getEmployeesForApplication = async (req, res) => {
             counterpartyId: counterpartyId
           },
           attributes: []
+        },
+        {
+          model: Position,
+          as: 'position',
+          attributes: ['id', 'name']
         }
       ],
-      attributes: ['id', 'firstName', 'lastName', 'middleName', 'position'],
+      attributes: ['id', 'firstName', 'lastName', 'middleName', 'positionId'],
       order: [['lastName', 'ASC']]
     });
     

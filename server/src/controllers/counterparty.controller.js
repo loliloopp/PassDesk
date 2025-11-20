@@ -1,4 +1,4 @@
-import { Counterparty, Employee, sequelize } from '../models/index.js';
+import { Counterparty, Employee, Position, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Получить все контрагенты
@@ -62,7 +62,14 @@ export const getCounterpartyById = async (req, res) => {
         {
           model: Employee,
           as: 'employees',
-          attributes: ['id', 'firstName', 'lastName', 'position']
+          include: [
+            {
+              model: Position,
+              as: 'position',
+              attributes: ['id', 'name']
+            }
+          ],
+          attributes: ['id', 'firstName', 'lastName', 'positionId']
         }
       ]
     });
