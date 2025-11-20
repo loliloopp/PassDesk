@@ -32,7 +32,6 @@ const Sidebar = () => {
     const loadSettings = async () => {
       try {
         const response = await settingsService.getPublicSettings()
-        console.log('🔍 Sidebar: loaded settings', response.data)
         setDefaultCounterpartyId(response.data.defaultCounterpartyId)
       } catch (error) {
         console.error('Error loading settings:', error)
@@ -55,12 +54,6 @@ const Sidebar = () => {
 
   // Проверяем, должен ли пользователь видеть дашборд
   const canSeeDashboard = user?.counterpartyId === defaultCounterpartyId
-
-  console.log('🔍 Sidebar: dashboard access check', {
-    userCounterpartyId: user?.counterpartyId,
-    defaultCounterpartyId,
-    canSeeDashboard
-  })
 
   // Меню для администраторов и менеджеров
   const adminManagerMenuItems = []

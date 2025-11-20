@@ -10,18 +10,15 @@ let isRedirecting = false
 export const getBaseURL = () => {
   // 1. Проверяем переменную окружения (приоритет!)
   if (import.meta.env.VITE_API_URL) {
-    console.log('📌 Using VITE_API_URL:', import.meta.env.VITE_API_URL);
     return import.meta.env.VITE_API_URL;
   }
   
   // 2. Проверяем конфигурацию
   if (API_CONFIG?.BASE_URL) {
-    console.log('📌 Using API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
     return API_CONFIG.BASE_URL;
   }
   
   // 3. По умолчанию используем localhost
-  console.log('📌 Using default localhost URL');
   return 'http://localhost:5000/api/v1';
 };
 
@@ -35,10 +32,6 @@ const api = axios.create({
   },
   timeout: 60000 // Увеличиваем до 60 секунд для импорта больших файлов
 })
-
-// Логируем информацию при инициализации
-console.log('🔗 API module loaded - VERSION 5.0 (with auth notifications)');
-console.log('📍 Initial baseURL:', api.defaults.baseURL);
 
 // Interceptor для обновления baseURL перед каждым запросом
 api.interceptors.request.use(

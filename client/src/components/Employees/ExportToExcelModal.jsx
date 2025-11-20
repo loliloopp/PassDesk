@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Select, Radio, Table, Checkbox, Space, Button, message } from 'antd';
+import { Modal, Select, Radio, Table, Checkbox, Space, Button, message } from 'antd';
 import { FileExcelOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 import { constructionSiteService } from '../../services/constructionSiteService';
@@ -10,18 +10,25 @@ import * as XLSX from 'xlsx';
 const { Option } = Select;
 
 const ExportToExcelModal = ({ visible, onCancel }) => {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [constructionSites, setConstructionSites] = useState([]);
   const [counterparties, setCounterparties] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
-  const [filterType, setFilterType] = useState('all'); // 'all' или 'tb_passed'
+  const [filterType, setFilterType] = useState('all');
+  const [constructionSiteId, setConstructionSiteId] = useState(null);
+  const [counterpartyId, setCounterpartyId] = useState(null);
 
   useEffect(() => {
     if (visible) {
       fetchConstructionSites();
       fetchCounterparties();
+      // Сбрасываем фильтры при открытии
+      setFilterType('all');
+      setConstructionSiteId(null);
+      setCounterpartyId(null);
+      setEmployees([]);
+      setSelectedEmployees([]);
     }
   }, [visible]);
 
@@ -44,74 +51,60 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
   };
 
   // Функция для фильтрации сотрудников
-  const handleFilterChange = async () => {
-    try {
-      const values = form.getFieldsValue(['constructionSiteId', 'counterpartyId', 'filterType']);
-      
-      console.log('🔍 Filter values:', values);
-      
-      if (!values.constructionSiteId || !values.counterpartyId) {
+  useEffect(() => {
+    const loadEmployees = async () => {
+      if (!constructionSiteId || !counterpartyId) {
         setEmployees([]);
         setSelectedEmployees([]);
         return;
       }
 
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      // Получаем всех сотрудников
-      const response = await employeeService.getAll();
-      const allEmployees = response.data.employees || [];
-      
-      console.log('📋 All employees count:', allEmployees.length);
+        // Получаем всех сотрудников
+        const response = await employeeService.getAll();
+        const allEmployees = response.data.employees || [];
 
-      // Фильтруем сотрудников по условиям
-      const filtered = allEmployees.filter((emp) => {
-        const mappings = emp.employeeCounterpartyMappings || [];
-        
-        console.log(`👤 Employee ${emp.lastName}: mappings count = ${mappings.length}`);
-        
-        // Проверяем, есть ли хотя бы один маппинг, который соответствует фильтрам
-        const hasMatchingMapping = mappings.some(mapping => {
-          const siteMatch = mapping?.constructionSiteId === values.constructionSiteId;
-          const counterpartyMatch = mapping?.counterpartyId === values.counterpartyId;
+        // Фильтруем сотрудников по условиям
+        const filtered = allEmployees.filter((emp) => {
+          const mappings = emp.employeeCounterpartyMappings || [];
           
-          console.log(`  Mapping: site ${mapping?.constructionSiteId} === ${values.constructionSiteId} ? ${siteMatch}, counterparty ${mapping?.counterpartyId} === ${values.counterpartyId} ? ${counterpartyMatch}`);
+          // Проверяем, есть ли хотя бы один маппинг, который соответствует фильтрам
+          const hasMatchingMapping = mappings.some(mapping => {
+            const siteMatch = mapping?.constructionSiteId === constructionSiteId;
+            const counterpartyMatch = mapping?.counterpartyId === counterpartyId;
+            
+            return siteMatch && counterpartyMatch;
+          });
           
-          return siteMatch && counterpartyMatch;
+          if (!hasMatchingMapping) return false;
+
+          // Фильтр по типу
+          if (filterType === 'tb_passed') {
+            return emp.status === 'tb_passed';
+          } else if (filterType === 'blocked') {
+            // 'blocked': статусы fired, inactive, block
+            return emp.statusActive === 'fired' || emp.statusActive === 'inactive' || emp.statusSecure === 'block';
+          } else {
+            // 'all': статусы 'tb_passed' или 'processed'
+            return emp.status === 'tb_passed' || emp.status === 'processed';
+          }
         });
-        
-        if (!hasMatchingMapping) return false;
 
-        // Фильтр по типу
-        if (values.filterType === 'tb_passed') {
-          const match = emp.status === 'tb_passed';
-          console.log(`  Status filter (tb_passed): ${emp.status} === 'tb_passed' ? ${match}`);
-          return match;
-        } else if (values.filterType === 'blocked') {
-          // 'blocked': статусы fired, inactive, block
-          const match = emp.statusActive === 'fired' || emp.statusActive === 'inactive' || emp.statusSecure === 'block';
-          console.log(`  Status filter (blocked): statusActive=${emp.statusActive}, statusSecure=${emp.statusSecure}, match=${match}`);
-          return match;
-        } else {
-          // 'all': статусы 'tb_passed' или 'processed'
-          const match = emp.status === 'tb_passed' || emp.status === 'processed';
-          console.log(`  Status filter (all): ${emp.status} in ['tb_passed', 'processed'] ? ${match}`);
-          return match;
-        }
-      });
-      
-      console.log('✅ Filtered employees count:', filtered.length);
+        setEmployees(filtered);
+        // По умолчанию все сотрудники выбраны
+        setSelectedEmployees(filtered.map(emp => emp.id));
+      } catch (error) {
+        console.error('Error filtering employees:', error);
+        message.error('Ошибка при загрузке списка сотрудников');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setEmployees(filtered);
-      // По умолчанию все сотрудники выбраны
-      setSelectedEmployees(filtered.map(emp => emp.id));
-    } catch (error) {
-      console.error('Error filtering employees:', error);
-      message.error('Ошибка при загрузке списка сотрудников');
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadEmployees();
+  }, [constructionSiteId, counterpartyId, filterType]);
 
   // Экспорт в Excel
   const handleExport = async () => {
@@ -125,16 +118,13 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
 
       // Фильтруем только выбранных сотрудников
       const employeesToExport = employees.filter(emp => selectedEmployees.includes(emp.id));
-      
-      // Получаем значения фильтров из формы
-      const formValues = form.getFieldsValue();
 
       // Формируем данные для Excel (такая же структура, как в BiometricTable)
       const excelData = employeesToExport.map((emp, index) => {
         // Находим правильный маппинг по выбранному объекту и контрагенту
         const mapping = emp.employeeCounterpartyMappings?.find(m => 
-          m.constructionSiteId === formValues.constructionSiteId &&
-          m.counterpartyId === formValues.counterpartyId
+          m.constructionSiteId === constructionSiteId &&
+          m.counterpartyId === counterpartyId
         );
         
         return {
@@ -162,9 +152,6 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
 
       // Сохраняем файл
       XLSX.writeFile(workbook, fileName);
-
-      // Получаем тип фильтра
-      const filterType = formValues.filterType;
 
       // Обновляем статусы сотрудников в зависимости от типа
       const employeesToUpdate = [];
@@ -277,38 +264,59 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
         </Space>
       }
     >
-      <Form form={form} layout="vertical" onFieldsChange={handleFilterChange}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          {/* Фильтры */}
-          <Space size="middle" wrap>
-            <Form.Item name="constructionSiteId" label="Объект" style={{ marginBottom: 0, minWidth: 250 }}>
-              <Select placeholder="Выберите объект" allowClear showSearch optionFilterProp="children">
-                {constructionSites.map((site) => (
-                  <Option key={site.id} value={site.id}>
-                    {site.shortName || site.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        {/* Фильтры */}
+        <Space size="middle" wrap>
+          <div style={{ minWidth: 250 }}>
+            <label style={{ display: 'block', marginBottom: 4 }}>Объект</label>
+            <Select
+              placeholder="Выберите объект"
+              allowClear
+              showSearch
+              optionFilterProp="children"
+              style={{ width: '100%' }}
+              value={constructionSiteId}
+              onChange={setConstructionSiteId}
+            >
+              {constructionSites.map((site) => (
+                <Option key={site.id} value={site.id}>
+                  {site.shortName || site.name}
+                </Option>
+              ))}
+            </Select>
+          </div>
 
-            <Form.Item name="counterpartyId" label="Контрагент" style={{ marginBottom: 0, minWidth: 250 }}>
-              <Select placeholder="Выберите контрагента" allowClear showSearch optionFilterProp="children">
-                {counterparties.map((cp) => (
-                  <Option key={cp.id} value={cp.id}>
-                    {cp.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+          <div style={{ minWidth: 250 }}>
+            <label style={{ display: 'block', marginBottom: 4 }}>Контрагент</label>
+            <Select
+              placeholder="Выберите контрагента"
+              allowClear
+              showSearch
+              optionFilterProp="children"
+              style={{ width: '100%' }}
+              value={counterpartyId}
+              onChange={setCounterpartyId}
+            >
+              {counterparties.map((cp) => (
+                <Option key={cp.id} value={cp.id}>
+                  {cp.name}
+                </Option>
+              ))}
+            </Select>
+          </div>
 
-            <Form.Item name="filterType" label="Тип сотрудников" initialValue="all" style={{ marginBottom: 0 }}>
-              <Radio.Group onChange={(e) => setFilterType(e.target.value)}>
-                <Radio.Button value="all">Действующие сотрудники</Radio.Button>
-                <Radio.Button value="tb_passed">Новые сотрудники (прошедшие ТБ)</Radio.Button>
-                <Radio.Button value="blocked">Заблокированные</Radio.Button>
-              </Radio.Group>
-            </Form.Item>
-          </Space>
+          <div>
+            <label style={{ display: 'block', marginBottom: 4 }}>Тип сотрудников</label>
+            <Radio.Group
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+            >
+              <Radio.Button value="all">Действующие сотрудники</Radio.Button>
+              <Radio.Button value="tb_passed">Новые сотрудники (прошедшие ТБ)</Radio.Button>
+              <Radio.Button value="blocked">Заблокированные</Radio.Button>
+            </Radio.Group>
+          </div>
+        </Space>
 
           {/* Таблица предпросмотра */}
           {employees.length > 0 && (
@@ -324,13 +332,12 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
             />
           )}
 
-          {employees.length === 0 && form.getFieldValue('constructionSiteId') && form.getFieldValue('counterpartyId') && (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-              Нет сотрудников, соответствующих выбранным фильтрам
-            </div>
-          )}
-        </Space>
-      </Form>
+        {employees.length === 0 && constructionSiteId && counterpartyId && !loading && (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+            Нет сотрудников, соответствующих выбранным фильтрам
+          </div>
+        )}
+      </Space>
     </Modal>
   );
 };

@@ -295,8 +295,6 @@ const UserProfilePage = () => {
         kig: values.kig ? values.kig.replace(/[^A-ZА-Я0-9]/g, '') : null,
       };
 
-      console.log('💾 Saving profile:', formattedValues);
-
       const { data } = await userProfileService.updateMyProfile(formattedValues);
       setEmployee(data.employee);
       setIsEditing(false);
@@ -381,7 +379,6 @@ const UserProfilePage = () => {
             const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
             const compressedSizeMB = (processedFile.size / 1024 / 1024).toFixed(2);
             
-            console.log(`Изображение сжато: ${originalSizeMB}MB -> ${compressedSizeMB}MB`);
             message.destroy('compress');
           } catch (compressionError) {
             console.error('Ошибка сжатия изображения:', compressionError);
@@ -406,7 +403,6 @@ const UserProfilePage = () => {
       
       try {
         const response = await userProfileService.uploadFiles(employee.id, processedFiles);
-        console.log('✅ Upload successful:', response);
         
         message.destroy('upload');
         message.success({

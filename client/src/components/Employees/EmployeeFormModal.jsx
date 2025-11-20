@@ -173,7 +173,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
   const computeValidation = (forceCompute = false, citizenshipOverride = null) => {
     if (!forceCompute && !dataLoaded) {
-      console.log('⏸️ computeValidation: data not loaded yet, skipping');
       return tabsValidation; // Не валидируем, пока данные не загружены
     }
     
@@ -184,15 +183,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     // Используем переданное гражданство или текущее из стейта
     const currentCitizenship = citizenshipOverride || selectedCitizenship;
     const currentRequiresPatent = currentCitizenship?.requiresPatent !== false;
-    
-    // Логируем входящие значения для отладки
-    console.log('🔍 computeValidation details:', {
-      forceCompute,
-      dataLoaded,
-      currentCitizenship,
-      currentRequiresPatent,
-      formValues: values
-    });
     
     // Пересчитываем requiredFieldsByTab с учетом актуального гражданства
     const currentRequiredFieldsByTab = {
@@ -218,10 +208,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         const isValid = Array.isArray(value) 
           ? value.length > 0 
           : value !== undefined && value !== null && value !== '';
-        
-        if (!isValid) {
-          console.log(`❌ Field invalid: Tab ${tabKey}, Field '${field}', Value:`, value);
-        }
           
         return { field, value, isValid };
       });
@@ -229,7 +215,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       validation[tabKey] = fieldsStatus.every(f => f.isValid);
     });
     
-    console.log('🔍 computeValidation result:', validation);
     return validation;
   };
 
@@ -262,8 +247,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       setDataLoaded(false);
       setActiveTab('1');
       
-      console.log('📝 EmployeeFormModal: opening with employee:', employee);
-      
       try {
         // Загружаем справочники параллельно (без блокировки UI)
         const loadReferencesPromise = Promise.all([
@@ -292,7 +275,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             kig: employee.kig ? formatKig(employee.kig) : null,
           };
           
-          console.log('📝 EmployeeFormModal: setting form data immediately');
           form.setFieldsValue(formData);
           
           // Теперь асинхронно проверяем гражданство
@@ -307,11 +289,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           // Определяем гражданство после загрузки справочника
           if (employee.citizenshipId) {
             const citizenship = citizenships.find(c => c.id === employee.citizenshipId);
-            console.log('📝 EmployeeFormModal: citizenship determined', {
-              citizenshipId: employee.citizenshipId,
-              found: !!citizenship,
-              requiresPatent: citizenship?.requiresPatent
-            });
             
             if (citizenship) {
               setSelectedCitizenship(citizenship);
@@ -321,10 +298,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               // Запускаем валидацию с учетом гражданства
               const validation = computeValidation(true, citizenship);
               setTabsValidation(validation);
-              console.log('✅ EmployeeFormModal: citizenship check complete', {
-                validation,
-                requiresPatent: citizenship?.requiresPatent
-              });
             }
           }
           
@@ -334,7 +307,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           // Для нового сотрудника просто загружаем справочники
           await loadReferencesPromise;
           
-          console.log('📝 EmployeeFormModal: resetting form (no employee)');
           form.resetFields();
           setActiveTab('1');
           setTabsValidation({ '1': false, '2': false, '3': false });
@@ -413,11 +385,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       const response = await settingsService.getPublicSettings();
       const dcId = response.data.defaultCounterpartyId;
       setDefaultCounterpartyId(dcId);
-      console.log('🔍 EmployeeFormModal: Default Counterparty loaded', {
-        defaultCounterpartyId: dcId,
-        userCounterpartyId: user?.counterpartyId,
-        canEditTb: user?.counterpartyId === dcId
-      });
     } catch (error) {
       console.error('Error loading default counterparty:', error);
     }
@@ -597,15 +564,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         formattedValues.statusActive = null;
       }
 
-      console.log('💾 Saving employee with statuses:', {
-        isFired: values.isFired,
-        isInactive: values.isInactive,
-        status: formattedValues.status,
-        statusActive: formattedValues.statusActive,
-        statusCard: 'completed',
-        allFormValues: JSON.stringify(formattedValues, null, 2)
-      });
-
       formattedValues.statusCard = 'completed';
       await onSuccess(formattedValues);
       
@@ -668,70 +626,20 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     return <CheckCircleOutlined style={{ color: '#d9d9d9', fontSize: 16, marginRight: 8 }} />;
   };
 
-  return (
-    <Modal
-      title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
-      open={visible}
-      onCancel={handleModalCancel}
-      maskClosable={false}
-      width={1200}
-      footer={
-        <Space>
-          <Button onClick={handleModalCancel}>
-            {employee ? 'Закрыть' : 'Отмена'}
-          </Button>
-          <Button onClick={handleSaveDraft} loading={loading}>
-            Сохранить черновик
-          </Button>
-          {allTabsValid() ? (
-            <Button 
-              type="primary" 
-              onClick={handleSave} 
-              loading={loading}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Сохранить
-            </Button>
-          ) : (
-            <Button type="primary" onClick={handleNext}>
-              Следующая
-            </Button>
-          )}
-        </Space>
-      }
-    >
-      <Form 
-        form={form} 
-        layout="vertical"
-        onFieldsChange={handleFieldsChange}
-        validateTrigger={['onChange', 'onBlur']}
-        autoComplete="off"
-        requiredMark={(label, { required }) => (
+  // Генерируем items для Tabs в новом формате
+  const getTabsItems = () => {
+    const items = [
+      // Вкладка 1: Основная информация
+      {
+        key: '1',
+        label: (
+          <span style={getTabStyle()}>
+            {getTabIcon('1')}
+            Основная информация
+          </span>
+        ),
+        children: (
           <>
-            {label}
-            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
-          </>
-        )}
-      >
-        <Tabs 
-          activeKey={activeTab}
-          onChange={(key) => {
-            setActiveTab(key);
-            // Валидация запустится через useEffect при изменении activeTab
-          }}
-          style={{ marginTop: 16 }}
-          destroyInactiveTabPane={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
-        >
-          {/* Вкладка: Основная информация */}
-          <Tabs.TabPane 
-            tab={
-              <span style={getTabStyle()}>
-                {getTabIcon('1')}
-                Основная информация
-              </span>
-            } 
-            key="1"
-          >
             {/* Чекбоксы статусов - только для существующих сотрудников */}
             {employee?.id && (
               <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -812,8 +720,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                       option.children.toLowerCase().includes(input.toLowerCase())
                     }
                     autoComplete="off"
-                    dropdownMatchSelectWidth={false}
-                    dropdownStyle={{ minWidth: 300 }}
+                    popupMatchSelectWidth={false}
+                    popupClassName="dropdown-wide"
                   >
                     {positions.map((p) => (
                       <Option key={p.id} value={p.id}>
@@ -942,18 +850,20 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 </Form.Item>
               </Col>
             </Row>
-          </Tabs.TabPane>
-
-          {/* Вкладка: Документы */}
-          <Tabs.TabPane 
-            tab={
-              <span style={getTabStyle()}>
-                {getTabIcon('2')}
-                Документы
-              </span>
-            } 
-            key="2"
-          >
+          </>
+        ),
+      },
+      // Вкладка 2: Документы
+      {
+        key: '2',
+        label: (
+          <span style={getTabStyle()}>
+            {getTabIcon('2')}
+            Документы
+          </span>
+        ),
+        children: (
+          <>
             <Row gutter={16}>
               <Col span={requiresPatent ? 8 : 12}>
                 <Form.Item 
@@ -1046,72 +956,134 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 </Form.Item>
               </Col>
             </Row>
-          </Tabs.TabPane>
+          </>
+        ),
+      },
+    ];
 
-          {/* Вкладка: Патент (только если требуется) */}
-          {(requiresPatent || checkingCitizenship) && (
-            <Tabs.TabPane 
-              tab={
-                <span style={getTabStyle()}>
-                  {getTabIcon('3')}
-                  Патент
-                  {checkingCitizenship && ' (проверка...)'}
-                </span>
-              } 
-              key="3"
-              disabled={checkingCitizenship}
+    // Вкладка 3: Патент (только если требуется)
+    if (requiresPatent || checkingCitizenship) {
+      items.push({
+        key: '3',
+        label: (
+          <span style={getTabStyle()}>
+            {getTabIcon('3')}
+            Патент
+            {checkingCitizenship && ' (проверка...)'}
+          </span>
+        ),
+        disabled: checkingCitizenship,
+        children: checkingCitizenship ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+            Проверка необходимости патента...
+          </div>
+        ) : (
+          <>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item 
+                  name="patentNumber" 
+                  label="Номер патента"
+                  rules={[{ required: true, message: 'Введите номер патента' }]}
+                >
+                  <Input autoComplete="off" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item 
+                  name="patentIssueDate" 
+                  label="Дата выдачи патента"
+                  rules={[{ required: true, message: 'Введите дату выдачи патента' }]}
+                >
+                  <DatePicker
+                    style={{ width: '100%' }}
+                    format={DATE_FORMAT}
+                    placeholder="ДД.ММ.ГГГГ"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item 
+                  name="blankNumber" 
+                  label="Номер бланка"
+                  rules={[{ required: true, message: 'Введите номер бланка' }]}
+                >
+                  <Input autoComplete="off" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </>
+        ),
+      });
+    }
+
+    // Вкладка 4: Файлы (только для существующих сотрудников)
+    if (employee?.id) {
+      items.push({
+        key: '4',
+        label: 'Файлы',
+        children: <EmployeeFileUpload employeeId={employee.id} readonly={false} />,
+      });
+    }
+
+    return items;
+  };
+
+  return (
+    <Modal
+      title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
+      open={visible}
+      onCancel={handleModalCancel}
+      maskClosable={false}
+      width={1200}
+      footer={
+        <Space>
+          <Button onClick={handleModalCancel}>
+            {employee ? 'Закрыть' : 'Отмена'}
+          </Button>
+          <Button onClick={handleSaveDraft} loading={loading}>
+            Сохранить черновик
+          </Button>
+          {allTabsValid() ? (
+            <Button 
+              type="primary" 
+              onClick={handleSave} 
+              loading={loading}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
             >
-              {checkingCitizenship ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-                  Проверка необходимости патента...
-                </div>
-              ) : (
-                <>
-                  <Row gutter={16}>
-                    <Col span={8}>
-                      <Form.Item 
-                        name="patentNumber" 
-                        label="Номер патента"
-                        rules={[{ required: true, message: 'Введите номер патента' }]}
-                      >
-                        <Input autoComplete="off" />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item 
-                        name="patentIssueDate" 
-                        label="Дата выдачи патента"
-                        rules={[{ required: true, message: 'Введите дату выдачи патента' }]}
-                      >
-                        <DatePicker
-                          style={{ width: '100%' }}
-                          format={DATE_FORMAT}
-                          placeholder="ДД.ММ.ГГГГ"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item 
-                        name="blankNumber" 
-                        label="Номер бланка"
-                        rules={[{ required: true, message: 'Введите номер бланка' }]}
-                      >
-                        <Input autoComplete="off" />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </>
-              )}
-            </Tabs.TabPane>
+              Сохранить
+            </Button>
+          ) : (
+            <Button type="primary" onClick={handleNext}>
+              Следующая
+            </Button>
           )}
-
-          {/* Вкладка: Файлы (только для существующих сотрудников) */}
-          {employee?.id && (
-            <Tabs.TabPane tab="Файлы" key="4">
-              <EmployeeFileUpload employeeId={employee.id} readonly={false} />
-            </Tabs.TabPane>
-          )}
-        </Tabs>
+        </Space>
+      }
+    >
+      <Form 
+        form={form} 
+        layout="vertical"
+        onFieldsChange={handleFieldsChange}
+        validateTrigger={['onChange', 'onBlur']}
+        autoComplete="off"
+        requiredMark={(label, { required }) => (
+          <>
+            {label}
+            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+          </>
+        )}
+      >
+        <Tabs 
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            // Валидация запустится через useEffect при изменении activeTab
+          }}
+          style={{ marginTop: 16 }}
+          destroyOnHidden={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
+          items={getTabsItems()}
+        />
       </Form>
     </Modal>
   );

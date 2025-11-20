@@ -33,15 +33,7 @@ export const useAuthStore = create(
       register: async (userData) => {
         set({ isLoading: true })
         try {
-          console.log('🚀 Attempting registration...', {
-            baseURL: api.defaults.baseURL,
-            url: '/auth/register',
-            data: { ...userData, password: '***' }
-          });
-          
           const response = await api.post('/auth/register', userData)
-          
-          console.log('✅ Registration successful:', response.data);
           
           const { user, token } = response.data.data
 
@@ -82,7 +74,6 @@ export const useAuthStore = create(
             await api.post('/auth/logout')
           } catch (error) {
             // Игнорируем ошибки logout на сервере
-            console.log('Server logout failed (not critical):', error.message)
           }
         }
       },
@@ -92,11 +83,6 @@ export const useAuthStore = create(
           const response = await api.get('/auth/me')
           // Сохраняем полный объект пользователя с ролью
           const userData = response.data.data.user || response.data.data
-          console.log('✅ getCurrentUser: received data', { 
-            raw: response.data.data,
-            userData,
-            role: userData?.role 
-          })
           set({ user: userData })
           return response.data
         } catch (error) {
