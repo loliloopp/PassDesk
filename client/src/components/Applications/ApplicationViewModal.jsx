@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Modal, Spin, Typography, Button, Space, message } from 'antd';
+import { Modal, Spin, Typography, Button, Space, message, Card } from 'antd';
 import { FileExcelOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { fileService } from '../../services/fileService';
 import BiometricTable from './BiometricTable';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
   const [loading, setLoading] = useState(false);
@@ -136,6 +136,18 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
       <Spin spinning={loading}>
         {application && (
           <div>
+            {/* Примечания к заявке */}
+            {application.notes && (
+              <Card 
+                size="small" 
+                title="Примечания" 
+                style={{ marginBottom: 16 }}
+                styles={{ body: { padding: '12px' } }}
+              >
+                <Text style={{ whiteSpace: 'pre-wrap' }}>{application.notes}</Text>
+              </Card>
+            )}
+
             {isBiometric && application.employees && application.employees.length > 0 && (
               <BiometricTable 
                 employees={application.employees} 
