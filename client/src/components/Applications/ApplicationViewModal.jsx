@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal, Spin, Typography, Button, Space, message } from 'antd';
 import { FileExcelOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
@@ -9,7 +9,7 @@ const { Title } = Typography;
 const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [application, setApplication] = useState(null);
-  const [exportFunction, setExportFunction] = useState(null);
+  const exportFunctionRef = useRef(null);
 
   useEffect(() => {
     if (visible && applicationId) {
@@ -31,15 +31,15 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
   };
 
   const handleExport = () => {
-    if (exportFunction) {
-      exportFunction();
+    if (exportFunctionRef.current) {
+      exportFunctionRef.current();
       message.success('Файл экспортирован');
     }
   };
 
-  const handleExportRef = (exportFn) => {
-    setExportFunction(() => exportFn);
-  };
+  const handleExportRef = useCallback((exportFn) => {
+    exportFunctionRef.current = exportFn;
+  }, []);
 
   const isBiometric = application?.applicationType === 'biometric';
 
