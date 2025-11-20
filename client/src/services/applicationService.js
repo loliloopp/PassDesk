@@ -47,7 +47,15 @@ const applicationService = {
     api.get(`/applications/${applicationId}/files/${fileId}/download`),
 
   getFileViewLink: (applicationId, fileId) =>
-    api.get(`/applications/${applicationId}/files/${fileId}/view`)
+    api.get(`/applications/${applicationId}/files/${fileId}/view`),
+
+  // Экспорт заявки в Word
+  exportToWord: async (applicationId) => {
+    const response = await api.get(`/applications/${applicationId}/export/word`, {
+      responseType: 'blob' // Важно для скачивания файлов
+    });
+    return response;
+  }
 };
 
 export { applicationService };

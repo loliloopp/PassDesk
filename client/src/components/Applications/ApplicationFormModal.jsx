@@ -11,6 +11,7 @@ import {
   Divider,
   Input,
   Collapse,
+  DatePicker,
 } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
@@ -18,6 +19,7 @@ import { counterpartyService } from '../../services/counterpartyService';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { useAuthStore } from '../../store/authStore';
 import ApplicationFileUpload from './ApplicationFileUpload';
+import dayjs from 'dayjs';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -94,6 +96,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
         subcontractId: data.data.subcontractId,
         employeeIds: employeeIds,
         notes: data.data.notes,
+        passValidUntil: data.data.passValidUntil ? dayjs(data.data.passValidUntil) : null,
       });
       setSelectedCounterparty(data.data.counterpartyId);
       setSelectedSite(data.data.constructionSiteId);
@@ -154,11 +157,19 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     try {
       const values = await form.validateFields();
       
+      // Преобразуем дату в формат YYYY-MM-DD без учета временной зоны
+      const submitData = {
+        ...values,
+        passValidUntil: values.passValidUntil 
+          ? values.passValidUntil.format('YYYY-MM-DD') 
+          : null
+      };
+      
       if (editingId) {
-        await applicationService.update(editingId, values);
+        await applicationService.update(editingId, submitData);
         message.success('Заявка обновлена');
       } else {
-        await applicationService.create(values);
+        await applicationService.create(submitData);
         message.success('Заявка создана');
       }
       
@@ -252,6 +263,18 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
           )}
 
           <Divider />
+
+          <Form.Item
+            name="passValidUntil"
+            label="Дата окончания действия пропусков"
+            rules={[{ required: true, message: 'Укажите дату окончания действия пропусков' }]}
+          >
+            <DatePicker 
+              style={{ width: '100%' }} 
+              format="DD.MM.YYYY"
+              placeholder="Выберите дату"
+            />
+          </Form.Item>
 
           {loadingEmployees ? (
             <div style={{ textAlign: 'center', padding: 20 }}>

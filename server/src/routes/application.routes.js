@@ -7,7 +7,8 @@ import {
   deleteApplication,
   copyApplication,
   getContractsForApplication,
-  getEmployeesForApplication
+  getEmployeesForApplication,
+  exportApplicationToWord
 } from '../controllers/application.controller.js';
 import {
   uploadApplicationFiles,
@@ -33,6 +34,7 @@ router.delete('/:id', deleteApplication);
 
 // Дополнительные операции
 router.post('/:id/copy', copyApplication);
+router.get('/:id/export/word', exportApplicationToWord);
 
 // Вспомогательные endpoints для формы создания заявки
 router.get('/helpers/contracts', getContractsForApplication);

@@ -62,6 +62,12 @@ const Application = sequelize.define('Application', {
     allowNull: true,
     comment: 'Примечания к заявке'
   },
+  passValidUntil: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'pass_valid_until',
+    comment: 'Дата окончания действия пропусков'
+  },
   createdBy: {
     type: DataTypes.UUID,
     allowNull: true, // Разрешаем NULL при удалении пользователя

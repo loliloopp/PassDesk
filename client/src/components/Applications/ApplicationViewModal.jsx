@@ -1,16 +1,16 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Spin, Typography, Button, Space, message, Card } from 'antd';
-import { FileExcelOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
+import { FileWordOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { fileService } from '../../services/fileService';
 import BiometricTable from './BiometricTable';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
 const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [application, setApplication] = useState(null);
-  const exportFunctionRef = useRef(null);
 
   useEffect(() => {
     if (visible && applicationId) {
@@ -31,16 +31,29 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
     }
   };
 
-  const handleExport = () => {
-    if (exportFunctionRef.current) {
-      exportFunctionRef.current();
-      message.success('Файл экспортирован');
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+      const response = await applicationService.exportToWord(applicationId);
+      
+      // Создаем ссылку для скачивания
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Заявка_${application.applicationNumber}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      message.success('Файл успешно экспортирован');
+    } catch (error) {
+      message.error('Ошибка при экспорте файла');
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
-
-  const handleExportRef = useCallback((exportFn) => {
-    exportFunctionRef.current = exportFn;
-  }, []);
 
   // Обработчик просмотра скана заявки
   const handleViewScan = async () => {
@@ -87,7 +100,14 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
     <Modal
       title={
         <Space direction="vertical" size={4} style={{ width: '100%' }}>
-          <div>{`Заявка ${application?.applicationNumber || ''}`}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight: '40px' }}>
+            <span>{`Заявка ${application?.applicationNumber || ''}`}</span>
+            {application?.passValidUntil && (
+              <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#666' }}>
+                Действует до: {dayjs(application.passValidUntil).format('DD.MM.YYYY')}
+              </span>
+            )}
+          </div>
           {application?.scanFile && (
             <div style={{ fontSize: '14px', fontWeight: 'normal' }}>
               <Space>
@@ -122,10 +142,11 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
             <Button onClick={onCancel}>Закрыть</Button>
             <Button 
               type="primary" 
-              icon={<FileExcelOutlined />} 
+              icon={<FileWordOutlined />} 
               onClick={handleExport}
+              loading={loading}
             >
-              Экспорт в Excel
+              Экспорт в Word
             </Button>
           </Space>
         ) : (
@@ -152,7 +173,6 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
               <BiometricTable 
                 employees={application.employees} 
                 applicationNumber={application.applicationNumber}
-                onExport={handleExportRef}
               />
             )}
 

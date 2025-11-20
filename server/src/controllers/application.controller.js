@@ -1,5 +1,6 @@
 import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, Position, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
+import { generateApplicationDocument } from '../services/documentService.js';
 
 // Функция генерации номера заявки
 const generateApplicationNumber = async (constructionSiteId) => {
@@ -874,4 +875,46 @@ export const getEmployeesForApplication = async (req, res) => {
     });
   }
 };
+
+// Экспортировать заявку в Word
+export const exportApplicationToWord = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Проверяем доступ к заявке
+    const application = await Application.findOne({
+      where: {
+        id: id,
+        createdBy: req.user.id // Только свои заявки
+      }
+    });
+    
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Заявка не найдена'
+      });
+    }
+    
+    // Генерируем документ Word
+    const buffer = await generateApplicationDocument(id);
+    
+    // Формируем имя файла
+    const fileName = `Заявка_${application.applicationNumber}.docx`;
+    
+    // Отправляем файл
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.send(buffer);
+    
+  } catch (error) {
+    console.error('Error exporting application to Word:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при экспорте заявки',
+      error: error.message
+    });
+  }
+};
+
 
