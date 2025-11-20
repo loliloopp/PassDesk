@@ -34,16 +34,6 @@ const Application = sequelize.define('Application', {
     },
     comment: 'Объект строительства'
   },
-  generalContractId: {
-    type: DataTypes.UUID,
-    allowNull: false,
-    field: 'general_contract_id',
-    references: {
-      model: 'contracts',
-      key: 'id'
-    },
-    comment: 'Договор генподряда'
-  },
   subcontractId: {
     type: DataTypes.UUID,
     allowNull: true,

@@ -10,7 +10,6 @@ import {
   Typography,
   Divider,
   Input,
-  Radio,
   Collapse,
   Tag,
 } from 'antd';
@@ -23,7 +22,6 @@ import { useAuthStore } from '../../store/authStore';
 
 const { Text } = Typography;
 const { TextArea } = Input;
-const { Panel } = Collapse;
 
 const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
@@ -37,12 +35,10 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const [counterpartyType, setCounterpartyType] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
-  const [loadingContracts, setLoadingContracts] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [loadingFiles, setLoadingFiles] = useState(false);
   
   const getCurrentUser = useAuthStore(state => state.getCurrentUser);
-  const applicationType = Form.useWatch('applicationType', form);
 
   useEffect(() => {
     if (visible) {
@@ -95,7 +91,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
       form.setFieldsValue({
         counterpartyId: data.data.counterpartyId,
         constructionSiteId: data.data.constructionSiteId,
-        generalContractId: data.data.generalContractId,
         subcontractId: data.data.subcontractId,
         employeeIds: data.data.employeeIds,
         status: data.data.status,
@@ -117,22 +112,12 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const fetchContracts = async (counterpartyId, siteId) => {
     if (!counterpartyId || !siteId) return;
     
-    setLoadingContracts(true);
     try {
       const { data } = await applicationService.getContracts(counterpartyId, siteId);
       setContracts(data.data);
-      
-      // Автоматически устанавливаем договор генподряда
-      if (data.data.generalContract) {
-        form.setFieldsValue({
-          generalContractId: data.data.generalContract.id
-        });
-      }
     } catch (error) {
       message.error('Ошибка загрузки договоров');
       console.error(error);
-    } finally {
-      setLoadingContracts(false);
     }
   };
 
@@ -202,7 +187,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const handleSiteChange = (value) => {
     setSelectedSite(value);
     form.setFieldsValue({
-      generalContractId: null,
       subcontractId: null,
     });
     setContracts({ generalContract: null, subcontracts: [] });
@@ -262,18 +246,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
       <Spin spinning={loading}>
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Form.Item
-            name="applicationType"
-            label="Тип заявки"
-            rules={[{ required: true, message: 'Выберите тип заявки' }]}
-            initialValue="biometric"
-          >
-            <Radio.Group>
-              <Radio value="biometric">Биометрия</Radio>
-              <Radio value="customer">Заказчик</Radio>
-            </Radio.Group>
-          </Form.Item>
-
-          <Form.Item
             name="constructionSiteId"
             label="Объект строительства"
             rules={[{ required: true, message: 'Выберите объект' }]}
@@ -295,55 +267,29 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
             </Select>
           </Form.Item>
 
-          {loadingContracts ? (
-            <div style={{ textAlign: 'center', padding: 20 }}>
-              <Spin tip="Загрузка договоров..." />
-            </div>
-          ) : (
-            <>
-              <Form.Item
-                name="generalContractId"
-                label="Договор генподряда"
-                rules={[{ required: true, message: 'Требуется договор генподряда' }]}
-              >
-                <Select placeholder="Автоматически определяется" disabled={!contracts.generalContract}>
-                  {contracts.generalContract && (
-                    <Select.Option value={contracts.generalContract.id}>
-                      {contracts.generalContract.contractNumber} от {contracts.generalContract.contractDate}
-                    </Select.Option>
-                  )}
-                </Select>
-              </Form.Item>
-
-              {isContractor && contracts.subcontracts.length > 0 && (
-                <Form.Item
-                  name="subcontractId"
-                  label="Договор подряда"
-                  rules={[{ required: true, message: 'Выберите договор подряда' }]}
-                >
-                  <Select placeholder="Выберите договор подряда">
-                    {contracts.subcontracts.map(contract => (
-                      <Select.Option key={contract.id} value={contract.id}>
-                        {contract.contractNumber} от {contract.contractDate}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              )}
-
-              {!contracts.generalContract && selectedCounterparty && selectedSite && !loadingContracts && (
-                <Text type="warning">
-                  Не найден договор генподряда для выбранного контрагента и объекта
-                </Text>
-              )}
-            </>
+          {isContractor && contracts.subcontracts.length > 0 && (
+            <Form.Item
+              name="subcontractId"
+              label="Договор подряда"
+              rules={[{ required: true, message: 'Выберите договор подряда' }]}
+            >
+              <Select placeholder="Выберите договор подряда">
+                {contracts.subcontracts.map(contract => (
+                  <Select.Option key={contract.id} value={contract.id}>
+                    {contract.contractNumber} от {contract.contractDate}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
           )}
 
           <Divider />
 
           {loadingEmployees ? (
             <div style={{ textAlign: 'center', padding: 20 }}>
-              <Spin tip="Загрузка сотрудников..." />
+              <Spin tip="Загрузка сотрудников...">
+                <div style={{ minHeight: 50 }} />
+              </Spin>
             </div>
           ) : (
             <>
@@ -366,59 +312,62 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
                 </Checkbox.Group>
               </Form.Item>
 
-              {applicationType !== 'biometric' && selectedEmployeeIds.length > 0 && (
+              {selectedEmployeeIds.length > 0 && (
                 <Form.Item label="Документы сотрудников">
-                  <Collapse>
-                    {selectedEmployeeIds.map(empId => {
+                  <Collapse
+                    items={selectedEmployeeIds.map(empId => {
                       const employee = employees.find(e => e.id === empId);
                       const files = employeeFiles[empId] || [];
                       const selectedCount = (selectedFiles[empId] || []).length;
                       
-                      return (
-                        <Panel
-                          key={empId}
-                          header={
-                            <Space>
-                              <span>
-                                {employee?.lastName} {employee?.firstName} {employee?.middleName || ''}
-                              </span>
-                              {selectedCount > 0 && (
-                                <Tag color="blue">
-                                  <FileOutlined /> {selectedCount} файл(ов)
-                                </Tag>
-                              )}
-                            </Space>
-                          }
-                        >
-                          {loadingFiles && !employeeFiles[empId] ? (
-                            <Spin tip="Загрузка файлов..." />
-                          ) : files.length === 0 ? (
-                            <Text type="secondary">У сотрудника нет загруженных документов</Text>
-                          ) : (
-                            <Checkbox.Group
-                              style={{ width: '100%' }}
-                              value={selectedFiles[empId] || []}
-                              onChange={(fileIds) => handleFileSelect(empId, fileIds)}
-                            >
-                              <Space direction="vertical" style={{ width: '100%' }}>
-                                {files.map(file => (
-                                  <Checkbox key={file.id} value={file.id}>
-                                    <Space>
-                                      <FileOutlined />
-                                      <span>{file.fileName}</span>
-                                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                                        ({(file.fileSize / 1024).toFixed(2)} KB)
-                                      </Text>
-                                    </Space>
-                                  </Checkbox>
-                                ))}
-                              </Space>
-                            </Checkbox.Group>
-                          )}
-                        </Panel>
-                      );
+                      return {
+                        key: empId,
+                        label: (
+                          <Space>
+                            <span>
+                              {employee?.lastName} {employee?.firstName} {employee?.middleName || ''}
+                            </span>
+                            {selectedCount > 0 && (
+                              <Tag color="blue">
+                                <FileOutlined /> {selectedCount} файл(ов)
+                              </Tag>
+                            )}
+                          </Space>
+                        ),
+                        children: (
+                          <>
+                            {loadingFiles && !employeeFiles[empId] ? (
+                              <Spin tip="Загрузка файлов...">
+                                <div style={{ minHeight: 50 }} />
+                              </Spin>
+                            ) : files.length === 0 ? (
+                              <Text type="secondary">У сотрудника нет загруженных документов</Text>
+                            ) : (
+                              <Checkbox.Group
+                                style={{ width: '100%' }}
+                                value={selectedFiles[empId] || []}
+                                onChange={(fileIds) => handleFileSelect(empId, fileIds)}
+                              >
+                                <Space direction="vertical" style={{ width: '100%' }}>
+                                  {files.map(file => (
+                                    <Checkbox key={file.id} value={file.id}>
+                                      <Space>
+                                        <FileOutlined />
+                                        <span>{file.fileName}</span>
+                                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                                          ({(file.fileSize / 1024).toFixed(2)} KB)
+                                        </Text>
+                                      </Space>
+                                    </Checkbox>
+                                  ))}
+                                </Space>
+                              </Checkbox.Group>
+                            )}
+                          </>
+                        )
+                      };
                     })}
-                  </Collapse>
+                  />
                   <Text type="secondary" style={{ fontSize: '12px', marginTop: 8, display: 'block' }}>
                     Выберите документы для каждого сотрудника, которые войдут в заявку
                   </Text>

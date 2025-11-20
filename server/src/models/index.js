@@ -119,10 +119,6 @@ Application.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counte
 ConstructionSite.hasMany(Application, { foreignKey: 'construction_site_id', as: 'applications' });
 Application.belongsTo(ConstructionSite, { foreignKey: 'construction_site_id', as: 'constructionSite' });
 
-// Application -> Contract (general)
-Contract.hasMany(Application, { foreignKey: 'general_contract_id', as: 'generalApplications' });
-Application.belongsTo(Contract, { foreignKey: 'general_contract_id', as: 'generalContract' });
-
 // Application -> Contract (sub)
 Contract.hasMany(Application, { foreignKey: 'subcontract_id', as: 'subApplications' });
 Application.belongsTo(Contract, { foreignKey: 'subcontract_id', as: 'subcontract' });

@@ -89,11 +89,6 @@ export const getAllApplications = async (req, res) => {
         },
         {
           model: Contract,
-          as: 'generalContract',
-          attributes: ['id', 'contractNumber']
-        },
-        {
-          model: Contract,
           as: 'subcontract',
           attributes: ['id', 'contractNumber']
         },
@@ -183,10 +178,6 @@ export const getApplicationById = async (req, res) => {
         {
           model: ConstructionSite,
           as: 'constructionSite'
-        },
-        {
-          model: Contract,
-          as: 'generalContract'
         },
         {
           model: Contract,
@@ -530,7 +521,6 @@ export const copyApplication = async (req, res) => {
     const copy = await Application.create({
       counterpartyId: original.counterpartyId,
       constructionSiteId: original.constructionSiteId,
-      generalContractId: original.generalContractId,
       subcontractId: original.subcontractId,
       notes: original.notes ? `Копия: ${original.notes}` : 'Копия заявки',
       status: 'draft',
