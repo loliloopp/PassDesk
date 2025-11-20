@@ -212,6 +212,20 @@ const EmployeesPage = () => {
     return matchesSearch && matchesCitizenship;
   });
 
+  // Получаем уникальные значения для фильтров
+  const uniquePositions = [...new Set(filteredEmployees.map(e => e.position?.name).filter(Boolean))];
+  const uniqueDepartments = [...new Set(
+    filteredEmployees.flatMap(e => e.employeeCounterpartyMappings || [])
+      .map(m => m.department?.name)
+      .filter(Boolean)
+  )];
+  const uniqueCounterparties = [...new Set(
+    filteredEmployees.flatMap(e => e.employeeCounterpartyMappings || [])
+      .map(m => m.counterparty?.name)
+      .filter(Boolean)
+  )];
+  const uniqueCitizenships = [...new Set(filteredEmployees.map(e => e.citizenship?.name).filter(Boolean))];
+
   const columns = [
     {
       title: 'ФИО',
@@ -230,6 +244,13 @@ const EmployeesPage = () => {
       key: 'position',
       width: 120,
       ellipsis: true,
+      sorter: (a, b) => {
+        const aPos = a.position?.name || '';
+        const bPos = b.position?.name || '';
+        return aPos.localeCompare(bPos);
+      },
+      filters: uniquePositions.sort().map(pos => ({ text: pos, value: pos })),
+      onFilter: (value, record) => record.position?.name === value,
     },
     {
       title: 'Подразделение',
@@ -240,6 +261,16 @@ const EmployeesPage = () => {
         if (mappings.length === 0) return '-';
         const departmentName = mappings[0]?.department?.name;
         return departmentName || '-';
+      },
+      sorter: (a, b) => {
+        const aDept = a.employeeCounterpartyMappings?.[0]?.department?.name || '';
+        const bDept = b.employeeCounterpartyMappings?.[0]?.department?.name || '';
+        return aDept.localeCompare(bDept);
+      },
+      filters: uniqueDepartments.sort().map(dept => ({ text: dept, value: dept })),
+      onFilter: (value, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        return mappings.some(m => m.department?.name === value);
       },
     },
     // Столбец "Контрагент" виден только для пользователей контрагента по умолчанию
@@ -253,6 +284,16 @@ const EmployeesPage = () => {
         // Показываем все уникальные контрагенты
         const counterparties = [...new Set(mappings.map(m => m.counterparty?.name).filter(Boolean))];
         return counterparties.join(', ') || '-';
+      },
+      sorter: (a, b) => {
+        const aCounterparty = a.employeeCounterpartyMappings?.[0]?.counterparty?.name || '';
+        const bCounterparty = b.employeeCounterpartyMappings?.[0]?.counterparty?.name || '';
+        return aCounterparty.localeCompare(bCounterparty);
+      },
+      filters: uniqueCounterparties.sort().map(cp => ({ text: cp, value: cp })),
+      onFilter: (value, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        return mappings.some(m => m.counterparty?.name === value);
       },
     }] : []),
     {
@@ -290,6 +331,13 @@ const EmployeesPage = () => {
           </div>
         );
       },
+      sorter: (a, b) => {
+        const aSite = a.employeeCounterpartyMappings?.find(m => m.constructionSite)?.constructionSite?.shortName ||
+                      a.employeeCounterpartyMappings?.find(m => m.constructionSite)?.constructionSite?.name || '';
+        const bSite = b.employeeCounterpartyMappings?.find(m => m.constructionSite)?.constructionSite?.shortName ||
+                      b.employeeCounterpartyMappings?.find(m => m.constructionSite)?.constructionSite?.name || '';
+        return aSite.localeCompare(bSite);
+      },
     },
     {
       title: 'Гражданство',
@@ -297,6 +345,13 @@ const EmployeesPage = () => {
       key: 'citizenship',
       ellipsis: true,
       render: (name) => name || '-',
+      sorter: (a, b) => {
+        const aCit = a.citizenship?.name || '';
+        const bCit = b.citizenship?.name || '';
+        return aCit.localeCompare(bCit);
+      },
+      filters: uniqueCitizenships.sort().map(cit => ({ text: cit, value: cit })),
+      onFilter: (value, record) => record.citizenship?.name === value,
     },
     {
       title: 'Заполнен',
@@ -316,6 +371,11 @@ const EmployeesPage = () => {
             )}
           </Tooltip>
         );
+      },
+      sorter: (a, b) => {
+        const aCompleted = a.statusCard === 'completed' ? 1 : 0;
+        const bCompleted = b.statusCard === 'completed' ? 1 : 0;
+        return aCompleted - bCompleted;
       },
       filters: [
         { text: 'Заполнен', value: 'completed' },
@@ -358,6 +418,7 @@ const EmployeesPage = () => {
           </Tooltip>
         );
       },
+      sorter: (a, b) => (a.filesCount || 0) - (b.filesCount || 0),
     },
     {
       title: 'Статус',
@@ -388,6 +449,19 @@ const EmployeesPage = () => {
         
         const statusInfo = statusMap[record.status] || { text: '-', color: 'default' };
         return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+      },
+      sorter: (a, b) => {
+        // Определяем порядок приоритетов статусов для сортировки
+        const getStatusPriority = (record) => {
+          if (record.statusSecure === 'block' || record.statusSecure === 'block_compl') return 1; // Заблокирован
+          if (record.statusActive === 'fired') return 2; // Уволен
+          if (record.statusActive === 'inactive') return 3; // Неактивный
+          if (record.status === 'new') return 4; // Новый
+          if (record.status === 'tb_passed') return 5; // Проведен ТБ
+          if (record.status === 'processed') return 6; // Обработан
+          return 7; // Остальные
+        };
+        return getStatusPriority(a) - getStatusPriority(b);
       },
       filters: [
         { text: 'Заблокирован', value: 'blocked' },
