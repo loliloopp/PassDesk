@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Typography, message } from 'antd';
+import { Typography, App } from 'antd';
 import { useEmployees, useEmployeeActions, filterEmployees, getUniqueFilterValues } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
 import { useSettings } from '@/entities/settings';
@@ -20,6 +20,7 @@ const { Title } = Typography;
  * Оптимизирована для быстрой загрузки с параллельными запросами и мемоизацией
  */
 const EmployeesPage = () => {
+  const { message } = App.useApp();
   const [searchText, setSearchText] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);

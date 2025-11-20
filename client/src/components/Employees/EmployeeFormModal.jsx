@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, message, Tabs, Button, Space, Checkbox } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
 import { constructionSiteService } from '../../services/constructionSiteService';
@@ -199,6 +199,7 @@ const formatBlankNumber = (value) => {
 };
 
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import { employeeApi } from '../api/employeeApi';
 
 /**
@@ -46,6 +46,7 @@ export const useEmployees = () => {
  * Хук для операций с сотрудником (CRUD)
  */
 export const useEmployeeActions = (onSuccess) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
 
   const createEmployee = async (values) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Button, List, Popconfirm, message, Space, Tooltip, Modal, Select, Form } from 'antd';
+import { Upload, Button, List, Popconfirm, App, Space, Tooltip, Modal, Select, Form } from 'antd';
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -25,6 +25,7 @@ const DOCUMENT_TYPES = [
 ];
 
 const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
+  const { message } = App.useApp();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);

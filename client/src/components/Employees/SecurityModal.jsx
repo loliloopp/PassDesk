@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Table, Input, Select, Space, Button, message, Tooltip } from 'antd';
+import { Modal, Table, Input, Select, Space, Button, App, Tooltip } from 'antd';
 import { SearchOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 import { counterpartyService } from '../../services/counterpartyService';
@@ -27,6 +27,7 @@ const formatKigDisplay = (kig) => {
 };
 
 const SecurityModal = ({ visible, onCancel, onSuccess }) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [counterparties, setCounterparties] = useState([]);

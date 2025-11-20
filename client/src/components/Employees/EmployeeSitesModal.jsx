@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Modal, Checkbox, Space, message } from 'antd';
+import { Modal, Checkbox, Space, App } from 'antd';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { employeeService } from '../../services/employeeService';
 
 const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
+  const { message } = App.useApp();
   const [constructionSites, setConstructionSites] = useState([]);
   const [selectedSites, setSelectedSites] = useState([]);
   const [loading, setLoading] = useState(false);

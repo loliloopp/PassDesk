@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Select, Radio, Table, Checkbox, Space, Button, message } from 'antd';
+import { Modal, Select, Radio, Table, Checkbox, Space, Button, App } from 'antd';
 import { FileExcelOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 import { constructionSiteService } from '../../services/constructionSiteService';
@@ -11,6 +11,7 @@ import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
 const { Option } = Select;
 
 const ExportToExcelModal = ({ visible, onCancel }) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [constructionSites, setConstructionSites] = useState([]);
   const [counterparties, setCounterparties] = useState([]);
