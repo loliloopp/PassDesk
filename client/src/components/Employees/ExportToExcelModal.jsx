@@ -261,25 +261,46 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
       ellipsis: true,
     },
     { title: 'СНИЛС', dataIndex: 'snils', key: 'snils', ellipsis: true },
-    { title: 'Должность', dataIndex: 'position', key: 'position', ellipsis: true },
+    { title: 'Должность', dataIndex: ['position', 'name'], key: 'position', ellipsis: true },
     { title: 'ИНН сотрудника', dataIndex: 'inn', key: 'inn', ellipsis: true },
     {
       title: 'Организация',
       key: 'organization',
       width: 200,
-      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.name || '-',
+      render: (_, record) => {
+        // Находим правильный маппинг по выбранному объекту и контрагенту
+        const mapping = record.employeeCounterpartyMappings?.find(m => 
+          m.constructionSiteId === constructionSiteId &&
+          m.counterpartyId === counterpartyId
+        );
+        return mapping?.counterparty?.name || '-';
+      },
     },
     {
       title: 'ИНН организации',
       key: 'organizationInn',
       width: 140,
-      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.inn || '-',
+      render: (_, record) => {
+        // Находим правильный маппинг по выбранному объекту и контрагенту
+        const mapping = record.employeeCounterpartyMappings?.find(m => 
+          m.constructionSiteId === constructionSiteId &&
+          m.counterpartyId === counterpartyId
+        );
+        return mapping?.counterparty?.inn || '-';
+      },
     },
     {
       title: 'КПП организации',
       key: 'organizationKpp',
       width: 120,
-      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.kpp || '-',
+      render: (_, record) => {
+        // Находим правильный маппинг по выбранному объекту и контрагенту
+        const mapping = record.employeeCounterpartyMappings?.find(m => 
+          m.constructionSiteId === constructionSiteId &&
+          m.counterpartyId === counterpartyId
+        );
+        return mapping?.counterparty?.kpp || '-';
+      },
     },
   ];
 

@@ -85,7 +85,7 @@ export const getAllEmployees = async (req, res, next) => {
             {
               model: Counterparty,
               as: 'counterparty',
-              attributes: ['id', 'name', 'type']
+              attributes: ['id', 'name', 'type', 'inn', 'kpp']
             },
             {
               model: Department,
@@ -173,7 +173,7 @@ export const getEmployeeById = async (req, res, next) => {
             {
               model: Counterparty,
               as: 'counterparty',
-              attributes: ['id', 'name', 'type']
+              attributes: ['id', 'name', 'type', 'inn', 'kpp']
             },
             {
               model: Department,
