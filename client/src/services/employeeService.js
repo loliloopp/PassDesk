@@ -75,6 +75,12 @@ export const employeeService = {
   updateConstructionSites: async (employeeId, siteIds) => {
     const response = await api.put(`/employees/${employeeId}/construction-sites`, { siteIds })
     return response.data
+  },
+
+  // Обновить подразделение сотрудника
+  updateDepartment: async (employeeId, departmentId) => {
+    const response = await api.put(`/employees/${employeeId}/department`, { departmentId })
+    return response.data
   }
 }
 

@@ -26,7 +26,7 @@ import {
   LockOutlined,
 } from '@ant-design/icons';
 import { employeeService } from '../services/employeeService';
-import { citizenshipService } from '../services/citizenshipService';
+import { departmentService } from '../services/departmentService';
 import settingsService from '../services/settingsService';
 import { useAuthStore } from '../store/authStore';
 import EmployeeFormModal from '../components/Employees/EmployeeFormModal';
@@ -56,10 +56,9 @@ const tableStyles = `
 
 const EmployeesPage = () => {
   const [employees, setEmployees] = useState([]);
-  const [citizenships, setCitizenships] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -78,7 +77,7 @@ const EmployeesPage = () => {
 
   useEffect(() => {
     fetchEmployees();
-    fetchCitizenships();
+    fetchDepartments();
     fetchDefaultCounterparty();
   }, []);
 
@@ -96,12 +95,13 @@ const EmployeesPage = () => {
     }
   };
 
-  const fetchCitizenships = async () => {
+  const fetchDepartments = async () => {
     try {
-      const { data } = await citizenshipService.getAll();
-      setCitizenships(data.data.citizenships || []);
+      const response = await departmentService.getAll();
+      setDepartments(response.data.data.departments || []);
     } catch (error) {
-      console.error('Error loading citizenships:', error);
+      console.error('Error loading departments:', error);
+      setDepartments([]);
     }
   };
 
@@ -147,6 +147,17 @@ const EmployeesPage = () => {
   const handleSitesSuccess = () => {
     fetchEmployees(); // Обновляем список сотрудников после изменения объектов
     handleCloseSitesModal();
+  };
+
+  const handleDepartmentChange = async (employeeId, departmentId) => {
+    try {
+      await employeeService.updateDepartment(employeeId, departmentId);
+      message.success('Подразделение обновлено');
+      fetchEmployees();
+    } catch (error) {
+      message.error('Ошибка при обновлении подразделения');
+      console.error('Error updating department:', error);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -207,9 +218,7 @@ const EmployeesPage = () => {
       employee.snils?.toLowerCase().includes(searchLower)
     );
     
-    const matchesCitizenship = !selectedCitizenship || employee.citizenshipId === selectedCitizenship;
-    
-    return matchesSearch && matchesCitizenship;
+    return matchesSearch;
   });
 
   // Получаем уникальные значения для фильтров
@@ -255,12 +264,33 @@ const EmployeesPage = () => {
     {
       title: 'Подразделение',
       key: 'department',
-      ellipsis: true,
+      width: 180,
+      ellipsis: false,
       render: (_, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
-        if (mappings.length === 0) return '-';
+        const currentDepartmentId = mappings[0]?.departmentId;
         const departmentName = mappings[0]?.department?.name;
-        return departmentName || '-';
+        
+        return (
+          <Select
+            value={currentDepartmentId || undefined}
+            placeholder="Выберите подразделение"
+            style={{ width: '100%' }}
+            onChange={(value) => handleDepartmentChange(record.id, value)}
+            allowClear
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
+          >
+            {departments.map((dept) => (
+              <Select.Option key={dept.id} value={dept.id}>
+                {dept.name}
+              </Select.Option>
+            ))}
+          </Select>
+        );
       },
       sorter: (a, b) => {
         const aDept = a.employeeCounterpartyMappings?.[0]?.department?.name || '';
@@ -540,24 +570,6 @@ const EmployeesPage = () => {
             style={{ width: 350 }}
             allowClear
           />
-          <Select
-            placeholder="Гражданство"
-            allowClear
-            value={selectedCitizenship}
-            onChange={setSelectedCitizenship}
-            style={{ width: 200 }}
-            showSearch
-            optionFilterProp="children"
-            filterOption={(input, option) =>
-              option.children.toLowerCase().includes(input.toLowerCase())
-            }
-          >
-            {citizenships.map((c) => (
-              <Select.Option key={c.id} value={c.id}>
-                {c.name}
-              </Select.Option>
-            ))}
-          </Select>
           {canExport && (
             <Button 
               type="default" 

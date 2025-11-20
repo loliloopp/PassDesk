@@ -534,6 +534,57 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
   }
 };
 
+// Обновить подразделение сотрудника
+export const updateEmployeeDepartment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { departmentId } = req.body;
+    
+    const employee = await Employee.findByPk(id);
+    
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сотрудник не найден'
+      });
+    }
+    
+    // Получаем первый маппинг сотрудника для текущего контрагента
+    let mapping = await EmployeeCounterpartyMapping.findOne({
+      where: {
+        employeeId: id,
+        counterpartyId: req.user.counterpartyId
+      }
+    });
+    
+    // Если маппинга нет, создаем новый
+    if (!mapping) {
+      mapping = await EmployeeCounterpartyMapping.create({
+        employeeId: id,
+        counterpartyId: req.user.counterpartyId,
+        departmentId: departmentId || null,
+        constructionSiteId: null
+      });
+    } else {
+      // Обновляем departmentId в существующем маппинге
+      await mapping.update({
+        departmentId: departmentId || null
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Подразделение обновлено',
+      data: {
+        departmentId: mapping.departmentId
+      }
+    });
+  } catch (error) {
+    console.error('Error updating department:', error);
+    next(error);
+  }
+};
+
 export const deleteEmployee = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   
