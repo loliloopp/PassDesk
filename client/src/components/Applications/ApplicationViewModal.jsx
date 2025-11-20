@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal, Spin, Typography, Button, Space, message } from 'antd';
-import { FileExcelOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
+import { fileService } from '../../services/fileService';
 import BiometricTable from './BiometricTable';
 
 const { Title } = Typography;
@@ -41,11 +42,76 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
     exportFunctionRef.current = exportFn;
   }, []);
 
+  // Обработчик просмотра скана заявки
+  const handleViewScan = async () => {
+    if (!application?.scanFile?.fileKey) {
+      message.error('Файл не найден');
+      return;
+    }
+
+    try {
+      const response = await fileService.getFileUrl(application.scanFile.fileKey);
+      window.open(response.data.url, '_blank');
+    } catch (error) {
+      message.error('Ошибка при открытии файла');
+      console.error(error);
+    }
+  };
+
+  // Обработчик скачивания скана заявки
+  const handleDownloadScan = async () => {
+    if (!application?.scanFile?.fileKey) {
+      message.error('Файл не найден');
+      return;
+    }
+
+    try {
+      const response = await fileService.getFileUrl(application.scanFile.fileKey);
+      const link = document.createElement('a');
+      link.href = response.data.url;
+      link.download = application.scanFile.fileName || 'application-scan.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      message.success('Файл скачивается');
+    } catch (error) {
+      message.error('Ошибка при скачивании файла');
+      console.error(error);
+    }
+  };
+
   const isBiometric = application?.applicationType === 'biometric';
 
   return (
     <Modal
-      title={`Заявка ${application?.applicationNumber || ''}`}
+      title={
+        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          <div>{`Заявка ${application?.applicationNumber || ''}`}</div>
+          {application?.scanFile && (
+            <div style={{ fontSize: '14px', fontWeight: 'normal' }}>
+              <Space>
+                <span>Скан заявки:</span>
+                <Button 
+                  type="link" 
+                  size="small" 
+                  icon={<EyeOutlined />}
+                  onClick={handleViewScan}
+                >
+                  Просмотр
+                </Button>
+                <Button 
+                  type="link" 
+                  size="small" 
+                  icon={<DownloadOutlined />}
+                  onClick={handleDownloadScan}
+                >
+                  Скачать
+                </Button>
+              </Space>
+            </div>
+          )}
+        </Space>
+      }
       open={visible}
       onCancel={onCancel}
       width={1200}

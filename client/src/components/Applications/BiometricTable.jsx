@@ -57,24 +57,6 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       width: 130,
       render: (value) => value || '-',
     },
-    {
-      title: 'Организация',
-      key: 'organization',
-      width: 200,
-      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.name || '-',
-    },
-    {
-      title: 'ИНН организации',
-      key: 'organizationInn',
-      width: 140,
-      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.inn || '-',
-    },
-    {
-      title: 'КПП организации',
-      key: 'organizationKpp',
-      width: 120,
-      render: (_, record) => record.employeeCounterpartyMappings?.[0]?.counterparty?.kpp || '-',
-    },
   ];
 
   // Функция экспорта в Excel (временно отключена)
@@ -96,7 +78,7 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       dataSource={employees}
       rowKey="id"
       pagination={false}
-      scroll={{ x: 1600 }}
+      scroll={{ x: 1200 }}
       bordered
       size="small"
     />
