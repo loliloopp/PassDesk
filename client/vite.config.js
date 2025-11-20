@@ -17,7 +17,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: 'localhost', // Слушать только на localhost
+    host: '0.0.0.0', // Слушать на всех сетевых интерфейсах
   },
   build: {
     outDir: 'dist',

@@ -21,6 +21,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://192.168.8.118:5173',
     process.env.CLIENT_URL
   ].filter(Boolean), // Убираем undefined если CLIENT_URL не установлен
   credentials: true
@@ -65,11 +66,12 @@ const startServer = async () => {
     // Таблицы создаются только явно через: npm run db:init
     // Изменения в БД делаются только через миграции с явным запуском
     
-    // Start server - слушаем только на localhost
-    app.listen(PORT, 'localhost', () => {
+    // Start server - слушаем на всех сетевых интерфейсах
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV}`);
       console.log(`🔗 API: http://localhost:${PORT}/api/${process.env.API_VERSION || 'v1'}`);
+      console.log(`🔗 API (LAN): http://192.168.8.118:${PORT}/api/${process.env.API_VERSION || 'v1'}`);
     });
   } catch (error) {
     console.error('❌ Unable to start server:', error);
