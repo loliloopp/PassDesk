@@ -10,14 +10,10 @@ import {
   Typography,
   Divider,
   Input,
-  Collapse,
-  Tag,
 } from 'antd';
-import { FileOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { counterpartyService } from '../../services/counterpartyService';
 import { constructionSiteService } from '../../services/constructionSiteService';
-import { employeeService } from '../../services/employeeService';
 import { useAuthStore } from '../../store/authStore';
 
 const { Text } = Typography;
@@ -28,15 +24,11 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [sites, setSites] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [employeeFiles, setEmployeeFiles] = useState({}); // { employeeId: [files] }
-  const [selectedFiles, setSelectedFiles] = useState({}); // { employeeId: [fileIds] }
   const [contracts, setContracts] = useState({ generalContract: null, subcontracts: [] });
   const [selectedCounterparty, setSelectedCounterparty] = useState(null);
   const [counterpartyType, setCounterpartyType] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
-  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
-  const [loadingFiles, setLoadingFiles] = useState(false);
   
   const getCurrentUser = useAuthStore(state => state.getCurrentUser);
 
@@ -136,54 +128,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     }
   };
 
-  const fetchEmployeeFiles = async (employeeId) => {
-    if (employeeFiles[employeeId]) return; // Уже загружены
-    
-    setLoadingFiles(true);
-    try {
-      const { data } = await employeeService.getFiles(employeeId);
-      setEmployeeFiles(prev => ({
-        ...prev,
-        [employeeId]: data.data || []
-      }));
-    } catch (error) {
-      console.error('Error loading employee files:', error);
-      setEmployeeFiles(prev => ({
-        ...prev,
-        [employeeId]: []
-      }));
-    } finally {
-      setLoadingFiles(false);
-    }
-  };
-
-  const handleEmployeeChange = (checkedValues) => {
-    setSelectedEmployeeIds(checkedValues);
-    
-    // Загружаем файлы для каждого выбранного сотрудника
-    checkedValues.forEach(employeeId => {
-      fetchEmployeeFiles(employeeId);
-    });
-    
-    // Удаляем выбранные файлы для сотрудников, которые больше не выбраны
-    setSelectedFiles(prev => {
-      const newSelected = { ...prev };
-      Object.keys(newSelected).forEach(empId => {
-        if (!checkedValues.includes(empId)) {
-          delete newSelected[empId];
-        }
-      });
-      return newSelected;
-    });
-  };
-
-  const handleFileSelect = (employeeId, fileIds) => {
-    setSelectedFiles(prev => ({
-      ...prev,
-      [employeeId]: fileIds
-    }));
-  };
-
   const handleSiteChange = (value) => {
     setSelectedSite(value);
     form.setFieldsValue({
@@ -201,24 +145,11 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     try {
       const values = await form.validateFields();
       
-      // Формируем массив selectedFiles для backend
-      const selectedFilesArray = [];
-      Object.entries(selectedFiles).forEach(([employeeId, fileIds]) => {
-        fileIds.forEach(fileId => {
-          selectedFilesArray.push({ employeeId, fileId });
-        });
-      });
-      
-      const payload = {
-        ...values,
-        selectedFiles: selectedFilesArray
-      };
-      
       if (editingId) {
-        await applicationService.update(editingId, payload);
+        await applicationService.update(editingId, values);
         message.success('Заявка обновлена');
       } else {
-        await applicationService.create(payload);
+        await applicationService.create(values);
         message.success('Заявка создана');
       }
       
@@ -298,7 +229,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
                 label="Сотрудники"
                 rules={[{ required: true, message: 'Выберите хотя бы одного сотрудника' }]}
               >
-                <Checkbox.Group style={{ width: '100%' }} onChange={handleEmployeeChange}>
+                <Checkbox.Group style={{ width: '100%' }}>
                   <Space direction="vertical" style={{ width: '100%' }}>
                     {employees.map(emp => (
                       <Checkbox key={emp.id} value={emp.id}>
@@ -311,68 +242,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
                   </Space>
                 </Checkbox.Group>
               </Form.Item>
-
-              {selectedEmployeeIds.length > 0 && (
-                <Form.Item label="Документы сотрудников">
-                  <Collapse
-                    items={selectedEmployeeIds.map(empId => {
-                      const employee = employees.find(e => e.id === empId);
-                      const files = employeeFiles[empId] || [];
-                      const selectedCount = (selectedFiles[empId] || []).length;
-                      
-                      return {
-                        key: empId,
-                        label: (
-                          <Space>
-                            <span>
-                              {employee?.lastName} {employee?.firstName} {employee?.middleName || ''}
-                            </span>
-                            {selectedCount > 0 && (
-                              <Tag color="blue">
-                                <FileOutlined /> {selectedCount} файл(ов)
-                              </Tag>
-                            )}
-                          </Space>
-                        ),
-                        children: (
-                          <>
-                            {loadingFiles && !employeeFiles[empId] ? (
-                              <Spin tip="Загрузка файлов...">
-                                <div style={{ minHeight: 50 }} />
-                              </Spin>
-                            ) : files.length === 0 ? (
-                              <Text type="secondary">У сотрудника нет загруженных документов</Text>
-                            ) : (
-                              <Checkbox.Group
-                                style={{ width: '100%' }}
-                                value={selectedFiles[empId] || []}
-                                onChange={(fileIds) => handleFileSelect(empId, fileIds)}
-                              >
-                                <Space direction="vertical" style={{ width: '100%' }}>
-                                  {files.map(file => (
-                                    <Checkbox key={file.id} value={file.id}>
-                                      <Space>
-                                        <FileOutlined />
-                                        <span>{file.fileName}</span>
-                                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                                          ({(file.fileSize / 1024).toFixed(2)} KB)
-                                        </Text>
-                                      </Space>
-                                    </Checkbox>
-                                  ))}
-                                </Space>
-                              </Checkbox.Group>
-                            )}
-                          </>
-                        )
-                      };
-                    })}
-                  />
-                  <Text type="secondary" style={{ fontSize: '12px', marginTop: 8, display: 'block' }}>
-                    Выберите документы для каждого сотрудника, которые войдут в заявку
-                  </Text>
-                </Form.Item>
-              )}
             </>
           )}
 

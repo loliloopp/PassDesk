@@ -275,6 +275,32 @@ export const createApplication = async (req, res) => {
     
     await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
     
+    // Обновляем/создаем записи в employee_counterparty_mapping для каждого сотрудника
+    for (const employeeId of employeeIds) {
+      // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
+      let mapping = await EmployeeCounterpartyMapping.findOne({
+        where: {
+          employeeId: employeeId,
+          counterpartyId: req.user.counterpartyId,
+          constructionSiteId: applicationData.constructionSiteId
+        },
+        transaction
+      });
+
+      if (mapping) {
+        // Связка уже существует - обновляем updated_at
+        await mapping.save({ transaction });
+      } else {
+        // Связки нет - создаем новую
+        await EmployeeCounterpartyMapping.create({
+          employeeId: employeeId,
+          counterpartyId: req.user.counterpartyId,
+          constructionSiteId: applicationData.constructionSiteId,
+          departmentId: null
+        }, { transaction });
+      }
+    }
+    
     // Добавляем файлы, если они выбраны
     // selectedFiles должен быть массивом объектов: [{ employeeId, fileId }, ...]
     if (selectedFiles && Array.isArray(selectedFiles) && selectedFiles.length > 0) {
@@ -400,6 +426,32 @@ export const updateApplication = async (req, res) => {
       }));
       
       await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
+      
+      // Обновляем/создаем записи в employee_counterparty_mapping для каждого сотрудника
+      for (const employeeId of employeeIds) {
+        // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
+        let mapping = await EmployeeCounterpartyMapping.findOne({
+          where: {
+            employeeId: employeeId,
+            counterpartyId: application.counterpartyId,
+            constructionSiteId: application.constructionSiteId
+          },
+          transaction
+        });
+
+        if (mapping) {
+          // Связка уже существует - обновляем updated_at
+          await mapping.save({ transaction });
+        } else {
+          // Связки нет - создаем новую
+          await EmployeeCounterpartyMapping.create({
+            employeeId: employeeId,
+            counterpartyId: application.counterpartyId,
+            constructionSiteId: application.constructionSiteId,
+            departmentId: null
+          }, { transaction });
+        }
+      }
     }
     
     await transaction.commit();

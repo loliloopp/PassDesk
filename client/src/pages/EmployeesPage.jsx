@@ -32,7 +32,6 @@ import { useAuthStore } from '../store/authStore';
 import EmployeeFormModal from '../components/Employees/EmployeeFormModal';
 import EmployeeViewModal from '../components/Employees/EmployeeViewModal';
 import EmployeeFilesModal from '../components/Employees/EmployeeFilesModal';
-import EmployeeSitesModal from '../components/Employees/EmployeeSitesModal';
 import ExportToExcelModal from '../components/Employees/ExportToExcelModal';
 import SecurityModal from '../components/Employees/SecurityModal';
 import dayjs from 'dayjs';
@@ -76,13 +75,11 @@ const EmployeesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
-  const [isSitesModalOpen, setIsSitesModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewingEmployee, setViewingEmployee] = useState(null);
   const [filesEmployee, setFilesEmployee] = useState(null);
-  const [sitesEmployee, setSitesEmployee] = useState(null);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const { user } = useAuthStore();
 
@@ -151,16 +148,6 @@ const EmployeesPage = () => {
   const handleCloseFilesModal = () => {
     setIsFilesModalOpen(false);
     setFilesEmployee(null);
-  };
-
-  const handleCloseSitesModal = () => {
-    setIsSitesModalOpen(false);
-    setSitesEmployee(null);
-  };
-
-  const handleSitesSuccess = () => {
-    fetchEmployees(); // Обновляем список сотрудников после изменения объектов
-    handleCloseSitesModal();
   };
 
   const handleDepartmentChange = async (employeeId, departmentId) => {
@@ -372,29 +359,24 @@ const EmployeesPage = () => {
         // Фильтруем только маппинги с объектами
         const siteMappings = mappings.filter(m => m.constructionSite);
         
+        if (siteMappings.length === 0) {
+          return '-';
+        }
+        
         return (
-          <div 
-            onClick={() => {
-              setSitesEmployee(record);
-              setIsSitesModalOpen(true);
-            }}
-            style={{ 
-              cursor: 'pointer',
-              minHeight: '32px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}
-          >
-            {siteMappings.length > 0 ? (
-              siteMappings.map((mapping, index) => (
-                <Tag key={index} color="blue" style={{ margin: 0 }}>
-                  {mapping.constructionSite?.shortName || mapping.constructionSite?.name}
-                </Tag>
-              ))
-            ) : (
-              <span style={{ color: '#999' }}>Нажмите для выбора</span>
-            )}
+          <div style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            whiteSpace: 'normal',
+            wordBreak: 'normal',
+            overflowWrap: 'break-word'
+          }}>
+            {siteMappings.map((mapping, index) => (
+              <div key={index}>
+                {mapping.constructionSite?.shortName || mapping.constructionSite?.name}
+              </div>
+            ))}
           </div>
         );
       },
@@ -672,13 +654,6 @@ const EmployeesPage = () => {
         employeeId={filesEmployee?.id}
         employeeName={filesEmployee ? `${filesEmployee.lastName} ${filesEmployee.firstName} ${filesEmployee.middleName || ''}` : ''}
         onClose={handleCloseFilesModal}
-      />
-
-      <EmployeeSitesModal
-        visible={isSitesModalOpen}
-        employee={sitesEmployee}
-        onCancel={handleCloseSitesModal}
-        onSuccess={handleSitesSuccess}
       />
 
       <ExportToExcelModal
