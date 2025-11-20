@@ -803,7 +803,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     }
                     autoComplete="off"
                     popupMatchSelectWidth={false}
-                    popupClassName="dropdown-wide"
+                    classNames={{ popup: { root: 'dropdown-wide' } }}
                   >
                     {positions.map((p) => (
                       <Option key={p.id} value={p.id}>
