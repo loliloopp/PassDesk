@@ -140,6 +140,64 @@ const formatInn = (value) => {
   return `${inn.slice(0, 4)}-${inn.slice(4, 10)}-${inn.slice(10, 12)}`;
 };
 
+// Маска для номера патента: форматирует ввод в XX №1234567890 (где XX - любые 2 цифры от 01 до 99)
+const formatPatentNumber = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр и №
+  const cleaned = value.replace(/[^\d№]/g, '');
+  
+  // Убираем все символы №, чтобы потом добавить один
+  const numbersOnly = cleaned.replace(/№/g, '');
+  
+  // Ограничиваем длину до 12 цифр (2 цифры кода + 10 цифр номера)
+  const limited = numbersOnly.slice(0, 12);
+  
+  // Если введено меньше 2 символов, просто возвращаем
+  if (limited.length === 0) {
+    return '';
+  }
+  if (limited.length === 1) {
+    return limited;
+  }
+  if (limited.length === 2) {
+    return limited;
+  }
+  
+  // Форматируем: XX №1234567890
+  return `${limited.slice(0, 2)} №${limited.slice(2)}`;
+};
+
+// Функция для удаления форматирования номера патента перед отправкой
+// Возвращает формат XX№1234567890 (без пробела)
+const normalizePatentNumber = (value) => {
+  if (!value) return value;
+  // Убираем пробелы, оставляем только цифры и №
+  return value.replace(/\s/g, '');
+};
+
+// Маска для номера бланка: форматирует ввод в ПР1234567 (кириллица)
+const formatBlankNumber = (value) => {
+  if (!value) return value;
+  
+  // Преобразуем в верхний регистр
+  let blank = value.toUpperCase();
+  
+  // Убираем все символы кроме кириллических букв и цифр
+  blank = blank.replace(/[^А-ЯЁ0-9]/g, '');
+  
+  // Разделяем на буквы и цифры
+  const letters = blank.replace(/[^А-ЯЁ]/g, '');
+  const numbers = blank.replace(/[^0-9]/g, '');
+  
+  // Ограничиваем: 2 буквы + 7 цифр
+  const limitedLetters = letters.slice(0, 2);
+  const limitedNumbers = numbers.slice(0, 7);
+  
+  // Форматируем: ПР1234567
+  return `${limitedLetters}${limitedNumbers}`;
+};
+
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [form] = Form.useForm();
   const [citizenships, setCitizenships] = useState([]);
@@ -278,11 +336,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             constructionSiteId: mapping?.constructionSiteId || null,
             isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
             isInactive: employee.statusActive === 'inactive',
-            // Форматируем ИНН, СНИЛС, телефон и КИГ при загрузке
+            // Форматируем ИНН, СНИЛС, телефон, КИГ, номер патента и номер бланка при загрузке
             inn: employee.inn ? formatInn(employee.inn) : null,
             snils: employee.snils ? formatSnils(employee.snils) : null,
             phone: employee.phone ? formatPhoneNumber(employee.phone) : null,
             kig: employee.kig ? formatKig(employee.kig) : null,
+            patentNumber: employee.patentNumber ? formatPatentNumber(employee.patentNumber) : null,
+            blankNumber: employee.blankNumber ? formatBlankNumber(employee.blankNumber) : null,
           };
           
           form.setFieldsValue(formData);
@@ -487,6 +547,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'kig') {
           // Убираем пробел из КИГ (АА 1234567 → АА1234567)
           formattedValues[key] = normalizeKig(value);
+        } else if (key === 'patentNumber') {
+          // Убираем пробел из номера патента (01 №1234567890 → 01№1234567890)
+          formattedValues[key] = normalizePatentNumber(value);
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
@@ -559,6 +622,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'kig') {
           // Убираем пробел из КИГ (АА 1234567 → АА1234567)
           formattedValues[key] = normalizeKig(value);
+        } else if (key === 'patentNumber') {
+          // Убираем пробел из номера патента (01 №1234567890 → 01№1234567890)
+          formattedValues[key] = normalizePatentNumber(value);
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
@@ -1000,9 +1066,22 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 <Form.Item 
                   name="patentNumber" 
                   label="Номер патента"
-                  rules={[{ required: true, message: 'Введите номер патента' }]}
+                  rules={[
+                    { required: true, message: 'Введите номер патента' },
+                    {
+                      pattern: /^\d{2}\s№\d{10}$/,
+                      message: 'Номер патента должен быть в формате XX №1234567890 (где XX - код от 01 до 99)'
+                    }
+                  ]}
+                  normalize={(value) => {
+                    return formatPatentNumber(value);
+                  }}
                 >
-                  <Input autoComplete="off" />
+                  <Input 
+                    placeholder="01 №1234567890 (код 01-99)"
+                    maxLength={15}
+                    autoComplete="off"
+                  />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -1022,9 +1101,22 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 <Form.Item 
                   name="blankNumber" 
                   label="Номер бланка"
-                  rules={[{ required: true, message: 'Введите номер бланка' }]}
+                  rules={[
+                    { required: true, message: 'Введите номер бланка' },
+                    {
+                      pattern: /^[А-ЯЁ]{2}\d{7}$/,
+                      message: 'Номер бланка должен быть в формате ПР1234567 (кириллица)'
+                    }
+                  ]}
+                  normalize={(value) => {
+                    return formatBlankNumber(value);
+                  }}
                 >
-                  <Input autoComplete="off" />
+                  <Input 
+                    placeholder="ПР1234567 (буквы - кириллица)"
+                    maxLength={9}
+                    autoComplete="off"
+                  />
                 </Form.Item>
               </Col>
             </Row>
