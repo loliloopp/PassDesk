@@ -25,7 +25,7 @@ const LoginPage = () => {
       if (userRole === 'user') {
         navigate('/my-profile')
       } else {
-        navigate('/dashboard')
+        navigate('/employees')
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -61,7 +61,7 @@ const LoginPage = () => {
       console.log('Attempting registration with:', { ...values, password: '***' }); // Безопасное логирование
       await register(values)
       message.success('Регистрация прошла успешно!')
-      navigate('/my-profile')
+      navigate('/employees')
     } catch (err) {
       console.error('Registration error:', err);
       
@@ -146,67 +146,33 @@ const LoginPage = () => {
       onFinish={handleRegister}
       layout="vertical"
       requiredMark={true}
+      autoComplete="off"
     >
       <Form.Item
-        name="lastName"
-        label="Фамилия"
+        name="fullName"
+        label="ФИО"
         rules={[
-          { required: true, message: 'Пожалуйста, введите фамилию' },
+          { required: true, message: 'Пожалуйста, введите ФИО' },
           { 
-            pattern: /^[А-Яа-яЁё-]+$/,
-            message: 'Фамилия должна содержать только русские буквы'
+            pattern: /^[А-Яа-яЁё\s-]+$/,
+            message: 'ФИО должно содержать только русские буквы'
+          },
+          {
+            validator: (_, value) => {
+              if (!value) return Promise.resolve();
+              const parts = value.trim().split(/\s+/);
+              if (parts.length < 2) {
+                return Promise.reject(new Error('Введите фамилию и имя (минимум 2 слова)'));
+              }
+              return Promise.resolve();
+            }
           }
         ]}
       >
         <Input
-          placeholder="Иванов"
+          placeholder="Иванов Иван Иванович"
           size="large"
-        />
-      </Form.Item>
-
-      <Form.Item
-        name="firstName"
-        label="Имя"
-        rules={[
-          { required: true, message: 'Пожалуйста, введите имя' },
-          { 
-            pattern: /^[А-Яа-яЁё-]+$/,
-            message: 'Имя должно содержать только русские буквы'
-          }
-        ]}
-      >
-        <Input
-          placeholder="Иван"
-          size="large"
-        />
-      </Form.Item>
-
-      <Form.Item
-        name="middleName"
-        label="Отчество"
-        rules={[
-          { 
-            pattern: /^[А-Яа-яЁё-]+$/,
-            message: 'Отчество должно содержать только русские буквы'
-          }
-        ]}
-      >
-        <Input
-          placeholder="Иванович"
-          size="large"
-        />
-      </Form.Item>
-
-      <Form.Item
-        name="position"
-        label="Должность"
-        rules={[
-          { required: true, message: 'Пожалуйста, введите должность' }
-        ]}
-      >
-        <Input
-          placeholder="Например: Инженер, Прораб, Монтажник"
-          size="large"
+          autoComplete="off"
         />
       </Form.Item>
 
@@ -222,6 +188,7 @@ const LoginPage = () => {
           prefix={<UserOutlined />}
           placeholder="user@example.com"
           size="large"
+          autoComplete="off"
         />
       </Form.Item>
 
@@ -230,13 +197,14 @@ const LoginPage = () => {
         label="Пароль"
         rules={[
           { required: true, message: 'Пожалуйста, введите пароль' },
-          { min: 6, message: 'Пароль должен содержать минимум 6 символов' }
+          { min: 8, message: 'Пароль должен содержать минимум 8 символов' }
         ]}
       >
         <Input.Password
           prefix={<LockOutlined />}
           placeholder="••••••••"
           size="large"
+          autoComplete="new-password"
         />
       </Form.Item>
 
@@ -260,6 +228,7 @@ const LoginPage = () => {
           prefix={<LockOutlined />}
           placeholder="••••••••"
           size="large"
+          autoComplete="new-password"
         />
       </Form.Item>
 

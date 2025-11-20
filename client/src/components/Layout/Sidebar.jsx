@@ -1,22 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu } from 'antd'
 import {
-  DashboardOutlined,
   UserOutlined,
-  IdcardOutlined,
   LogoutOutlined,
   TeamOutlined,
   ShopOutlined,
   BankOutlined,
   FileTextOutlined,
-  SettingOutlined,
   ProfileOutlined,
   ControlOutlined,
   BookOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
-import settingsService from '@/services/settingsService'
 
 const { Sider } = Layout
 
@@ -25,23 +21,6 @@ const Sidebar = () => {
   const location = useLocation()
   const { logout, user } = useAuthStore()
   const [collapsed, setCollapsed] = useState(false)
-  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
-
-  // Загружаем настройки при монтировании компонента
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const response = await settingsService.getPublicSettings()
-        setDefaultCounterpartyId(response.data.defaultCounterpartyId)
-      } catch (error) {
-        console.error('Error loading settings:', error)
-      }
-    }
-    
-    if (user) {
-      loadSettings()
-    }
-  }, [user])
 
   // Меню для обычных пользователей (role: user)
   const userMenuItems = [
@@ -52,23 +31,8 @@ const Sidebar = () => {
     }
   ]
 
-  // Проверяем, должен ли пользователь видеть дашборд
-  const canSeeDashboard = user?.counterpartyId === defaultCounterpartyId
-
   // Меню для администраторов и менеджеров
-  const adminManagerMenuItems = []
-
-  // Добавляем "Дашборд" только если пользователь принадлежит к контрагенту по умолчанию
-  if (canSeeDashboard) {
-    adminManagerMenuItems.push({
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: 'Дашборд',
-    })
-  }
-
-  // Остальные пункты меню для админов и менеджеров
-  adminManagerMenuItems.push(
+  const adminManagerMenuItems = [
     {
       key: '/employees',
       icon: <UserOutlined />,
@@ -106,30 +70,12 @@ const Sidebar = () => {
         },
       ],
     }
-  )
+  ]
 
   // Выбираем меню на основе роли пользователя
   let menuItems = []
   if (user?.role === 'user') {
-    
-    // Если пользователь имеет доступ к дашборду (сотрудник компании), добавляем ему соответствующие пункты
-    if (canSeeDashboard) {
-      menuItems = [
-        {
-          key: '/dashboard',
-          icon: <DashboardOutlined />,
-          label: 'Дашборд',
-        },
-        {
-          key: '/applications',
-          icon: <FileTextOutlined />,
-          label: 'Заявки',
-        },
-        ...userMenuItems
-      ]
-    } else {
-      menuItems = [...userMenuItems]
-    }
+    menuItems = [...userMenuItems]
   } else {
     menuItems = [...adminManagerMenuItems]
     

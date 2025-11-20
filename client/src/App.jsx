@@ -4,7 +4,6 @@ import ruRU from 'antd/locale/ru_RU'
 import { antdTheme } from './theme/antd-theme'
 import Layout from './components/Layout/Layout'
 import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
 import EmployeesPage from './pages/employees'
 import PassesPage from './pages/PassesPage'
 import CounterpartiesPage from './pages/CounterpartiesPage'
@@ -17,50 +16,16 @@ import DirectoriesPage from './pages/DirectoriesPage'
 import DebugPage from './pages/DebugPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
-import DashboardProtectedRoute from './components/Auth/DashboardProtectedRoute'
 import { useAuthStore } from './store/authStore'
-import { useState, useEffect } from 'react'
-import settingsService from './services/settingsService'
 
 // Компонент для перенаправления на основе роли
 const RoleBasedRedirect = () => {
   const { user } = useAuthStore()
-  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const response = await settingsService.getPublicSettings()
-        setDefaultCounterpartyId(response.data.defaultCounterpartyId)
-      } catch (error) {
-        console.error('Error loading settings:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadSettings()
-  }, [])
-
-  if (loading) {
-    return null
-  }
   
   if (user?.role === 'user') {
-    // Для пользователей контрагента по умолчанию (сотрудников) даем доступ к дашборду
-    if (user?.counterpartyId === defaultCounterpartyId) {
-      return <Navigate to="/dashboard" replace />
-    }
     return <Navigate to="/my-profile" replace />
   }
 
-  // Для admin и manager проверяем доступ к дашборду
-  const canSeeDashboard = user?.counterpartyId === defaultCounterpartyId
-  
-  if (canSeeDashboard) {
-    return <Navigate to="/dashboard" replace />
-  }
-  
   return <Navigate to="/employees" replace />
 }
 
@@ -78,16 +43,6 @@ function App() {
             <Route index element={<RoleBasedRedirect />} />
             
             {/* Routes for admin and manager */}
-            <Route 
-              path="dashboard" 
-              element={
-                <ProtectedRoute allowedRoles={['admin', 'manager', 'user']}>
-                  <DashboardProtectedRoute>
-                    <DashboardPage />
-                  </DashboardProtectedRoute>
-                </ProtectedRoute>
-              } 
-            />
             <Route 
               path="employees" 
               element={<ProtectedRoute allowedRoles={['admin', 'manager']}><EmployeesPage /></ProtectedRoute>} 

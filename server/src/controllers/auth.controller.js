@@ -41,16 +41,21 @@ export const register = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   
   try {
-    const { email, password, lastName, firstName, middleName, position } = req.body; // Изменено: отдельные поля вместо fullName
+    console.log('📝 Registration request body:', req.body);
+    const { email, password, fullName } = req.body;
 
     // Валидация входных данных
-    if (!email || !password || !lastName || !firstName || !position) {
+    if (!email || !password || !fullName) {
+      console.log('❌ Validation failed:', { email: !!email, password: !!password, fullName: !!fullName });
       throw new AppError('Все обязательные поля должны быть заполнены', 400);
     }
 
-    if (password.length < 6) {
-      throw new AppError('Пароль должен содержать минимум 6 символов', 400);
+    if (password.length < 8) {
+      throw new AppError('Пароль должен содержать минимум 8 символов', 400);
     }
+
+    // Парсим ФИО
+    const { lastName, firstName, middleName } = parseFullName(fullName);
 
     // Проверяем, существует ли пользователь
     const existingUser = await User.findOne({ where: { email } });
@@ -69,8 +74,8 @@ export const register = async (req, res, next) => {
     const user = await User.create({
       email,
       password,
-      firstName,
-      lastName,
+      firstName: fullName, // Сохраняем полное ФИО в first_name
+      lastName: null, // last_name теперь NULL
       role: 'user',
       counterpartyId: defaultCounterpartyId,
       isActive: true
@@ -80,8 +85,8 @@ export const register = async (req, res, next) => {
     const employee = await Employee.create({
       firstName,
       lastName,
-      middleName: middleName || null, // Отчество необязательное
-      position,
+      middleName: middleName || null,
+      position: 'Не указана', // Должность по умолчанию
       email,
       counterpartyId: defaultCounterpartyId,
       isActive: true,

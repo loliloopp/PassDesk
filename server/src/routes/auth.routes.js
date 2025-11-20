@@ -14,10 +14,8 @@ const loginValidation = [
 
 const registerValidation = [
   body('email').isEmail().normalizeEmail().withMessage('Введите корректный email'),
-  body('password').isLength({ min: 6 }).withMessage('Пароль должен содержать минимум 6 символов'),
-  body('lastName').notEmpty().trim().withMessage('Фамилия обязательна'),
-  body('firstName').notEmpty().trim().withMessage('Имя обязательно'),
-  body('position').notEmpty().trim().withMessage('Должность обязательна')
+  body('password').isLength({ min: 8 }).withMessage('Пароль должен содержать минимум 8 символов'),
+  body('fullName').notEmpty().trim().withMessage('ФИО обязательно')
 ];
 
 // Routes

@@ -42,7 +42,7 @@ User.init(
     },
     lastName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field: 'last_name'
     },
     role: {
