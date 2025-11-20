@@ -3,8 +3,6 @@ import { Table, Button, Input, Space, Modal, Form, Select, message, Tag } from '
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
 
-const { Search } = Input;
-
 const typeMap = {
   customer: { label: 'Заказчик', color: 'blue' },
   contractor: { label: 'Подрядчик', color: 'green' },
@@ -129,9 +127,11 @@ const CounterpartiesPage = () => {
         </div>
 
         <Space>
-          <Search
+          <Input
             placeholder="Поиск по названию или ИНН"
-            onSearch={(value) => setFilters(prev => ({ ...prev, search: value }))}
+            prefix={<SearchOutlined />}
+            value={filters.search || ''}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
             style={{ width: 300 }}
             allowClear
           />

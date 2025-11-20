@@ -23,7 +23,6 @@ import ApplicationViewModal from '../components/Applications/ApplicationViewModa
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
-const { Search } = Input;
 
 const ApplicationsPage = () => {
   const [data, setData] = useState([]);
@@ -202,8 +201,9 @@ const ApplicationsPage = () => {
       </div>
 
       <Space style={{ marginBottom: 16 }}>
-        <Search
+        <Input
           placeholder="Поиск по номеру, контрагенту, объекту..."
+          prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           style={{ width: 400 }}

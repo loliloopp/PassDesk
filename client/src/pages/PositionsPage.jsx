@@ -246,7 +246,6 @@ const PositionsPage = () => {
             allowClear
             style={{ width: 300 }}
             onSearch={handleSearch}
-            prefix={<SearchOutlined />}
           />
           {canEditAndDelete && (
             <>

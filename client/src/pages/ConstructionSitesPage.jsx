@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Input, Space, Modal, Form, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { constructionSiteService } from '../services/constructionSiteService';
 
-const { Search } = Input;
 const { TextArea } = Input;
 
 const ConstructionSitesPage = () => {
@@ -105,9 +104,11 @@ const ConstructionSitesPage = () => {
           </Button>
         </div>
 
-        <Search
+        <Input
           placeholder="Поиск по названию или адресу"
-          onSearch={setSearch}
+          prefix={<SearchOutlined />}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           style={{ width: 400 }}
           allowClear
         />
