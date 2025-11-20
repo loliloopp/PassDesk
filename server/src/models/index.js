@@ -129,6 +129,18 @@ User.hasMany(Application, { foreignKey: 'updated_by', as: 'updatedApplications' 
 Application.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 Application.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 
+// Application -> File (полиморфная связь через entity_type и entity_id)
+// Виртуальная связь для скана заявки
+Application.hasOne(File, {
+  foreignKey: 'entity_id',
+  constraints: false,
+  scope: {
+    entity_type: 'application',
+    document_type: 'application_scan'
+  },
+  as: 'scanFile'
+});
+
 // Application <-> Employee (many-to-many через ApplicationEmployeeMapping)
 Application.belongsToMany(Employee, {
   through: ApplicationEmployeeMapping,

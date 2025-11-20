@@ -29,9 +29,15 @@ export const fileService = {
     return response.data
   },
 
-  // Получить URL файла
+  // Получить URL файла по ключу
   getFileUrl: async (fileKey) => {
     const response = await api.get(`/files/${fileKey}`)
+    return response.data
+  },
+
+  // Получить URL файла по ID
+  getFileUrlById: async (fileId) => {
+    const response = await api.get(`/files/id/${fileId}`)
     return response.data
   },
 

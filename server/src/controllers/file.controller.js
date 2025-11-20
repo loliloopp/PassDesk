@@ -119,6 +119,51 @@ export const uploadMultipleFiles = async (req, res, next) => {
 };
 
 /**
+ * Получить ссылку для скачивания файла по ID
+ */
+export const getFileById = async (req, res, next) => {
+  try {
+    const { fileId } = req.params;
+    
+    // Импортируем модель File
+    const { File } = await import('../models/index.js');
+    
+    // Находим файл по ID
+    const file = await File.findOne({
+      where: {
+        id: fileId,
+        isDeleted: false
+      }
+    });
+    
+    if (!file) {
+      throw new AppError('Файл не найден', 404);
+    }
+    
+    // Получить ссылку для скачивания
+    const downloadResponse = await yandexDiskClient.get('/resources/download', {
+      params: {
+        path: file.filePath
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        url: downloadResponse.data.href,
+        fileName: file.originalName || file.fileName
+      }
+    });
+  } catch (error) {
+    if (error.response?.status === 404) {
+      next(new AppError('Файл не найден на Яндекс.Диске', 404));
+    } else {
+      next(error);
+    }
+  }
+};
+
+/**
  * Получить ссылку для скачивания файла
  */
 export const getFile = async (req, res, next) => {

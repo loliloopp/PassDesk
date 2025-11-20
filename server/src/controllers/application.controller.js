@@ -128,6 +128,12 @@ export const getAllApplications = async (req, res) => {
         },
         {
           model: File,
+          as: 'scanFile',
+          attributes: ['id', 'fileKey', 'fileName', 'originalName', 'mimeType', 'fileSize', 'createdAt'],
+          required: false // LEFT JOIN - заявка может существовать без скана
+        },
+        {
+          model: File,
           as: 'files',
           attributes: ['id', 'fileName', 'originalName', 'mimeType', 'fileSize'],
           through: {
@@ -215,6 +221,12 @@ export const getApplicationById = async (req, res) => {
           ],
           attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'positionId'],
           through: { attributes: [] }
+        },
+        {
+          model: File,
+          as: 'scanFile',
+          attributes: ['id', 'fileKey', 'fileName', 'originalName', 'mimeType', 'fileSize', 'createdAt'],
+          required: false // LEFT JOIN - заявка может существовать без скана
         }
       ]
     });
@@ -528,6 +540,8 @@ export const updateApplication = async (req, res) => {
 
 // Удалить заявку
 export const deleteApplication = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
   try {
     const { id } = req.params;
     
@@ -535,23 +549,113 @@ export const deleteApplication = async (req, res) => {
       where: {
         id: id,
         createdBy: req.user.id // Только свои заявки
-      }
+      },
+      include: [
+        {
+          model: Employee,
+          as: 'employees',
+          attributes: ['id'],
+          through: { attributes: [] }
+        },
+        {
+          model: Counterparty,
+          as: 'counterparty',
+          attributes: ['id', 'name']
+        }
+      ],
+      transaction
     });
     
     if (!application) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: 'Заявка не найдена'
       });
     }
     
-    await application.destroy();
+    console.log('=== DELETING APPLICATION ===');
+    console.log('Application:', {
+      id: application.id,
+      number: application.applicationNumber
+    });
+    
+    // 1. Удаляем файлы, прикрепленные к заявке
+    const files = await File.findAll({
+      where: {
+        entityType: 'application',
+        entityId: id,
+        isDeleted: false
+      },
+      transaction
+    });
+    
+    console.log(`Found ${files.length} files to delete`);
+    
+    // Импортируем yandexDiskClient
+    const { default: yandexDiskClient } = await import('../config/storage.js');
+    
+    // Удаляем каждый файл с Яндекс.Диска
+    for (const file of files) {
+      try {
+        console.log(`Deleting file from Yandex.Disk: ${file.filePath}`);
+        await yandexDiskClient.delete('/resources', {
+          params: {
+            path: file.filePath,
+            permanently: true
+          }
+        });
+        console.log(`✓ File deleted: ${file.filePath}`);
+      } catch (error) {
+        console.error(`✗ Error deleting file from Yandex.Disk: ${file.filePath}`);
+        console.error('Error details:', {
+          message: error.message,
+          status: error.response?.status
+        });
+        // Продолжаем удаление, даже если файл уже отсутствует на диске
+      }
+    }
+    
+    // Физически удаляем файлы из БД
+    const deletedFilesCount = await File.destroy({
+      where: {
+        entityType: 'application',
+        entityId: id
+      },
+      transaction
+    });
+    console.log(`Deleted ${deletedFilesCount} file records from DB`);
+    
+    // 2. Удаляем записи из employee_counterparty_mapping для сотрудников этой заявки
+    // Удаляем только те записи, которые соответствуют комбинации:
+    // сотрудник из заявки + контрагент заявки + объект заявки
+    const employeeIds = application.employees.map(emp => emp.id);
+    
+    if (employeeIds.length > 0) {
+      const deletedMappingsCount = await EmployeeCounterpartyMapping.destroy({
+        where: {
+          employeeId: employeeIds,
+          counterpartyId: application.counterpartyId,
+          constructionSiteId: application.constructionSiteId
+        },
+        transaction
+      });
+      console.log(`Deleted ${deletedMappingsCount} employee-counterparty mappings`);
+    }
+    
+    // 3. Удаляем саму заявку (каскадно удалятся записи из application_employees_mapping)
+    await application.destroy({ transaction });
+    
+    await transaction.commit();
+    
+    console.log('✓ Application deleted successfully');
     
     res.json({
       success: true,
       message: 'Заявка успешно удалена'
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error deleting application:', error);
     res.status(500).json({
       success: false,

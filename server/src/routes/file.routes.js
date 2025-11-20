@@ -11,7 +11,8 @@ router.use(authenticate);
 // Routes
 router.post('/upload', upload.single('file'), fileController.uploadFile);
 router.post('/upload-multiple', upload.array('files', 5), fileController.uploadMultipleFiles);
-router.get('/:fileKey', fileController.getFile);
+router.get('/id/:fileId', fileController.getFileById); // Получить файл по ID
+router.get('/:fileKey', fileController.getFile); // Получить файл по ключу
 router.get('/:fileKey/public', fileController.getPublicLink);
 router.delete('/:fileKey', fileController.deleteFile);
 

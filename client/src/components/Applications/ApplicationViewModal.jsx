@@ -44,13 +44,14 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
 
   // Обработчик просмотра скана заявки
   const handleViewScan = async () => {
-    if (!application?.scanFile?.fileKey) {
+    if (!application?.scanFile?.id) {
       message.error('Файл не найден');
       return;
     }
 
     try {
-      const response = await fileService.getFileUrl(application.scanFile.fileKey);
+      // Используем ID файла для получения ссылки
+      const response = await fileService.getFileUrlById(application.scanFile.id);
       window.open(response.data.url, '_blank');
     } catch (error) {
       message.error('Ошибка при открытии файла');
@@ -60,16 +61,16 @@ const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
 
   // Обработчик скачивания скана заявки
   const handleDownloadScan = async () => {
-    if (!application?.scanFile?.fileKey) {
+    if (!application?.scanFile?.id) {
       message.error('Файл не найден');
       return;
     }
 
     try {
-      const response = await fileService.getFileUrl(application.scanFile.fileKey);
+      const response = await fileService.getFileUrlById(application.scanFile.id);
       const link = document.createElement('a');
       link.href = response.data.url;
-      link.download = application.scanFile.fileName || 'application-scan.pdf';
+      link.download = application.scanFile.originalName || application.scanFile.fileName || 'application-scan.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
