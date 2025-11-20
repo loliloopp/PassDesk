@@ -357,15 +357,6 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
           index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
         }
       />
-      
-      <style jsx>{`
-        .table-row-light {
-          background-color: #ffffff;
-        }
-        .table-row-dark {
-          background-color: #fafafa;
-        }
-      `}</style>
     </Modal>
   );
 };
