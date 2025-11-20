@@ -6,6 +6,26 @@ import { counterpartyService } from '../../services/counterpartyService';
 
 const { Option } = Select;
 
+// Функция для форматирования КИГ при отображении
+const formatKigDisplay = (kig) => {
+  if (!kig) return '-';
+  
+  // Если КИГ уже отформатирован (содержит пробел), возвращаем как есть
+  if (kig.includes(' ')) {
+    return kig;
+  }
+  
+  // Убираем все символы кроме букв и цифр
+  const kigClean = kig.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  
+  // Форматируем: АА 1234567
+  if (kigClean.length === 9) {
+    return `${kigClean.slice(0, 2)} ${kigClean.slice(2)}`;
+  }
+  
+  return kig;
+};
+
 const SecurityModal = ({ visible, onCancel, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
@@ -181,7 +201,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       title: 'КИГ',
       dataIndex: 'kig',
       key: 'kig',
-      render: (text) => text || '-',
+      render: (text) => formatKigDisplay(text),
     },
     {
       title: 'Патент',

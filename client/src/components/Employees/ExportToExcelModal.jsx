@@ -9,6 +9,46 @@ import * as XLSX from 'xlsx';
 
 const { Option } = Select;
 
+// Функция для форматирования СНИЛС при экспорте
+const formatSnilsDisplay = (snils) => {
+  if (!snils) return '-';
+  
+  // Если СНИЛС уже отформатирован, возвращаем как есть
+  if (snils.includes('-')) {
+    return snils;
+  }
+  
+  // Убираем все символы кроме цифр
+  const snilsNumber = snils.replace(/[^\d]/g, '');
+  
+  // Форматируем: 123-456-789 00
+  if (snilsNumber.length === 11) {
+    return `${snilsNumber.slice(0, 3)}-${snilsNumber.slice(3, 6)}-${snilsNumber.slice(6, 9)} ${snilsNumber.slice(9, 11)}`;
+  }
+  
+  return snils;
+};
+
+// Функция для форматирования КИГ при экспорте
+const formatKigDisplay = (kig) => {
+  if (!kig) return '-';
+  
+  // Если КИГ уже отформатирован (содержит пробел), возвращаем как есть
+  if (kig.includes(' ')) {
+    return kig;
+  }
+  
+  // Убираем все символы кроме букв и цифр
+  const kigClean = kig.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  
+  // Форматируем: АА 1234567
+  if (kigClean.length === 9) {
+    return `${kigClean.slice(0, 2)} ${kigClean.slice(2)}`;
+  }
+  
+  return kig;
+};
+
 const ExportToExcelModal = ({ visible, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [constructionSites, setConstructionSites] = useState([]);
@@ -130,10 +170,10 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
         return {
           '№': index + 1,
           'Ф.И.О.': `${emp.lastName} ${emp.firstName} ${emp.middleName || ''}`,
-          'КИГ': emp.kig || '-',
+          'КИГ': formatKigDisplay(emp.kig),
           'Гражданство': emp.citizenship?.name || '-',
           'Дата рождения': emp.birthDate ? dayjs(emp.birthDate).format('DD.MM.YYYY') : '-',
-          'СНИЛС': emp.snils || '-',
+          'СНИЛС': formatSnilsDisplay(emp.snils),
           'Должность': emp.position || '-',
           'ИНН сотрудника': emp.inn || '-',
           'Организация': mapping?.counterparty?.name || '-',

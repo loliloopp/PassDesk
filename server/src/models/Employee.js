@@ -82,8 +82,9 @@ Employee.init(
         if (!value || value.trim() === '') {
           return;
         }
-        if (!/^\d{3}-\d{3}-\d{3}\s\d{2}$/.test(value)) {
-          throw new Error('СНИЛС должен быть в формате XXX-XXX-XXX XX');
+        // СНИЛС должен содержать только 11 цифр
+        if (!/^\d{11}$/.test(value)) {
+          throw new Error('СНИЛС должен содержать 11 цифр');
         }
       }
     },
@@ -94,6 +95,18 @@ Employee.init(
     allowNull: true,
     unique: true,
     field: 'kig',
+    validate: {
+      isValidKig(value) {
+        // Пропускаем пустые значения (null, undefined, пустая строка)
+        if (!value || value.trim() === '') {
+          return;
+        }
+        // КИГ должен быть в формате: 2 латинские буквы + 7 цифр (без пробела)
+        if (!/^[A-Z]{2}\d{7}$/.test(value)) {
+          throw new Error('КИГ должен быть в формате АА1234567 (2 латинские буквы + 7 цифр)');
+        }
+      }
+    },
     comment: 'КИГ (Карта иностранного гражданина) (уникальный)'
   },
     passportNumber: {
@@ -154,7 +167,19 @@ Employee.init(
       }
     },
     phone: {
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
+      validate: {
+        isValidPhone(value) {
+          // Пропускаем пустые значения (null, undefined, пустая строка)
+          if (!value || value.trim() === '') {
+            return;
+          }
+          // Телефон должен быть в формате +79101234567
+          if (!/^\+\d{11}$/.test(value)) {
+            throw new Error('Телефон должен быть в формате +79101234567');
+          }
+        }
+      }
     },
     notes: {
       type: DataTypes.TEXT

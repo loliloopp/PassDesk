@@ -25,6 +25,46 @@ const formatPhoneDisplay = (phone) => {
   return phone; // Возвращаем как есть, если формат не подходит
 };
 
+// Функция для форматирования СНИЛС при отображении
+const formatSnilsDisplay = (snils) => {
+  if (!snils) return '-';
+  
+  // Если СНИЛС уже отформатирован, возвращаем как есть
+  if (snils.includes('-')) {
+    return snils;
+  }
+  
+  // Убираем все символы кроме цифр
+  const snilsNumber = snils.replace(/[^\d]/g, '');
+  
+  // Форматируем: 123-456-789 00
+  if (snilsNumber.length === 11) {
+    return `${snilsNumber.slice(0, 3)}-${snilsNumber.slice(3, 6)}-${snilsNumber.slice(6, 9)} ${snilsNumber.slice(9, 11)}`;
+  }
+  
+  return snils; // Возвращаем как есть, если формат не подходит
+};
+
+// Функция для форматирования КИГ при отображении
+const formatKigDisplay = (kig) => {
+  if (!kig) return '-';
+  
+  // Если КИГ уже отформатирован (содержит пробел), возвращаем как есть
+  if (kig.includes(' ')) {
+    return kig;
+  }
+  
+  // Убираем все символы кроме букв и цифр
+  const kigClean = kig.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  
+  // Форматируем: АА 1234567
+  if (kigClean.length === 9) {
+    return `${kigClean.slice(0, 2)} ${kigClean.slice(2)}`;
+  }
+  
+  return kig; // Возвращаем как есть, если формат не подходит
+};
+
 const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
   if (!employee) return null;
 
@@ -107,11 +147,11 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
               {employee.inn || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="СНИЛС" span={1}>
-              {employee.snils || '-'}
+              {formatSnilsDisplay(employee.snils)}
             </Descriptions.Item>
             {requiresPatent && (
               <Descriptions.Item label="КИГ" span={1}>
-                {employee.kig || '-'}
+                {formatKigDisplay(employee.kig)}
               </Descriptions.Item>
             )}
             <Descriptions.Item label="№ паспорта" span={1}>

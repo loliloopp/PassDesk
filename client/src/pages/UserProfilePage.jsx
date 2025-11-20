@@ -60,6 +60,38 @@ const formatDateInput = (value) => {
   return result;
 };
 
+// Маска для телефона: форматирует ввод в +7 (123) 456-78-90
+const formatPhoneNumber = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр
+  const phoneNumber = value.replace(/[^\d]/g, '');
+  
+  // Ограничиваем длину до 11 цифр
+  const phoneNumberLength = phoneNumber.length;
+  
+  // Если число начинается с 8, заменяем на 7
+  let formattedNumber = phoneNumber;
+  if (phoneNumber.startsWith('8')) {
+    formattedNumber = '7' + phoneNumber.slice(1);
+  }
+  
+  // Форматируем: +7 (123) 456-78-90
+  if (phoneNumberLength < 2) {
+    return formattedNumber;
+  }
+  if (phoneNumberLength < 5) {
+    return `+7 (${formattedNumber.slice(1)}`;
+  }
+  if (phoneNumberLength < 8) {
+    return `+7 (${formattedNumber.slice(1, 4)}) ${formattedNumber.slice(4)}`;
+  }
+  if (phoneNumberLength < 10) {
+    return `+7 (${formattedNumber.slice(1, 4)}) ${formattedNumber.slice(4, 7)}-${formattedNumber.slice(7)}`;
+  }
+  return `+7 (${formattedNumber.slice(1, 4)}) ${formattedNumber.slice(4, 7)}-${formattedNumber.slice(7, 9)}-${formattedNumber.slice(9, 11)}`;
+};
+
 // Маска для СНИЛС: форматирует ввод в 123-456-789 00
 const formatSnils = (value) => {
   if (!value) return value;
@@ -82,18 +114,18 @@ const formatSnils = (value) => {
   return `${snils.slice(0, 3)}-${snils.slice(3, 6)}-${snils.slice(6, 9)} ${snils.slice(9, 11)}`;
 };
 
-// Маска для КИГ: форматирует ввод в АА 1234567
+// Маска для КИГ: форматирует ввод в АА 1234567 (только латинские буквы)
 const formatKig = (value) => {
   if (!value) return value;
   
   // Преобразуем в верхний регистр
   let kig = value.toUpperCase();
   
-  // Убираем все символы кроме букв и цифр
-  kig = kig.replace(/[^A-ZА-Я0-9]/g, '');
+  // Убираем все символы кроме латинских букв и цифр
+  kig = kig.replace(/[^A-Z0-9]/g, '');
   
   // Разделяем на буквы и цифры
-  const letters = kig.replace(/[^A-ZА-Я]/g, '');
+  const letters = kig.replace(/[^A-Z]/g, '');
   const numbers = kig.replace(/[^0-9]/g, '');
   
   // Ограничиваем: 2 буквы + 7 цифр
@@ -181,7 +213,8 @@ const UserProfilePage = () => {
           birthDate: formatDate(data.employee.birthDate),
           passportDate: formatDate(data.employee.passportDate),
           patentIssueDate: formatDate(data.employee.patentIssueDate),
-          // Форматируем ИНН, СНИЛС и КИГ
+          // Форматируем телефон, ИНН, СНИЛС и КИГ
+          phone: data.employee.phone ? formatPhoneNumber(data.employee.phone) : '',
           inn: data.employee.inn ? formatInn(data.employee.inn) : '',
           snils: data.employee.snils ? formatSnils(data.employee.snils) : '',
           kig: data.employee.kig ? formatKig(data.employee.kig) : '',
@@ -289,10 +322,13 @@ const UserProfilePage = () => {
         birthDate: parseDate(values.birthDate),
         passportDate: parseDate(values.passportDate),
         patentIssueDate: parseDate(values.patentIssueDate),
-        // Убираем дефисы и пробелы из ИНН, СНИЛС, КИГ перед отправкой
+        // Убираем форматирование телефона и добавляем + в начало
+        phone: values.phone ? `+${values.phone.replace(/[^\d]/g, '')}` : null,
+        // Убираем дефисы и пробелы из ИНН, СНИЛС перед отправкой
         inn: values.inn ? values.inn.replace(/[^\d]/g, '') : null,
         snils: values.snils ? values.snils.replace(/[^\d]/g, '') : null,
-        kig: values.kig ? values.kig.replace(/[^A-ZА-Я0-9]/g, '') : null,
+        // Убираем только пробелы из КИГ (АА 1234567 → АА1234567)
+        kig: values.kig ? values.kig.replace(/\s/g, '') : null,
       };
 
       const { data } = await userProfileService.updateMyProfile(formattedValues);
@@ -659,7 +695,14 @@ const UserProfilePage = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="phone" label="Телефон">
-                <Input />
+                <Input 
+                  maxLength={18}
+                  placeholder="+7 (999) 123-45-67"
+                  onChange={(e) => {
+                    const formatted = formatPhoneNumber(e.target.value);
+                    form.setFieldValue('phone', formatted);
+                  }}
+                />
               </Form.Item>
             </Col>
           </Row>

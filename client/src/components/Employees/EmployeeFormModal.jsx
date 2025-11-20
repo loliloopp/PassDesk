@@ -46,9 +46,12 @@ const formatPhoneNumber = (value) => {
 };
 
 // Функция для удаления форматирования телефона перед отправкой
+// Возвращает формат +79101234567
 const normalizePhoneNumber = (value) => {
   if (!value) return value;
-  return value.replace(/[^\d]/g, '');
+  const digits = value.replace(/[^\d]/g, '');
+  // Добавляем + в начало если есть цифры
+  return digits ? `+${digits}` : '';
 };
 
 // Маска для СНИЛС: форматирует ввод в 123-456-789 00
@@ -73,18 +76,18 @@ const formatSnils = (value) => {
   return `${snils.slice(0, 3)}-${snils.slice(3, 6)}-${snils.slice(6, 9)} ${snils.slice(9, 11)}`;
 };
 
-// Маска для КИГ: форматирует ввод в АА 1234567
+// Маска для КИГ: форматирует ввод в АА 1234567 (только латинские буквы)
 const formatKig = (value) => {
   if (!value) return value;
   
   // Преобразуем в верхний регистр
   let kig = value.toUpperCase();
   
-  // Убираем все символы кроме букв и цифр
-  kig = kig.replace(/[^A-ZА-Я0-9]/g, '');
+  // Убираем все символы кроме латинских букв и цифр
+  kig = kig.replace(/[^A-Z0-9]/g, '');
   
   // Разделяем на буквы и цифры
-  const letters = kig.replace(/[^A-ZА-Я]/g, '');
+  const letters = kig.replace(/[^A-Z]/g, '');
   const numbers = kig.replace(/[^0-9]/g, '');
   
   // Ограничиваем: 2 буквы + 7 цифр
@@ -99,6 +102,13 @@ const formatKig = (value) => {
     return limitedLetters;
   }
   return `${limitedLetters} ${limitedNumbers}`;
+};
+
+// Функция для удаления форматирования КИГ перед отправкой
+// Возвращает формат АА1234567 (без пробела)
+const normalizeKig = (value) => {
+  if (!value) return value;
+  return value.replace(/\s/g, '');
 };
 
 // Маска для ИНН: форматирует ввод в XXXX-XXXXX-X (10 цифр) или XXXX-XXXXXX-XX (12 цифр)
@@ -461,8 +471,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       
       const formattedValues = {};
       Object.keys(values).forEach(key => {
-        // Пропускаем чекбоксы статусов - они не сохраняются напрямую
-        if (key === 'isFired' || key === 'isInactive') {
+        // Пропускаем чекбоксы статусов и constructionSiteId - они не сохраняются при обновлении сотрудника
+        if (key === 'isFired' || key === 'isInactive' || key === 'constructionSiteId') {
           return;
         }
         
@@ -472,8 +482,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
           formattedValues[key] = value ? value.format('YYYY-MM-DD') : null;
         } else if (key === 'phone') {
-          // Убираем форматирование телефона (оставляем только цифры)
+          // Убираем форматирование телефона и добавляем + в начало
           formattedValues[key] = normalizePhoneNumber(value);
+        } else if (key === 'kig') {
+          // Убираем пробел из КИГ (АА 1234567 → АА1234567)
+          formattedValues[key] = normalizeKig(value);
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
@@ -530,8 +543,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       
       const formattedValues = {};
       Object.keys(values).forEach(key => {
-        // Пропускаем чекбоксы статусов - они не сохраняются напрямую
-        if (key === 'isFired' || key === 'isInactive') {
+        // Пропускаем чекбоксы статусов и constructionSiteId - они не сохраняются при обновлении сотрудника
+        if (key === 'isFired' || key === 'isInactive' || key === 'constructionSiteId') {
           return;
         }
         
@@ -541,8 +554,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
           formattedValues[key] = value ? value.format('YYYY-MM-DD') : null;
         } else if (key === 'phone') {
-          // Убираем форматирование телефона (оставляем только цифры)
+          // Убираем форматирование телефона и добавляем + в начало
           formattedValues[key] = normalizePhoneNumber(value);
+        } else if (key === 'kig') {
+          // Убираем пробел из КИГ (АА 1234567 → АА1234567)
+          formattedValues[key] = normalizeKig(value);
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
@@ -909,8 +925,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     rules={[
                       { required: true, message: 'Введите КИГ' },
                       {
-                        pattern: /^[A-ZА-Я]{2}\s\d{7}$/,
-                        message: 'КИГ должен быть в формате АА 1234567'
+                        pattern: /^[A-Z]{2}\s\d{7}$/,
+                        message: 'КИГ должен быть в формате АА 1234567 (латинские буквы)'
                       }
                     ]}
                     normalize={(value) => {
