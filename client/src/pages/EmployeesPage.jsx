@@ -40,7 +40,7 @@ import dayjs from 'dayjs';
 const { Title } = Typography;
 const DATE_FORMAT = 'DD.MM.YYYY';
 
-// CSS для чередующихся цветов строк
+// CSS для чередующихся цветов строк и переноса текста в Select
 const tableStyles = `
   .table-row-light {
     background-color: #ffffff;
@@ -51,6 +51,20 @@ const tableStyles = `
   .table-row-light:hover,
   .table-row-dark:hover {
     background-color: #e6f7ff !important;
+  }
+  
+  /* Перенос текста в Select для столбца Подразделение */
+  .department-select .ant-select-selection-item {
+    white-space: normal !important;
+    word-break: keep-all !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.4 !important;
+    height: auto !important;
+  }
+  
+  .department-select .ant-select-selector {
+    height: auto !important;
+    padding: 4px 11px !important;
   }
 `;
 
@@ -251,8 +265,18 @@ const EmployeesPage = () => {
       title: 'Должность',
       dataIndex: ['position', 'name'], // Путь к вложенному значению
       key: 'position',
-      width: 120,
-      ellipsis: true,
+      width: 156, // Увеличено на 30% (120 * 1.3)
+      ellipsis: false,
+      render: (name) => (
+        <div style={{ 
+          whiteSpace: 'normal', 
+          wordBreak: 'keep-all', 
+          overflowWrap: 'break-word',
+          lineHeight: '1.4'
+        }}>
+          {name || '-'}
+        </div>
+      ),
       sorter: (a, b) => {
         const aPos = a.position?.name || '';
         const bPos = b.position?.name || '';
@@ -276,6 +300,8 @@ const EmployeesPage = () => {
             value={currentDepartmentId || undefined}
             placeholder="Выберите подразделение"
             style={{ width: '100%' }}
+            className="department-select"
+            popupMatchSelectWidth={false}
             onChange={(value) => handleDepartmentChange(record.id, value)}
             allowClear
             showSearch
@@ -307,13 +333,24 @@ const EmployeesPage = () => {
     ...(canExport ? [{
       title: 'Контрагент',
       key: 'counterparty',
-      ellipsis: true,
+      width: 168, // Уменьшено на 30% (240 * 0.7)
+      ellipsis: false,
       render: (_, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
         if (mappings.length === 0) return '-';
         // Показываем все уникальные контрагенты
         const counterparties = [...new Set(mappings.map(m => m.counterparty?.name).filter(Boolean))];
-        return counterparties.join(', ') || '-';
+        const text = counterparties.join(', ') || '-';
+        return (
+          <div style={{ 
+            whiteSpace: 'normal', 
+            wordBreak: 'keep-all', 
+            overflowWrap: 'break-word',
+            lineHeight: '1.4'
+          }}>
+            {text}
+          </div>
+        );
       },
       sorter: (a, b) => {
         const aCounterparty = a.employeeCounterpartyMappings?.[0]?.counterparty?.name || '';
