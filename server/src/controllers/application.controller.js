@@ -413,6 +413,17 @@ export const updateApplication = async (req, res) => {
         });
       }
       
+      // Получаем старый список сотрудников из заявки
+      const oldEmployeeMappings = await ApplicationEmployeeMapping.findAll({
+        where: { applicationId: id },
+        attributes: ['employeeId'],
+        transaction
+      });
+      const oldEmployeeIds = oldEmployeeMappings.map(m => m.employeeId);
+      
+      // Определяем сотрудников, у которых были сняты чекбоксы
+      const removedEmployeeIds = oldEmployeeIds.filter(empId => !employeeIds.includes(empId));
+      
       // Удаляем старые связи
       await ApplicationEmployeeMapping.destroy({
         where: { applicationId: id },
@@ -427,7 +438,7 @@ export const updateApplication = async (req, res) => {
       
       await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
       
-      // Обновляем/создаем записи в employee_counterparty_mapping для каждого сотрудника
+      // Обновляем/создаем записи в employee_counterparty_mapping для добавленных сотрудников
       for (const employeeId of employeeIds) {
         // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
         let mapping = await EmployeeCounterpartyMapping.findOne({
@@ -451,6 +462,18 @@ export const updateApplication = async (req, res) => {
             departmentId: null
           }, { transaction });
         }
+      }
+      
+      // Удаляем записи из employee_counterparty_mapping для сотрудников, у которых сняли чекбоксы
+      for (const employeeId of removedEmployeeIds) {
+        await EmployeeCounterpartyMapping.destroy({
+          where: {
+            employeeId: employeeId,
+            counterpartyId: application.counterpartyId,
+            constructionSiteId: application.constructionSiteId
+          },
+          transaction
+        });
       }
     }
     

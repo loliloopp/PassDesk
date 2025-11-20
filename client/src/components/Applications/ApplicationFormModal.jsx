@@ -80,20 +80,26 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     setLoading(true);
     try {
       const { data } = await applicationService.getById(editingId);
+      
+      // Для режима редактирования: загружаем только сотрудников из заявки
+      const applicationEmployees = data.data.employees || [];
+      const employeeIds = applicationEmployees.map(emp => emp.id);
+      
       form.setFieldsValue({
         counterpartyId: data.data.counterpartyId,
         constructionSiteId: data.data.constructionSiteId,
         subcontractId: data.data.subcontractId,
-        employeeIds: data.data.employeeIds,
-        status: data.data.status,
+        employeeIds: employeeIds,
         notes: data.data.notes,
       });
       setSelectedCounterparty(data.data.counterpartyId);
       setSelectedSite(data.data.constructionSiteId);
       
-      // Загружаем договоры и сотрудников
+      // В режиме редактирования отображаем только сотрудников из заявки
+      setEmployees(applicationEmployees);
+      
+      // Загружаем договоры
       await fetchContracts(data.data.counterpartyId, data.data.constructionSiteId);
-      await fetchEmployees(data.data.counterpartyId);
     } catch (error) {
       message.error('Ошибка загрузки заявки');
     } finally {
@@ -243,21 +249,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
                 </Checkbox.Group>
               </Form.Item>
             </>
-          )}
-
-          {editingId && (
-            <Form.Item
-              name="status"
-              label="Статус"
-              rules={[{ required: true, message: 'Выберите статус' }]}
-            >
-              <Select>
-                <Select.Option value="draft">Черновик</Select.Option>
-                <Select.Option value="submitted">Подана</Select.Option>
-                <Select.Option value="approved">Одобрена</Select.Option>
-                <Select.Option value="rejected">Отклонена</Select.Option>
-              </Select>
-            </Form.Item>
           )}
 
           <Form.Item name="notes" label="Примечания">
