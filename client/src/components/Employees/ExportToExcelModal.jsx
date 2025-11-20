@@ -6,48 +6,9 @@ import { constructionSiteService } from '../../services/constructionSiteService'
 import { counterpartyService } from '../../services/counterpartyService';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
+import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
 
 const { Option } = Select;
-
-// Функция для форматирования СНИЛС при экспорте
-const formatSnilsDisplay = (snils) => {
-  if (!snils) return '-';
-  
-  // Если СНИЛС уже отформатирован, возвращаем как есть
-  if (snils.includes('-')) {
-    return snils;
-  }
-  
-  // Убираем все символы кроме цифр
-  const snilsNumber = snils.replace(/[^\d]/g, '');
-  
-  // Форматируем: 123-456-789 00
-  if (snilsNumber.length === 11) {
-    return `${snilsNumber.slice(0, 3)}-${snilsNumber.slice(3, 6)}-${snilsNumber.slice(6, 9)} ${snilsNumber.slice(9, 11)}`;
-  }
-  
-  return snils;
-};
-
-// Функция для форматирования КИГ при экспорте
-const formatKigDisplay = (kig) => {
-  if (!kig) return '-';
-  
-  // Если КИГ уже отформатирован (содержит пробел), возвращаем как есть
-  if (kig.includes(' ')) {
-    return kig;
-  }
-  
-  // Убираем все символы кроме букв и цифр
-  const kigClean = kig.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-  
-  // Форматируем: АА 1234567
-  if (kigClean.length === 9) {
-    return `${kigClean.slice(0, 2)} ${kigClean.slice(2)}`;
-  }
-  
-  return kig;
-};
 
 const ExportToExcelModal = ({ visible, onCancel }) => {
   const [loading, setLoading] = useState(false);
@@ -170,12 +131,12 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
         return {
           '№': index + 1,
           'Ф.И.О.': `${emp.lastName} ${emp.firstName} ${emp.middleName || ''}`,
-          'КИГ': formatKigDisplay(emp.kig),
+          'КИГ': formatKig(emp.kig),
           'Гражданство': emp.citizenship?.name || '-',
           'Дата рождения': emp.birthDate ? dayjs(emp.birthDate).format('DD.MM.YYYY') : '-',
-          'СНИЛС': formatSnilsDisplay(emp.snils),
+          'СНИЛС': formatSnils(emp.snils),
           'Должность': emp.position?.name || '-',
-          'ИНН сотрудника': emp.inn || '-',
+          'ИНН сотрудника': formatInn(emp.inn),
           'Организация': mapping?.counterparty?.name || '-',
           'ИНН организации': mapping?.counterparty?.inn || '-',
           'КПП организации': mapping?.counterparty?.kpp || '-',
@@ -251,7 +212,7 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
       render: (_, record) => `${record.lastName} ${record.firstName} ${record.middleName || ''}`,
       ellipsis: true,
     },
-    { title: 'КИГ', dataIndex: 'kig', key: 'kig', ellipsis: true },
+    { title: 'КИГ', dataIndex: 'kig', key: 'kig', ellipsis: true, render: (value) => formatKig(value) },
     { title: 'Гражданство', dataIndex: ['citizenship', 'name'], key: 'citizenship', ellipsis: true },
     {
       title: 'Дата рождения',
@@ -260,9 +221,9 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
       render: (date) => (date ? dayjs(date).format('DD.MM.YYYY') : '-'),
       ellipsis: true,
     },
-    { title: 'СНИЛС', dataIndex: 'snils', key: 'snils', ellipsis: true },
+    { title: 'СНИЛС', dataIndex: 'snils', key: 'snils', ellipsis: true, render: (value) => formatSnils(value) },
     { title: 'Должность', dataIndex: ['position', 'name'], key: 'position', ellipsis: true },
-    { title: 'ИНН сотрудника', dataIndex: 'inn', key: 'inn', ellipsis: true },
+    { title: 'ИНН сотрудника', dataIndex: 'inn', key: 'inn', ellipsis: true, render: (value) => formatInn(value) },
     {
       title: 'Организация',
       key: 'organization',

@@ -2,68 +2,16 @@ import { Modal, Descriptions, Tag, Button, Tabs, Row, Col, Space, Checkbox } fro
 import { EditOutlined } from '@ant-design/icons';
 import EmployeeFileUpload from './EmployeeFileUpload';
 import dayjs from 'dayjs';
+import { 
+  formatPhone, 
+  formatSnils, 
+  formatKig, 
+  formatInn, 
+  formatPatentNumber, 
+  formatBlankNumber 
+} from '../../utils/formatters';
 
 const DATE_FORMAT = 'DD.MM.YYYY';
-
-// Функция для форматирования телефона при отображении
-const formatPhoneDisplay = (phone) => {
-  if (!phone) return '-';
-  
-  // Если телефон уже отформатирован, возвращаем как есть
-  if (phone.includes('(') && phone.includes(')')) {
-    return phone;
-  }
-  
-  // Убираем все символы кроме цифр
-  const phoneNumber = phone.replace(/[^\d]/g, '');
-  
-  // Форматируем: +7 (123) 456-78-90
-  if (phoneNumber.length === 11 && phoneNumber.startsWith('7')) {
-    return `+7 (${phoneNumber.slice(1, 4)}) ${phoneNumber.slice(4, 7)}-${phoneNumber.slice(7, 9)}-${phoneNumber.slice(9, 11)}`;
-  }
-  
-  return phone; // Возвращаем как есть, если формат не подходит
-};
-
-// Функция для форматирования СНИЛС при отображении
-const formatSnilsDisplay = (snils) => {
-  if (!snils) return '-';
-  
-  // Если СНИЛС уже отформатирован, возвращаем как есть
-  if (snils.includes('-')) {
-    return snils;
-  }
-  
-  // Убираем все символы кроме цифр
-  const snilsNumber = snils.replace(/[^\d]/g, '');
-  
-  // Форматируем: 123-456-789 00
-  if (snilsNumber.length === 11) {
-    return `${snilsNumber.slice(0, 3)}-${snilsNumber.slice(3, 6)}-${snilsNumber.slice(6, 9)} ${snilsNumber.slice(9, 11)}`;
-  }
-  
-  return snils; // Возвращаем как есть, если формат не подходит
-};
-
-// Функция для форматирования КИГ при отображении
-const formatKigDisplay = (kig) => {
-  if (!kig) return '-';
-  
-  // Если КИГ уже отформатирован (содержит пробел), возвращаем как есть
-  if (kig.includes(' ')) {
-    return kig;
-  }
-  
-  // Убираем все символы кроме букв и цифр
-  const kigClean = kig.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-  
-  // Форматируем: АА 1234567
-  if (kigClean.length === 9) {
-    return `${kigClean.slice(0, 2)} ${kigClean.slice(2)}`;
-  }
-  
-  return kig; // Возвращаем как есть, если формат не подходит
-};
 
 const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
   if (!employee) return null;
@@ -132,7 +80,7 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
               {employee.email || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Телефон" span={1}>
-              {formatPhoneDisplay(employee.phone)}
+              {formatPhone(employee.phone)}
             </Descriptions.Item>
             <Descriptions.Item label="Примечания" span={1}>
               {employee.notes || '-'}
@@ -144,14 +92,14 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
         <Tabs.TabPane tab="Документы" key="2">
           <Descriptions bordered column={3} size="small">
             <Descriptions.Item label="ИНН" span={1}>
-              {employee.inn || '-'}
+              {formatInn(employee.inn)}
             </Descriptions.Item>
             <Descriptions.Item label="СНИЛС" span={1}>
-              {formatSnilsDisplay(employee.snils)}
+              {formatSnils(employee.snils)}
             </Descriptions.Item>
             {requiresPatent && (
               <Descriptions.Item label="КИГ" span={1}>
-                {formatKigDisplay(employee.kig)}
+                {formatKig(employee.kig)}
               </Descriptions.Item>
             )}
             <Descriptions.Item label="№ паспорта" span={1}>
@@ -171,13 +119,13 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
           <Tabs.TabPane tab="Патент" key="3">
             <Descriptions bordered column={3} size="small">
               <Descriptions.Item label="Номер патента" span={1}>
-                {employee.patentNumber || '-'}
+                {formatPatentNumber(employee.patentNumber)}
               </Descriptions.Item>
               <Descriptions.Item label="Дата выдачи патента" span={1}>
                 {employee.patentIssueDate ? dayjs(employee.patentIssueDate).format(DATE_FORMAT) : '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Номер бланка" span={1}>
-                {employee.blankNumber || '-'}
+                {formatBlankNumber(employee.blankNumber)}
               </Descriptions.Item>
             </Descriptions>
           </Tabs.TabPane>

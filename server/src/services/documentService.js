@@ -18,6 +18,7 @@ import Position from '../models/Position.js';
 import Counterparty from '../models/Counterparty.js';
 import ConstructionSite from '../models/ConstructionSite.js';
 import Contract from '../models/Contract.js';
+import { formatSnils, formatKig, formatInn, formatPatentNumber, formatBlankNumber } from '../utils/formatters.js';
 
 /**
  * Генерация документа Word для заявки
@@ -469,18 +470,21 @@ function createEmployeesTable(employees) {
       ? new Date(employee.birthDate).toLocaleDateString('ru-RU')
       : '-';
 
-    // Паспортные данные
+    // Паспортные данные (с форматированным СНИЛС, КИГ и ИНН)
     const passportData = [
       employee.passportNumber || '-',
       employee.passportDate ? new Date(employee.passportDate).toLocaleDateString('ru-RU') : '-',
-      employee.passportIssuer || '-'
+      employee.passportIssuer || '-',
+      `СНИЛС: ${formatSnils(employee.snils)}`,
+      `КИГ: ${formatKig(employee.kig)}`,
+      `ИНН: ${formatInn(employee.inn)}`
     ].join('\n');
 
-    // Патент
+    // Патент (с форматированными номером патента и номером бланка)
     const patentData = [
-      employee.patentNumber || '-',
+      `№ патента: ${formatPatentNumber(employee.patentNumber)}`,
       employee.patentIssueDate ? new Date(employee.patentIssueDate).toLocaleDateString('ru-RU') : '-',
-      employee.blankNumber || '-'
+      `№ бланка: ${formatBlankNumber(employee.blankNumber)}`
     ].join('\n');
 
     return new TableRow({

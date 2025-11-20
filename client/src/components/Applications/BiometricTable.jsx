@@ -1,6 +1,7 @@
 import { Table } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect } from 'react';
+import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
 
 const BiometricTable = ({ employees, applicationNumber, onExport }) => {
   const columns = [
@@ -22,7 +23,7 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       dataIndex: 'kig',
       key: 'kig',
       width: 120,
-      render: (value) => value || '-',
+      render: (value) => formatKig(value),
     },
     {
       title: 'Гражданство',
@@ -42,7 +43,7 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       dataIndex: 'snils',
       key: 'snils',
       width: 150,
-      render: (value) => value || '-',
+      render: (value) => formatSnils(value),
     },
     {
       title: 'Должность',
@@ -55,7 +56,7 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       dataIndex: 'inn',
       key: 'inn',
       width: 130,
-      render: (value) => value || '-',
+      render: (value) => formatInn(value),
     },
   ];
 
