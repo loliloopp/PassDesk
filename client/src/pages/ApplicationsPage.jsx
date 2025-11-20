@@ -108,7 +108,7 @@ const ApplicationsPage = () => {
       ellipsis: true,
     },
     {
-      title: 'Сотрудников',
+      title: 'Число сотрудников',
       dataIndex: 'employees',
       key: 'employees',
       render: (employees) => (employees && employees.length) || 0,

@@ -252,7 +252,42 @@ function createHeader(orgData) {
     );
   }
   
-  return paragraphs;
+  // Создаем таблицу с рамкой для реквизитов
+  const borderStyle = {
+    style: BorderStyle.SINGLE,
+    size: 6,
+    color: '000000'
+  };
+
+  const headerTable = new Table({
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            children: paragraphs,
+            borders: {
+              top: borderStyle,
+              bottom: borderStyle,
+              left: borderStyle,
+              right: borderStyle
+            },
+            margins: {
+              top: 100,
+              bottom: 100,
+              left: 100,
+              right: 100
+            }
+          })
+        ]
+      })
+    ],
+    width: {
+      size: 100,
+      type: WidthType.PERCENTAGE
+    }
+  });
+  
+  return [headerTable];
 }
 
 /**
@@ -264,10 +299,11 @@ function createExportDate() {
   
   return [
     new Paragraph({
+      alignment: AlignmentType.RIGHT,
       spacing: { after: 200 },
       children: [
         new TextRun({
-          text: `Число: ${dateStr}`,
+          text: dateStr,
           size: 22
         })
       ]
