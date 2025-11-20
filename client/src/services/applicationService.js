@@ -29,7 +29,25 @@ const applicationService = {
   getEmployees: (counterpartyId) => 
     api.get('/applications/helpers/employees', {
       params: { counterpartyId }
-    })
+    }),
+
+  // Работа с файлами заявки
+  uploadFiles: (applicationId, formData) =>
+    api.post(`/applications/${applicationId}/files`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+
+  getFiles: (applicationId) =>
+    api.get(`/applications/${applicationId}/files`),
+
+  deleteFile: (applicationId, fileId) =>
+    api.delete(`/applications/${applicationId}/files/${fileId}`),
+
+  getFileDownloadLink: (applicationId, fileId) =>
+    api.get(`/applications/${applicationId}/files/${fileId}/download`),
+
+  getFileViewLink: (applicationId, fileId) =>
+    api.get(`/applications/${applicationId}/files/${fileId}/view`)
 };
 
 export { applicationService };

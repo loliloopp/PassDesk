@@ -10,11 +10,14 @@ import {
   Typography,
   Divider,
   Input,
+  Collapse,
 } from 'antd';
+import { FileTextOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { counterpartyService } from '../../services/counterpartyService';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { useAuthStore } from '../../store/authStore';
+import ApplicationFileUpload from './ApplicationFileUpload';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -218,6 +221,34 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
                 ))}
               </Select>
             </Form.Item>
+          )}
+
+          {editingId && (
+            <>
+              <Divider />
+              
+              <Collapse
+                ghost
+                expandIconPosition="end"
+                items={[
+                  {
+                    key: 'files',
+                    label: (
+                      <Space>
+                        <FileTextOutlined />
+                        <span style={{ fontWeight: 500 }}>Скан заявки</span>
+                      </Space>
+                    ),
+                    children: (
+                      <ApplicationFileUpload 
+                        applicationId={editingId}
+                        readonly={false}
+                      />
+                    )
+                  }
+                ]}
+              />
+            </>
           )}
 
           <Divider />

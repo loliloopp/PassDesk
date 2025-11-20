@@ -1,0 +1,297 @@
+import { useState, useEffect } from 'react';
+import { Upload, Button, List, Popconfirm, message, Space, Tooltip, Modal } from 'antd';
+import {
+  UploadOutlined,
+  DeleteOutlined,
+  FileOutlined,
+  EyeOutlined,
+  FilePdfOutlined,
+  FileImageOutlined,
+  DownloadOutlined
+} from '@ant-design/icons';
+import { applicationService } from '../../services/applicationService';
+
+const ApplicationFileUpload = ({ applicationId, readonly = false }) => {
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
+
+  useEffect(() => {
+    if (applicationId) {
+      fetchFiles();
+    }
+  }, [applicationId]);
+
+  const fetchFiles = async () => {
+    setLoading(true);
+    try {
+      const response = await applicationService.getFiles(applicationId);
+      setFiles(response.data.data || []);
+    } catch (error) {
+      console.error('Error loading files:', error);
+      message.error('Ошибка загрузки списка файлов');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (fileList.length === 0) {
+      message.warning('Выберите файлы для загрузки');
+      return;
+    }
+
+    const formData = new FormData();
+    fileList.forEach(fileObj => {
+      const actualFile = fileObj.originFileObj || fileObj;
+      formData.append('files', actualFile);
+    });
+
+    setUploading(true);
+    try {
+      await applicationService.uploadFiles(applicationId, formData);
+      message.success('Файлы успешно загружены');
+      setFileList([]);
+      fetchFiles();
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      message.error(error.response?.data?.message || 'Ошибка загрузки файлов');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (fileId) => {
+    try {
+      await applicationService.deleteFile(applicationId, fileId);
+      message.success('Файл удален');
+      fetchFiles();
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      message.error('Ошибка удаления файла');
+    }
+  };
+
+  const handleDownload = async (file) => {
+    try {
+      const response = await applicationService.getFileDownloadLink(applicationId, file.id);
+      if (response.data.data.downloadUrl) {
+        window.open(response.data.data.downloadUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error getting download link:', error);
+      message.error('Ошибка получения ссылки для скачивания');
+    }
+  };
+
+  const handleView = async (file) => {
+    // Для изображений показываем превью в модальном окне
+    if (file.mimeType.startsWith('image/')) {
+      try {
+        const response = await applicationService.getFileViewLink(applicationId, file.id);
+        if (response.data.data.viewUrl) {
+          setPreviewFile({
+            url: response.data.data.viewUrl,
+            name: file.originalName
+          });
+          setPreviewVisible(true);
+        }
+      } catch (error) {
+        console.error('Error getting view link:', error);
+        message.error('Ошибка получения ссылки для просмотра');
+      }
+    } else {
+      // Для PDF открываем в новой вкладке
+      try {
+        const response = await applicationService.getFileViewLink(applicationId, file.id);
+        if (response.data.data.viewUrl) {
+          window.open(response.data.data.viewUrl, '_blank');
+        }
+      } catch (error) {
+        console.error('Error getting view link:', error);
+        message.error('Ошибка получения ссылки для просмотра');
+      }
+    }
+  };
+
+  const getFileIcon = (mimeType) => {
+    if (mimeType.startsWith('image/')) {
+      return <FileImageOutlined style={{ fontSize: 24, color: '#52c41a' }} />;
+    } else if (mimeType.includes('pdf')) {
+      return <FilePdfOutlined style={{ fontSize: 24, color: '#f5222d' }} />;
+    }
+    return <FileOutlined style={{ fontSize: 24, color: '#8c8c8c' }} />;
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const uploadProps = {
+    multiple: true,
+    accept: '.jpg,.jpeg,.png,.pdf',
+    fileList: fileList,
+    beforeUpload: (file) => {
+      // Проверка размера файла (макс. 10 МБ)
+      const isLt10M = file.size / 1024 / 1024 < 10;
+      if (!isLt10M) {
+        message.error(`${file.name}: размер файла превышает 10 МБ`);
+        return Upload.LIST_IGNORE;
+      }
+
+      // Проверка типа файла
+      const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'application/pdf'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        message.error(`${file.name}: неподдерживаемый тип файла`);
+        return Upload.LIST_IGNORE;
+      }
+
+      return false; // Не загружать автоматически
+    },
+    onChange: (info) => {
+      // Обновляем fileList при изменениях
+      setFileList(info.fileList);
+    },
+    onRemove: (file) => {
+      return true; // Разрешить удаление
+    },
+    showUploadList: true
+  };
+
+  return (
+    <Space direction="vertical" style={{ width: '100%' }} size="large">
+      {!readonly && (
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Upload {...uploadProps}>
+            <Button icon={<UploadOutlined />} disabled={uploading}>
+              Выбрать файлы
+            </Button>
+          </Upload>
+          {fileList.length > 0 && (
+            <Button
+              type="primary"
+              icon={<UploadOutlined />}
+              loading={uploading}
+              onClick={handleUpload}
+            >
+              Загрузить {fileList.length} файл(ов)
+            </Button>
+          )}
+          <div style={{ color: '#8c8c8c', fontSize: '12px' }}>
+            Поддерживаемые форматы: JPG, PNG, PDF (макс. 10 МБ)
+          </div>
+        </Space>
+      )}
+
+      <List
+        loading={loading}
+        dataSource={files}
+        locale={{ emptyText: 'Нет загруженных файлов' }}
+        renderItem={(file) => (
+          <List.Item
+            actions={[
+              <Tooltip key="view" title="Просмотр">
+                <Button
+                  icon={<EyeOutlined />}
+                  size="small"
+                  onClick={() => handleView(file)}
+                />
+              </Tooltip>,
+              <Tooltip key="download" title="Скачать">
+                <Button
+                  icon={<DownloadOutlined />}
+                  size="small"
+                  onClick={() => handleDownload(file)}
+                />
+              </Tooltip>,
+              !readonly && (
+                <Popconfirm
+                  key="delete"
+                  title="Удалить файл?"
+                  description="Это действие нельзя отменить"
+                  onConfirm={() => handleDelete(file.id)}
+                  okText="Удалить"
+                  cancelText="Отмена"
+                >
+                  <Tooltip title="Удалить">
+                    <Button
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      danger
+                    />
+                  </Tooltip>
+                </Popconfirm>
+              )
+            ].filter(Boolean)}
+          >
+            <List.Item.Meta
+              avatar={getFileIcon(file.mimeType)}
+              title={file.fileName}
+              description={
+                <Space split="|">
+                  <span>{formatFileSize(file.fileSize)}</span>
+                  <span>{new Date(file.createdAt).toLocaleDateString('ru-RU')}</span>
+                </Space>
+              }
+            />
+          </List.Item>
+        )}
+      />
+
+      {/* Модальное окно для предпросмотра изображений */}
+      <Modal
+        open={previewVisible}
+        title={previewFile?.name}
+        footer={null}
+        onCancel={() => setPreviewVisible(false)}
+        width={800}
+        centered
+      >
+        {previewFile && (
+          <div style={{ textAlign: 'center' }}>
+            <img
+              src={previewFile.url}
+              alt={previewFile.name}
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '70vh',
+                objectFit: 'contain'
+              }}
+              onError={(e) => {
+                console.error('Error loading image:', previewFile.url);
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'block';
+              }}
+            />
+            <div style={{ display: 'none', padding: '40px', textAlign: 'center' }}>
+              <FileImageOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />
+              <p style={{ marginTop: 16, color: '#8c8c8c' }}>
+                Не удалось загрузить изображение
+              </p>
+              <Button 
+                type="primary" 
+                onClick={() => window.open(previewFile.url, '_blank')}
+              >
+                Открыть в новой вкладке
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </Space>
+  );
+};
+
+export default ApplicationFileUpload;
+

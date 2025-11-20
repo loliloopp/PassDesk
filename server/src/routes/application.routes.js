@@ -9,7 +9,15 @@ import {
   getContractsForApplication,
   getEmployeesForApplication
 } from '../controllers/application.controller.js';
+import {
+  uploadApplicationFiles,
+  getApplicationFiles,
+  deleteApplicationFile,
+  getApplicationFileDownloadLink,
+  getApplicationFileViewLink
+} from '../controllers/applicationFile.controller.js';
 import { authenticate } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -29,6 +37,13 @@ router.post('/:id/copy', copyApplication);
 // Вспомогательные endpoints для формы создания заявки
 router.get('/helpers/contracts', getContractsForApplication);
 router.get('/helpers/employees', getEmployeesForApplication);
+
+// Работа с файлами заявки
+router.post('/:applicationId/files', upload.array('files', 10), uploadApplicationFiles);
+router.get('/:applicationId/files', getApplicationFiles);
+router.delete('/:applicationId/files/:fileId', deleteApplicationFile);
+router.get('/:applicationId/files/:fileId/download', getApplicationFileDownloadLink);
+router.get('/:applicationId/files/:fileId/view', getApplicationFileViewLink);
 
 export default router;
 

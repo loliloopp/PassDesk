@@ -54,7 +54,7 @@ File.init(
       comment: 'Resource ID от Яндекс.Диска'
     },
     entityType: {
-      type: DataTypes.ENUM('employee', 'pass', 'other'),
+      type: DataTypes.ENUM('employee', 'pass', 'application', 'other'),
       field: 'entity_type',
       comment: 'Тип связанной сущности'
     },
@@ -64,10 +64,10 @@ File.init(
       comment: 'ID связанной сущности'
     },
     documentType: {
-      type: DataTypes.ENUM('passport', 'patent_front', 'patent_back', 'biometric_consent', 'other'),
+      type: DataTypes.ENUM('passport', 'patent_front', 'patent_back', 'biometric_consent', 'application_scan', 'other'),
       field: 'document_type',
       allowNull: true,
-      comment: 'Тип документа: passport (Паспорт), patent_front (Лицевая сторона патента), patent_back (Задняя сторона патента), biometric_consent (Согласие на обработку биометрических данных), other (Другое)'
+      comment: 'Тип документа: passport (Паспорт), patent_front (Лицевая сторона патента), patent_back (Задняя сторона патента), biometric_consent (Согласие на обработку биометрических данных), application_scan (Скан заявки), other (Другое)'
     },
     employeeId: {
       type: DataTypes.UUID,
