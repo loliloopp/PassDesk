@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Spin, Typography, Button, Space, message, Card } from 'antd';
+import { Modal, Spin, Typography, Button, Space, Card, App } from 'antd';
 import { FileWordOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { fileService } from '../../services/fileService';
@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 
 const ApplicationViewModal = ({ visible, applicationId, onCancel }) => {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [application, setApplication] = useState(null);
 
