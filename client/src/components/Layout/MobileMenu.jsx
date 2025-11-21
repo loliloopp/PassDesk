@@ -41,7 +41,7 @@ const MobileMenu = () => {
   // Меню для обычных пользователей
   const userMenuItems = [
     {
-      key: '/my-profile',
+      key: '/profile',
       icon: <ProfileOutlined />,
       label: 'Профиль',
     },

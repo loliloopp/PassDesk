@@ -1,34 +1,19 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { Result, Button } from 'antd'
 import { Link } from 'react-router-dom'
-import { useEffect } from 'react'
-import { message } from 'antd'
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, requiresActivation = true }) => {
   const { isAuthenticated, user } = useAuthStore()
-
-  // Проверяем аутентификацию
-  useEffect(() => {
-    if (!isAuthenticated) {
-      console.warn('🚫 ProtectedRoute: User not authenticated, redirecting to login');
-      message.info('Пожалуйста, войдите в систему');
-    }
-  }, [isAuthenticated])
-
-  // Проверяем права доступа
-  useEffect(() => {
-    if (isAuthenticated && allowedRoles && user && !allowedRoles.includes(user?.role)) {
-      console.warn(`🚫 ProtectedRoute: User role "${user.role}" not allowed. Required: [${allowedRoles.join(', ')}]`);
-      message.error({
-        content: `У вас нет доступа к этой странице. Требуется роль: ${allowedRoles.join(' или ')}`,
-        duration: 5
-      });
-    }
-  }, [isAuthenticated, allowedRoles, user])
+  const location = useLocation()
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  // Если пользователь неактивен и страница требует активации - перенаправляем на профиль БЕЗ алертов
+  if (requiresActivation && !user?.isActive && location.pathname !== '/profile') {
+    return <Navigate to="/profile" replace />
   }
 
   // Если указаны разрешенные роли, проверяем роль пользователя
@@ -51,4 +36,5 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 }
 
 export default ProtectedRoute
+
 

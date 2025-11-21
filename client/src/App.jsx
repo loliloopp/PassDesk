@@ -5,6 +5,7 @@ import { antdTheme } from './theme/antd-theme'
 import Layout from './components/Layout/Layout'
 import LoginPage from './pages/LoginPage'
 import BlockedAccountPage from './pages/BlockedAccountPage'
+import ProfilePage from './pages/ProfilePage'
 import EmployeesPage from './pages/employees'
 import PassesPage from './pages/PassesPage'
 import CounterpartiesPage from './pages/CounterpartiesPage'
@@ -34,11 +35,14 @@ function App() {
           <Route path="/blocked" element={<BlockedAccountPage />} />
           <Route path="/debug" element={<DebugPage />} />
           
-          {/* Protected routes */}
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          {/* Protected routes с Layout */}
+          <Route path="/" element={<ProtectedRoute requiresActivation={false}><Layout /></ProtectedRoute>}>
             <Route index element={<RoleBasedRedirect />} />
             
-            {/* Routes for admin and user */}
+            {/* Profile route - доступен всем авторизованным (даже неактивным) */}
+            <Route path="profile" element={<ProfilePage />} />
+            
+            {/* Routes for admin and user - требуют активации */}
             <Route 
               path="employees" 
               element={<ProtectedRoute allowedRoles={['admin', 'user']}><EmployeesPage /></ProtectedRoute>} 
@@ -76,7 +80,7 @@ function App() {
               element={<ProtectedRoute allowedRoles={['admin']}><AdministrationPage /></ProtectedRoute>} 
             />
             
-            {/* Route for regular users */}
+            {/* Route for regular users (employee profile) */}
             <Route path="my-profile" element={<UserProfilePage />} />
           </Route>
 

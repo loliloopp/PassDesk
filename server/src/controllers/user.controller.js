@@ -1,6 +1,7 @@
 import { AppError } from '../middleware/errorHandler.js';
 import { User } from '../models/index.js';
 import { Op } from 'sequelize';
+import { isPasswordAllowed, getForbiddenPasswordMessage } from '../utils/forbiddenPasswords.js';
 
 export const getAllUsers = async (req, res, next) => {
   try {
@@ -189,6 +190,16 @@ export const updatePassword = async (req, res, next) => {
       }
     }
 
+    // Проверяем длину нового пароля
+    if (newPassword.length < 8) {
+      throw new AppError('Новый пароль должен содержать минимум 8 символов', 400);
+    }
+
+    // Проверяем, не является ли новый пароль запрещенным
+    if (!isPasswordAllowed(newPassword)) {
+      throw new AppError(getForbiddenPasswordMessage(), 400);
+    }
+
     // Обновляем пароль
     await user.update({ password: newPassword });
 
@@ -223,6 +234,119 @@ export const toggleUserStatus = async (req, res, next) => {
         ? 'Пользователь активирован'
         : 'Пользователь деактивирован',
       data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Получить профиль текущего пользователя
+ */
+export const getMyProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new AppError('Пользователь не найден', 404);
+    }
+
+    res.json({
+      success: true,
+      data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Обновить профиль текущего пользователя
+ */
+export const updateMyProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { firstName, email } = req.body;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new AppError('Пользователь не найден', 404);
+    }
+
+    // Если обновляется email, проверяем уникальность
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({
+        where: { email },
+      });
+      if (existingUser) {
+        throw new AppError('Пользователь с таким email уже существует', 409);
+      }
+    }
+
+    // Обновляем только разрешенные поля
+    const updateData = {};
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (email !== undefined) updateData.email = email;
+
+    await user.update(updateData);
+
+    res.json({
+      success: true,
+      message: 'Профиль обновлен успешно',
+      data: { user },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Сменить пароль текущего пользователя
+ */
+export const changeMyPassword = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      throw new AppError('Необходимо указать текущий и новый пароль', 400);
+    }
+
+    if (newPassword.length < 8) {
+      throw new AppError('Новый пароль должен содержать минимум 8 символов', 400);
+    }
+
+    // Проверяем, не является ли новый пароль запрещенным
+    if (!isPasswordAllowed(newPassword)) {
+      throw new AppError(getForbiddenPasswordMessage(), 400);
+    }
+
+    const user = await User.findByPk(userId, {
+      attributes: { include: ['password'] },
+    });
+    if (!user) {
+      throw new AppError('Пользователь не найден', 404);
+    }
+
+    // Проверяем текущий пароль
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      throw new AppError('Неверный текущий пароль', 401);
+    }
+
+    // Проверяем, что новый пароль отличается от текущего
+    const isSamePassword = await user.comparePassword(newPassword);
+    if (isSamePassword) {
+      throw new AppError('Новый пароль должен отличаться от текущего', 400);
+    }
+
+    // Обновляем пароль
+    await user.update({ password: newPassword });
+
+    res.json({
+      success: true,
+      message: 'Пароль успешно изменен',
     });
   } catch (error) {
     next(error);

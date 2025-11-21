@@ -19,9 +19,7 @@ const Header = () => {
       label: 'Профиль',
       icon: <UserOutlined />,
       onClick: () => {
-        if (user?.role === 'user') {
-          navigate('/my-profile')
-        }
+        navigate('/profile')
       }
     },
     {

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Form, Input, Button, Card, Typography, message, Tabs, Alert } from 'antd'
 import { UserOutlined, LockOutlined, LoginOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
+import { forbiddenPasswordValidator } from '@/utils/forbiddenPasswords'
 
 const { Title, Text, Link } = Typography
 
@@ -29,17 +30,17 @@ const LoginPage = () => {
     try {
       const response = await login(values)
       
+      message.success('Вход выполнен успешно!')
+      
       // Проверяем активацию аккаунта
       const userIsActive = response.data.user.isActive
       if (!userIsActive) {
-        // Если аккаунт не активирован - перенаправляем на страницу блокировки
-        navigate('/blocked')
+        // Если аккаунт не активирован - перенаправляем на профиль
+        navigate('/profile')
         return
       }
       
-      message.success('Вход выполнен успешно!')
-      
-      // Перенаправление на страницу сотрудников для всех ролей
+      // Перенаправление на страницу сотрудников для активных пользователей
       navigate('/employees')
     } catch (err) {
       console.error('Login error:', err);
@@ -82,18 +83,13 @@ const LoginPage = () => {
       
       const response = await register(registrationData)
       
-      // Проверяем, нужна ли активация
-      if (response?.data?.user?.isActive === false) {
-        message.success({
-          content: `Регистрация прошла успешно! Ваш УИН: ${response.data.user.identificationNumber}. Дождитесь активации администратором.`,
-          duration: 10
-        })
-        // Перенаправляем на страницу входа
-        navigate('/login')
-      } else {
-        message.success('Регистрация прошла успешно!')
-        navigate('/employees')
-      }
+      message.success({
+        content: `Регистрация прошла успешно! Ваш УИН: ${response.data.user.identificationNumber}`,
+        duration: 10
+      })
+      
+      // После регистрации перенаправляем на страницу профиля
+      navigate('/profile')
     } catch (err) {
       console.error('Registration error:', err);
       
@@ -129,6 +125,7 @@ const LoginPage = () => {
       onFinish={handleLogin}
       layout="vertical"
       requiredMark={false}
+      autoComplete="off"
     >
       <Form.Item
         name="email"
@@ -142,6 +139,7 @@ const LoginPage = () => {
           prefix={<UserOutlined />}
           placeholder="user@example.com"
           size="large"
+          autoComplete="off"
         />
       </Form.Item>
 
@@ -154,6 +152,7 @@ const LoginPage = () => {
           prefix={<LockOutlined />}
           placeholder="••••••••"
           size="large"
+          autoComplete="off"
         />
       </Form.Item>
 
@@ -229,14 +228,15 @@ const LoginPage = () => {
         label="Пароль"
         rules={[
           { required: true, message: 'Пожалуйста, введите пароль' },
-          { min: 8, message: 'Пароль должен содержать минимум 8 символов' }
+          { min: 8, message: 'Пароль должен содержать минимум 8 символов' },
+          forbiddenPasswordValidator
         ]}
       >
         <Input.Password
           prefix={<LockOutlined />}
           placeholder="••••••••"
           size="large"
-          autoComplete="new-password"
+          autoComplete="off"
         />
       </Form.Item>
 
@@ -260,7 +260,7 @@ const LoginPage = () => {
           prefix={<LockOutlined />}
           placeholder="••••••••"
           size="large"
-          autoComplete="new-password"
+          autoComplete="off"
         />
       </Form.Item>
 

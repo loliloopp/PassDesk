@@ -114,13 +114,7 @@ api.interceptors.response.use(
     // Обработка 403 ошибки (нет прав доступа)
     if (error.response?.status === 403) {
       const errorMessage = error.response?.data?.message || 'У вас нет прав для выполнения этого действия'
-      console.warn('🚫 Access denied:', errorMessage);
-      
-      message.error({
-        content: `🚫 Доступ запрещен: ${errorMessage}`,
-        duration: 5
-      });
-      
+      // Не логируем в консоль для уменьшения шума
       error.userMessage = errorMessage;
     }
 

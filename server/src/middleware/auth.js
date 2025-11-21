@@ -49,6 +49,52 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+// Middleware для аутентификации БЕЗ проверки активации (для страницы профиля)
+export const authenticateWithoutActivationCheck = async (req, res, next) => {
+  try {
+    // Получаем токен из заголовка
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new AppError('Необходима авторизация', 401);
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Проверяем токен
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Загружаем пользователя с counterpartyId и identificationNumber
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'role', 'counterpartyId', 'isActive', 'identificationNumber']
+    });
+    
+    if (!user) {
+      throw new AppError('Пользователь не найден', 401);
+    }
+
+    // НЕ проверяем isActive - разрешаем доступ всем авторизованным пользователям
+    
+    // Добавляем данные пользователя в запрос
+    req.user = {
+      id: user.id,
+      role: user.role,
+      counterpartyId: user.counterpartyId,
+      isActive: user.isActive
+    };
+    
+    next();
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return next(new AppError('Невалидный токен авторизации', 401));
+    }
+    if (error.name === 'TokenExpiredError') {
+      return next(new AppError('Время сессии истекло. Войдите снова', 401));
+    }
+    next(error);
+  }
+};
+
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {

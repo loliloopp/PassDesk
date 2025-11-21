@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AppError } from '../middleware/errorHandler.js';
 import { User, Employee, Setting, UserEmployeeMapping, Counterparty, EmployeeCounterpartyMapping } from '../models/index.js';
 import sequelize from '../config/database.js';
+import { isPasswordAllowed, getForbiddenPasswordMessage } from '../utils/forbiddenPasswords.js';
 
 // Генерация JWT токена
 const generateToken = (userId, role) => {
@@ -75,6 +76,11 @@ export const register = async (req, res, next) => {
 
     if (password.length < 8) {
       throw new AppError('Пароль должен содержать минимум 8 символов', 400);
+    }
+
+    // Проверяем, не является ли пароль запрещенным
+    if (!isPasswordAllowed(password)) {
+      throw new AppError(getForbiddenPasswordMessage(), 400);
     }
 
     // Парсим ФИО
@@ -155,6 +161,10 @@ export const register = async (req, res, next) => {
     // Коммитим транзакцию
     await transaction.commit();
 
+    // Генерируем токены для автоматического входа
+    const token = generateToken(user.id, user.role);
+    const refreshToken = generateRefreshToken(user.id);
+
     res.status(201).json({
       success: true,
       message: 'Регистрация прошла успешно. Дождитесь активации аккаунта администратором.',
@@ -174,7 +184,9 @@ export const register = async (req, res, next) => {
           firstName: employee.firstName,
           lastName: employee.lastName,
           middleName: employee.middleName
-        }
+        },
+        token,
+        refreshToken,
       },
     });
   } catch (error) {
@@ -203,10 +215,8 @@ export const login = async (req, res, next) => {
       throw new AppError('Неверный email или пароль. Проверьте правильность введенных данных.', 401);
     }
 
-    // Проверяем, активен ли пользователь
-    if (!user.isActive) {
-      throw new AppError('Ваш аккаунт деактивирован. Обратитесь к администратору.', 403);
-    }
+    // Разрешаем вход даже неактивным пользователям
+    // Они будут перенаправлены на страницу профиля на фронтенде
 
     // Генерируем токены
     const token = generateToken(user.id, user.role);
@@ -226,6 +236,7 @@ export const login = async (req, res, next) => {
           lastName: user.lastName,
           role: user.role,
           counterpartyId: user.counterpartyId,
+          identificationNumber: user.identificationNumber,
           isActive: user.isActive,
         },
         token,
