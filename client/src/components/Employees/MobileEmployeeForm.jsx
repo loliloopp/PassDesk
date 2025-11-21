@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import EmployeeFileUpload from './EmployeeFileUpload';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -151,7 +152,24 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             <Form.Item
               label="Дата рождения"
               name="birthDate"
-              rules={[{ required: true, message: 'Укажите дату рождения' }]}
+              rules={[
+                { required: true, message: 'Укажите дату рождения' },
+                {
+                  validator: (_, value) => {
+                    if (!value) {
+                      return Promise.resolve();
+                    }
+                    const age = dayjs().diff(value, 'year');
+                    if (age < 18) {
+                      return Promise.reject(new Error('Возраст сотрудника должен быть не менее 18 лет'));
+                    }
+                    if (age > 80) {
+                      return Promise.reject(new Error('Возраст сотрудника должен быть не более 80 лет'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
             >
               <DatePicker
                 placeholder="Выберите дату"
