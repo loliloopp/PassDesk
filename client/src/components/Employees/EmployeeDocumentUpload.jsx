@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, Button, Image, App, Space, Popconfirm, Tooltip, Spin } from 'antd';
-import { UploadOutlined, DeleteOutlined, EyeOutlined, FileImageOutlined } from '@ant-design/icons';
+import { UploadOutlined, DeleteOutlined, EyeOutlined, FileImageOutlined, CameraOutlined } from '@ant-design/icons';
 import { employeeService } from '@/services/employeeService';
+import DocumentCamera from './DocumentCamera';
 
 /**
  * Компонент для загрузки типизированных документов сотрудника
@@ -26,6 +27,10 @@ const EmployeeDocumentUpload = ({
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [cameraVisible, setCameraVisible] = useState(false);
+  
+  // Ссылка на скрытый инпут для системной камеры (резервный вариант)
+  const nativeCameraInputRef = useRef(null);
 
   useEffect(() => {
     if (employeeId) {
@@ -49,10 +54,8 @@ const EmployeeDocumentUpload = ({
     }
   };
 
-  // Загрузка файла
-  const handleUpload = async (options) => {
-    const { file } = options;
-    
+  // Загрузка файла (универсальная функция)
+  const uploadFile = async (file) => {
     // Проверка размера файла (макс. 10 МБ)
     const isLt10M = file.size / 1024 / 1024 < 10;
     if (!isLt10M) {
@@ -87,6 +90,48 @@ const EmployeeDocumentUpload = ({
       message.error(error.response?.data?.message || 'Ошибка загрузки файла');
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Загрузка файла через Upload компонент
+  const handleUpload = async (options) => {
+    const { file } = options;
+    await uploadFile(file);
+  };
+
+  // Обработка захвата с камеры (OpenCV)
+  const handleCameraCapture = async (blob) => {
+    // Конвертируем Blob в File
+    const file = new File([blob], `document-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    setCameraVisible(false);
+    await uploadFile(file);
+  };
+
+  // Обработка захвата с системной камеры (Fallback)
+  const handleNativeCameraCapture = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      await uploadFile(file);
+    }
+    // Очищаем инпут, чтобы можно было снять то же самое фото снова
+    e.target.value = '';
+  };
+
+  // Умный запуск камеры
+  const handleStartCamera = () => {
+    // Проверяем поддержку API и контекст безопасности (HTTPS/localhost)
+    const isApiSupported = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    // const isSecure = window.isSecureContext; // Обычно isApiSupported уже false если не secure
+
+    if (isApiSupported) {
+      setCameraVisible(true);
+    } else {
+      // Если API недоступен (например, HTTP), используем системную камеру
+      console.warn('Camera API not supported or insecure context. Fallback to native input.');
+      if (!window.isSecureContext) {
+        message.warning('Умный режим недоступен по HTTP. Запуск системной камеры.');
+      }
+      nativeCameraInputRef.current?.click();
     }
   };
 
@@ -194,18 +239,43 @@ const EmployeeDocumentUpload = ({
             </Space>
           )}
 
-          {/* Кнопка загрузки */}
+          {/* Кнопки загрузки */}
           {!readonly && (!multiple && files.length < 1 || multiple) && (
-            <Upload {...uploadProps}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {/* Кнопка фотографирования */}
               <Button 
-                icon={<UploadOutlined />} 
-                loading={uploading}
+                icon={<CameraOutlined />}
+                type="primary"
                 size="large"
                 block
+                onClick={handleStartCamera}
+                disabled={uploading}
               >
-                {uploading ? 'Загрузка...' : 'Загрузить'}
+                Фотографировать документ
               </Button>
-            </Upload>
+              
+              {/* Скрытый инпут для системной камеры (Fallback) */}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                ref={nativeCameraInputRef}
+                onChange={handleNativeCameraCapture}
+              />
+
+              {/* Кнопка загрузки файла */}
+              <Upload {...uploadProps}>
+                <Button 
+                  icon={<UploadOutlined />} 
+                  loading={uploading}
+                  size="large"
+                  block
+                >
+                  {uploading ? 'Загрузка...' : 'Загрузить файл'}
+                </Button>
+              </Upload>
+            </Space>
           )}
 
           <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 4 }}>
@@ -222,6 +292,13 @@ const EmployeeDocumentUpload = ({
           src: previewImage,
           onVisibleChange: (visible) => setPreviewVisible(visible),
         }}
+      />
+
+      {/* Компонент камеры с режимом документа */}
+      <DocumentCamera
+        visible={cameraVisible}
+        onCapture={handleCameraCapture}
+        onCancel={() => setCameraVisible(false)}
       />
     </div>
   );

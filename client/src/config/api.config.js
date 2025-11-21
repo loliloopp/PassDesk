@@ -1,17 +1,9 @@
 // API Configuration
-// Автоматически определяем хост на основе текущего URL
-
-const getBaseURL = () => {
-  // Если открыто через IP адрес локальной сети
-  if (window.location.hostname === '192.168.8.118') {
-    return 'http://192.168.8.118:5000/api/v1';
-  }
-  // Иначе используем localhost
-  return 'http://localhost:5000/api/v1';
-};
+// Используем относительный путь для работы через прокси Vite
+// Это решает проблему Mixed Content (HTTPS фронтенд -> HTTP бэкенд)
 
 export const API_CONFIG = {
-  BASE_URL: getBaseURL(),
+  BASE_URL: '/api/v1',
   TIMEOUT: 10000
 };
 

@@ -8,18 +8,11 @@ let isRedirecting = false
 
 // Функция для получения базового URL
 export const getBaseURL = () => {
-  // 1. Проверяем переменную окружения (приоритет!)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  
-  // 2. Проверяем конфигурацию
-  if (API_CONFIG?.BASE_URL) {
-    return API_CONFIG.BASE_URL;
-  }
-  
-  // 3. По умолчанию используем localhost
-  return 'http://localhost:5000/api/v1';
+  // Всегда используем относительный путь '/api/v1'
+  // Это позволяет Vite проксировать запросы:
+  // Browser (HTTPS) -> Vite Dev Server (HTTPS) -> Backend (HTTP)
+  // Тем самым устраняется ошибка Mixed Content
+  return '/api/v1';
 };
 
 // Создаем базовый экземпляр с правильным baseURL
