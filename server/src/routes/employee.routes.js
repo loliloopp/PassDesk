@@ -54,7 +54,7 @@ router.get('/my-profile', employeeController.getMyProfile); // Получить 
 router.put('/my-profile', updateMyProfileValidation, validate, employeeController.updateMyProfile); // Обновить свой профиль
 router.get('/', employeeController.getAllEmployees);
 router.get('/:id', employeeController.getEmployeeById);
-router.post('/', createEmployeeValidation, validate, employeeController.createEmployee);
+router.post('/', employeeController.createEmployee); // Убрана валидация для поддержки черновиков
 router.put('/:id', updateEmployeeValidation, validate, employeeController.updateEmployee); // Убрали authorize('admin'), проверка внутри контроллера
 router.put('/:id/construction-sites', employeeController.updateEmployeeConstructionSites); // Убрали authorize('admin')
 router.put('/:id/department', employeeController.updateEmployeeDepartment); // Убрали authorize('admin')

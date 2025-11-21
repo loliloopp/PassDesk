@@ -218,6 +218,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
       if (error.errorFields) {
         message.error('Заполните все обязательные поля');
       }
+      // Не показываем дополнительную ошибку, если ошибка с сервера - она уже показана в хуке
     }
   };
 
@@ -249,7 +250,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      message.error('Ошибка сохранения черновика');
+      // Не показываем ошибку здесь, она уже показана в хуке createEmployee
     }
   };
 

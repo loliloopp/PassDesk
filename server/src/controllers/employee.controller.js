@@ -335,6 +335,21 @@ export const createEmployee = async (req, res, next) => {
     console.error('Error creating employee:', error);
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
+    if (error.parent) {
+      console.error('Parent error:', error.parent);
+    }
+    
+    // Обработка ошибки NOT NULL constraint (если миграция не применена)
+    if (error.name === 'SequelizeDatabaseError' && error.parent?.code === '23502') {
+      return res.status(500).json({
+        success: false,
+        message: 'Ошибка БД: не применена миграция для поддержки черновиков. Выполните миграцию 20241121_allow_null_for_drafts.sql',
+        errors: [{
+          field: error.parent.column,
+          message: `Поле ${error.parent.column} требует значение (миграция не применена)`
+        }]
+      });
+    }
     
     // Обработка ошибки уникальности
     if (error.name === 'SequelizeUniqueConstraintError') {

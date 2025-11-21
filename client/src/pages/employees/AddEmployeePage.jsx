@@ -55,12 +55,12 @@ const AddEmployeePage = () => {
         // Обновление существующего сотрудника
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
-        message.success('Сотрудник успешно обновлен');
+        // message.success уже показан в хуке updateEmployee
       } else {
         // Создание нового сотрудника
         const newEmployee = await createEmployee(values);
         setEditingEmployee(newEmployee);
-        message.success('Сотрудник успешно создан');
+        // message.success уже показан в хуке createEmployee
       }
       // После успешного сохранения возвращаемся к списку
       setTimeout(() => {

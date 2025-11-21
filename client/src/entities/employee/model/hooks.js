@@ -53,15 +53,50 @@ export const useEmployeeActions = (onSuccess) => {
     setLoading(true);
     try {
       const response = await employeeApi.create(values);
-      message.success('Сотрудник создан');
+      
+      // Показываем сообщение в зависимости от того, черновик это или полная карточка
+      if (values.isDraft) {
+        message.success('Черновик сохранен');
+      } else {
+        message.success('Сотрудник создан');
+      }
+      
       onSuccess?.(response.data.data);
       return response.data.data;
     } catch (error) {
       console.error('Error creating employee:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.errors?.map((e) => e.message).join(', ') ||
-        'Ошибка при создании';
+      
+      // Формируем понятное сообщение об ошибке
+      let errorMessage = 'Ошибка при сохранении';
+      
+      if (error.response?.data?.message === 'Validation failed' && error.response?.data?.errors) {
+        // Собираем список полей с ошибками
+        const fields = error.response.data.errors
+          .map(e => {
+            const fieldNames = {
+              firstName: 'Имя',
+              lastName: 'Фамилия',
+              positionId: 'Должность',
+              citizenshipId: 'Гражданство',
+              birthDate: 'Дата рождения',
+              phone: 'Телефон',
+              inn: 'ИНН',
+              snils: 'СНИЛС',
+              passportNumber: 'Паспорт',
+              passportDate: 'Дата выдачи паспорта',
+              passportIssuer: 'Орган выдачи паспорта',
+              registrationAddress: 'Адрес регистрации',
+            };
+            return fieldNames[e.field] || e.field;
+          })
+          .join(', ');
+        errorMessage = values.isDraft 
+          ? `Для черновика требуется: ${fields}`
+          : `Заполните обязательные поля: ${fields}`;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
       message.error(errorMessage);
       throw error;
     } finally {
@@ -73,16 +108,51 @@ export const useEmployeeActions = (onSuccess) => {
     setLoading(true);
     try {
       await employeeApi.update(id, values);
-      message.success('Сотрудник обновлен');
+      
+      // Показываем сообщение в зависимости от того, черновик это или полная карточка
+      if (values.isDraft) {
+        message.success('Черновик обновлен');
+      } else {
+        message.success('Сотрудник обновлен');
+      }
+      
       const response = await employeeApi.getById(id);
       onSuccess?.(response.data.data);
       return response.data.data;
     } catch (error) {
       console.error('Error updating employee:', error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.errors?.map((e) => e.message).join(', ') ||
-        'Ошибка при обновлении';
+      
+      // Формируем понятное сообщение об ошибке
+      let errorMessage = 'Ошибка при обновлении';
+      
+      if (error.response?.data?.message === 'Validation failed' && error.response?.data?.errors) {
+        // Собираем список полей с ошибками
+        const fields = error.response.data.errors
+          .map(e => {
+            const fieldNames = {
+              firstName: 'Имя',
+              lastName: 'Фамилия',
+              positionId: 'Должность',
+              citizenshipId: 'Гражданство',
+              birthDate: 'Дата рождения',
+              phone: 'Телефон',
+              inn: 'ИНН',
+              snils: 'СНИЛС',
+              passportNumber: 'Паспорт',
+              passportDate: 'Дата выдачи паспорта',
+              passportIssuer: 'Орган выдачи паспорта',
+              registrationAddress: 'Адрес регистрации',
+            };
+            return fieldNames[e.field] || e.field;
+          })
+          .join(', ');
+        errorMessage = values.isDraft 
+          ? `Для черновика требуется: ${fields}`
+          : `Заполните обязательные поля: ${fields}`;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
       message.error(errorMessage);
       throw error;
     } finally {

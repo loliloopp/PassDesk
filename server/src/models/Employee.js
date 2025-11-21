@@ -12,12 +12,12 @@ Employee.init(
     },
     firstName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true, // Разрешаем null для черновиков
       field: 'first_name'
     },
     lastName: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: false, // Обязательное поле - минимум фамилия должна быть
       field: 'last_name'
     },
     middleName: {
@@ -221,6 +221,7 @@ Employee.init(
     },
     createdBy: {
       type: DataTypes.INTEGER,
+      allowNull: false, // Обязательное поле - каждый сотрудник должен иметь создателя
       field: 'created_by',
       references: {
         model: 'users',
