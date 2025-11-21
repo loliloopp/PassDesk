@@ -42,7 +42,7 @@ const EmployeesPage = () => {
   const loading = employeesLoading || departmentsLoading || settingsLoading;
 
   // Определяем права доступа
-  const canExport = user?.counterpartyId === defaultCounterpartyId;
+  const canExport = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
 
   // Actions для работы с сотрудниками
   const { createEmployee, updateEmployee, deleteEmployee, updateDepartment } =
