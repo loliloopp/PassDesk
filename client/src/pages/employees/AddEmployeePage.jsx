@@ -89,6 +89,17 @@ const AddEmployeePage = () => {
           alignItems: 'center',
           marginBottom: 24,
           gap: 16,
+          position: 'sticky',
+          top: isMobile ? 64 : 64, // Отступ от закрепленного Header
+          background: '#fff',
+          zIndex: 100,
+          padding: '16px 0',
+          marginTop: -24, // Компенсация отступа Content
+          marginLeft: -24,
+          marginRight: -24,
+          paddingLeft: 24,
+          paddingRight: 24,
+          borderBottom: '1px solid #f0f0f0',
         }}
       >
         {!isMobile && (

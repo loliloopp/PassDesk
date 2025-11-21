@@ -233,6 +233,38 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     }
   };
 
+  // Сохранение черновика без валидации
+  const handleSaveDraft = async () => {
+    try {
+      setLoading(true);
+      const values = form.getFieldsValue();
+
+      // Нормализация данных (если заполнены)
+      const normalizedValues = {
+        ...values,
+        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
+        passportDate: values.passportDate ? values.passportDate.format('YYYY-MM-DD') : null,
+        patentIssueDate: values.patentIssueDate ? values.patentIssueDate.format('YYYY-MM-DD') : null,
+        phone: values.phone ? normalizePhoneNumber(values.phone) : null,
+        kig: values.kig ? normalizeKig(values.kig) : null,
+        patentNumber: values.patentNumber ? normalizePatentNumber(values.patentNumber) : null,
+        // Статусы
+        statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : 'active'),
+        isDraft: true, // Помечаем как черновик
+      };
+
+      // Убираем временные поля
+      delete normalizedValues.isFired;
+      delete normalizedValues.isInactive;
+
+      await onSuccess(normalizedValues);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      message.error('Ошибка сохранения черновика');
+    }
+  };
+
   return {
     form,
     loading,
@@ -246,6 +278,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     user,
     handleCitizenshipChange,
     handleSave,
+    handleSaveDraft,
     initializeEmployeeData,
     // Функции форматирования
     formatPhoneNumber,

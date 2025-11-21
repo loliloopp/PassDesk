@@ -1,5 +1,5 @@
 import { Form, Input, Select, DatePicker, Button, Space, Divider, Typography, Checkbox, Spin, Collapse } from 'antd';
-import { SaveOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { SaveOutlined, CaretRightOutlined, FileOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import EmployeeFileUpload from './EmployeeFileUpload';
@@ -28,6 +28,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     user,
     handleCitizenshipChange,
     handleSave,
+    handleSaveDraft,
     initializeEmployeeData,
     formatPhoneNumber,
     formatSnils,
@@ -391,21 +392,43 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
           zIndex: 1000,
         }}
       >
-        <Space style={{ width: '100%' }} direction="vertical" size={8}>
+        {/* Кнопка "Сохранить черновик" в отдельном ряду */}
+        <Button
+          size="large"
+          block
+          icon={<FileOutlined />}
+          onClick={handleSaveDraft}
+          loading={loading}
+          style={{ marginBottom: 8 }}
+        >
+          Сохранить черновик
+        </Button>
+        
+        {/* Кнопки "Сохранить" и "Отмена" в одном ряду */}
+        <div style={{ display: 'flex', gap: 8 }}>
           <Button
             type="primary"
             size="large"
-            block
+            style={{ flex: 1 }}
             icon={<SaveOutlined />}
             onClick={handleSave}
             loading={loading}
           >
             Сохранить
           </Button>
-          <Button size="large" block onClick={onCancel} disabled={loading}>
+          <Button 
+            size="large" 
+            style={{ 
+              flex: 1,
+              borderColor: '#ff4d4f',
+              color: '#ff4d4f'
+            }} 
+            onClick={onCancel} 
+            disabled={loading}
+          >
             Отмена
           </Button>
-        </Space>
+        </div>
       </div>
     </div>
   );

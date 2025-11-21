@@ -63,8 +63,8 @@ const Header = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
           borderBottom: '1px solid #f0f0f0',
-          // Закрепление header для desktop версии
-          position: isMobile ? 'relative' : 'sticky',
+          // Закрепление header для всех версий
+          position: 'sticky',
           top: 0,
           zIndex: 1000,
         }}
