@@ -79,7 +79,7 @@ const MobileEmployeeList = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {employees.map((employee) => (
         <Card
           key={employee.id}
@@ -87,18 +87,18 @@ const MobileEmployeeList = ({
           onClick={() => onView(employee)}
           style={{ 
             cursor: 'pointer',
-            borderRadius: 8,
+            borderRadius: 4,
           }}
           styles={{
-            body: { padding: '12px 16px' }
+            body: { padding: '6px 8px' }
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             {/* Левая часть - основная информация */}
-            <div style={{ flex: 1, display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1, display: 'flex', gap: 6, minWidth: 0 }}>
               {/* Аватар */}
               <Avatar 
-                size={48} 
+                size={32} 
                 icon={<UserOutlined />} 
                 style={{ backgroundColor: '#2563eb', flexShrink: 0 }}
               />
@@ -106,51 +106,15 @@ const MobileEmployeeList = ({
               {/* Информация */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* ФИО */}
-                <Text strong style={{ fontSize: 16, display: 'block' }}>
+                <Text strong style={{ fontSize: 13 }}>
                   {employee.lastName} {employee.firstName}
                 </Text>
-                {employee.middleName && (
-                  <Text type="secondary" style={{ fontSize: 14, display: 'block' }}>
-                    {employee.middleName}
-                  </Text>
-                )}
 
-                {/* Должность */}
-                {employee.Position && (
-                  <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 4 }}>
-                    {employee.Position.name}
-                  </Text>
-                )}
-
-                {/* Контакты */}
-                <Space direction="vertical" size={2} style={{ marginTop: 8, width: '100%' }}>
-                  {employee.phone && (
-                    <Space size={4}>
-                      <PhoneOutlined style={{ fontSize: 12, color: '#666' }} />
-                      <Text style={{ fontSize: 12 }}>
-                        {formatPhone(employee.phone)}
-                      </Text>
-                    </Space>
-                  )}
-                  {employee.registrationAddress && (
-                    <Space size={4} style={{ width: '100%' }}>
-                      <EnvironmentOutlined style={{ fontSize: 12, color: '#666', flexShrink: 0 }} />
-                      <Paragraph 
-                        ellipsis={{ rows: 1 }} 
-                        style={{ fontSize: 12, margin: 0, flex: 1 }}
-                      >
-                        {employee.registrationAddress}
-                      </Paragraph>
-                    </Space>
-                  )}
-                </Space>
-
-                {/* Статус */}
-                {employee.status && (
-                  <div style={{ marginTop: 8 }}>
-                    <Tag color={employee.status === 'active' ? 'success' : 'default'}>
-                      {employee.status === 'active' ? 'Активен' : 'Неактивен'}
-                    </Tag>
+                {/* Телефон */}
+                {employee.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#666', marginTop: 2 }}>
+                    <PhoneOutlined style={{ fontSize: 10, flexShrink: 0 }} />
+                    <span>{formatPhone(employee.phone)}</span>
                   </div>
                 )}
               </div>
@@ -164,10 +128,11 @@ const MobileEmployeeList = ({
             >
               <EllipsisOutlined 
                 style={{ 
-                  fontSize: 20, 
-                  padding: 4,
+                  fontSize: 16, 
+                  padding: 2,
                   cursor: 'pointer',
-                  color: '#666'
+                  color: '#666',
+                  flexShrink: 0
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
