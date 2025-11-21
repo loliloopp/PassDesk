@@ -207,8 +207,11 @@ Employee.belongsToMany(User, {
 User.hasMany(UserEmployeeMapping, { foreignKey: 'user_id', as: 'userEmployeesMapping' });
 UserEmployeeMapping.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
-Employee.hasMany(UserEmployeeMapping, { foreignKey: 'employee_id', as: 'employeeUsersMapping' });
+Employee.hasMany(UserEmployeeMapping, { foreignKey: 'employee_id', as: 'userEmployeeMappings' });
 UserEmployeeMapping.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
+
+Counterparty.hasMany(UserEmployeeMapping, { foreignKey: 'counterparty_id', as: 'userEmployeeMappings' });
+UserEmployeeMapping.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
 
 // Position -> Employee (должность -> сотрудники)
 Position.hasMany(Employee, { foreignKey: 'position_id', as: 'employees' });

@@ -275,3 +275,76 @@ export const getCounterpartiesStats = async (req, res) => {
   }
 };
 
+// Генерация уникального кода регистрации для контрагента
+export const generateRegistrationCode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const counterparty = await Counterparty.findByPk(id);
+    
+    if (!counterparty) {
+      return res.status(404).json({
+        success: false,
+        message: 'Контрагент не найден'
+      });
+    }
+    
+    // Если код уже есть - возвращаем его
+    if (counterparty.registrationCode) {
+      return res.json({
+        success: true,
+        data: {
+          registrationCode: counterparty.registrationCode
+        }
+      });
+    }
+    
+    // Генерируем новый уникальный код
+    let registrationCode;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    while (!isUnique && attempts < maxAttempts) {
+      // Генерация 8-значного кода
+      registrationCode = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+      
+      // Проверка уникальности
+      const existing = await Counterparty.findOne({ 
+        where: { registrationCode } 
+      });
+      
+      if (!existing) {
+        isUnique = true;
+      }
+      
+      attempts++;
+    }
+    
+    if (!isUnique) {
+      return res.status(500).json({
+        success: false,
+        message: 'Не удалось сгенерировать уникальный код'
+      });
+    }
+    
+    // Сохраняем код
+    await counterparty.update({ registrationCode });
+    
+    res.json({
+      success: true,
+      message: 'Код регистрации успешно сгенерирован',
+      data: {
+        registrationCode
+      }
+    });
+  } catch (error) {
+    console.error('Error generating registration code:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при генерации кода регистрации',
+      error: error.message
+    });
+  }
+};
+

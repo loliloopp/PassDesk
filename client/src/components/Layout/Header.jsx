@@ -1,5 +1,5 @@
-import { Layout as AntLayout, Badge, Avatar, Dropdown, Space, Typography, Grid } from 'antd'
-import { BellOutlined, UserOutlined, DownOutlined } from '@ant-design/icons'
+import { Layout as AntLayout, Badge, Avatar, Dropdown, Space, Typography, Grid, Tag, Tooltip } from 'antd'
+import { BellOutlined, UserOutlined, DownOutlined, IdcardOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 
@@ -41,10 +41,15 @@ const Header = () => {
   const getRoleLabel = (role) => {
     const roles = {
       admin: 'Администратор',
-      manager: 'Менеджер',
       user: 'Пользователь',
     }
     return roles[role] || role
+  }
+
+  // Форматирование УИН в формат XXX-XXX
+  const formatUIN = (uin) => {
+    if (!uin || uin.length !== 6) return uin;
+    return `${uin.slice(0, 3)}-${uin.slice(3)}`;
   }
 
   return (
@@ -66,6 +71,23 @@ const Header = () => {
       )}
 
       <Space size={isMobile ? 'middle' : 'large'}>
+        {/* УИН - показываем всегда если есть */}
+        {user?.identificationNumber && (
+          <Tooltip title="Уникальный идентификационный номер">
+            <Tag 
+              icon={<IdcardOutlined />} 
+              color="blue"
+              style={{ 
+                fontSize: isMobile ? 12 : 14, 
+                padding: isMobile ? '2px 8px' : '4px 12px',
+                fontWeight: 'bold'
+              }}
+            >
+              {formatUIN(user.identificationNumber)}
+            </Tag>
+          </Tooltip>
+        )}
+
         {/* Уведомления скрываем на мобильных */}
         {!isMobile && (
           <Badge count={0} showZero={false}>

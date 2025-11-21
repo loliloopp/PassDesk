@@ -3,9 +3,16 @@ import { sequelize } from '../config/database.js';
 
 const Counterparty = sequelize.define('Counterparty', {
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true
+    defaultValue: DataTypes.UUIDV4
+  },
+  registrationCode: {
+    type: DataTypes.STRING(8),
+    allowNull: true,
+    unique: true,
+    field: 'registration_code',
+    comment: 'Уникальный код для регистрации новых пользователей контрагента'
   },
   name: {
     type: DataTypes.STRING(255),
@@ -94,7 +101,7 @@ const Counterparty = sequelize.define('Counterparty', {
     comment: 'customer - заказчик, contractor - подрядчик, general_contractor - генподрядчик'
   },
   createdBy: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     field: 'created_by',
     references: {
@@ -103,7 +110,7 @@ const Counterparty = sequelize.define('Counterparty', {
     }
   },
   updatedBy: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     field: 'updated_by',
     references: {

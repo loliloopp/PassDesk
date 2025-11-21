@@ -4,6 +4,7 @@ import ruRU from 'antd/locale/ru_RU'
 import { antdTheme } from './theme/antd-theme'
 import Layout from './components/Layout/Layout'
 import LoginPage from './pages/LoginPage'
+import BlockedAccountPage from './pages/BlockedAccountPage'
 import EmployeesPage from './pages/employees'
 import PassesPage from './pages/PassesPage'
 import CounterpartiesPage from './pages/CounterpartiesPage'
@@ -18,14 +19,8 @@ import NotFoundPage from './pages/NotFoundPage'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 import { useAuthStore } from './store/authStore'
 
-// Компонент для перенаправления на основе роли
+// Компонент для перенаправления на employees для всех ролей
 const RoleBasedRedirect = () => {
-  const { user } = useAuthStore()
-  
-  if (user?.role === 'user') {
-    return <Navigate to="/my-profile" replace />
-  }
-
   return <Navigate to="/employees" replace />
 }
 
@@ -36,42 +31,43 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/blocked" element={<BlockedAccountPage />} />
           <Route path="/debug" element={<DebugPage />} />
           
           {/* Protected routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<RoleBasedRedirect />} />
             
-            {/* Routes for admin and manager */}
+            {/* Routes for admin and user */}
             <Route 
               path="employees" 
-              element={<ProtectedRoute allowedRoles={['admin', 'manager']}><EmployeesPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin', 'user']}><EmployeesPage /></ProtectedRoute>} 
             />
             <Route 
               path="applications" 
-              element={<ProtectedRoute allowedRoles={['admin', 'manager', 'user']}><ApplicationsPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin', 'user']}><ApplicationsPage /></ProtectedRoute>} 
             />
             <Route 
               path="passes" 
-              element={<ProtectedRoute allowedRoles={['admin', 'manager']}><PassesPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin']}><PassesPage /></ProtectedRoute>} 
             />
             <Route 
               path="counterparties" 
-              element={<ProtectedRoute allowedRoles={['admin', 'manager']}><CounterpartiesPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin']}><CounterpartiesPage /></ProtectedRoute>} 
             />
             <Route 
               path="construction-sites" 
-              element={<ProtectedRoute allowedRoles={['admin', 'manager']}><ConstructionSitesPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin']}><ConstructionSitesPage /></ProtectedRoute>} 
             />
             <Route 
               path="contracts" 
-              element={<ProtectedRoute allowedRoles={['admin', 'manager']}><ContractsPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin']}><ContractsPage /></ProtectedRoute>} 
             />
             
-            {/* Route for directories (admin and manager) */}
+            {/* Route for directories (admin only) */}
             <Route 
               path="directories" 
-              element={<ProtectedRoute allowedRoles={['admin', 'manager']}><DirectoriesPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin']}><DirectoriesPage /></ProtectedRoute>} 
             />
             
             {/* Route for admin only */}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Input, Space, Modal, Form, Select, message, Tag } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { Table, Button, Input, Space, Modal, Form, Select, message, Tag, Tooltip } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
 
 const typeMap = {
@@ -67,6 +67,42 @@ const CounterpartiesPage = () => {
     });
   };
 
+  const handleCopyRegistrationLink = async (record) => {
+    try {
+      let registrationCode = record.registrationCode;
+      
+      // Если кода нет - генерируем
+      if (!registrationCode) {
+        const response = await counterpartyService.generateRegistrationCode(record.id);
+        registrationCode = response.data.data.registrationCode;
+        
+        // Обновляем данные в таблице
+        setData(prevData => 
+          prevData.map(item => 
+            item.id === record.id 
+              ? { ...item, registrationCode } 
+              : item
+          )
+        );
+      }
+      
+      // Создаем ссылку для регистрации
+      const baseUrl = window.location.origin;
+      const registrationUrl = `${baseUrl}/login?registrationCode=${registrationCode}`;
+      
+      // Копируем в буфер обмена
+      await navigator.clipboard.writeText(registrationUrl);
+      
+      message.success({
+        content: 'Ссылка для регистрации скопирована в буфер обмена',
+        duration: 3
+      });
+    } catch (error) {
+      console.error('Error copying registration link:', error);
+      message.error('Ошибка при копировании ссылки');
+    }
+  };
+
   const handleSubmit = async (values) => {
     try {
       if (editingId) {
@@ -109,6 +145,12 @@ const CounterpartiesPage = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
+          <Tooltip title="Копировать ссылку для регистрации">
+            <Button 
+              icon={<LinkOutlined />} 
+              onClick={() => handleCopyRegistrationLink(record)}
+            />
+          </Tooltip>
           <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           <Button icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.id)} />
         </Space>

@@ -19,9 +19,9 @@ class User extends Model {
 User.init(
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       primaryKey: true,
-      autoIncrement: true
+      defaultValue: DataTypes.UUIDV4
     },
     email: {
       type: DataTypes.STRING,
@@ -46,12 +46,12 @@ User.init(
       field: 'last_name'
     },
     role: {
-      type: DataTypes.ENUM('admin', 'manager', 'user'),
+      type: DataTypes.ENUM('admin', 'user'),
       defaultValue: 'user',
       allowNull: false
     },
     counterpartyId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: true,
       field: 'counterparty_id',
       references: {
@@ -59,10 +59,18 @@ User.init(
         key: 'id'
       }
     },
+    identificationNumber: {
+      type: DataTypes.STRING(6),
+      allowNull: true,
+      unique: true,
+      field: 'identification_number',
+      comment: 'Уникальный идентификационный номер (УИН) пользователя в формате xxxxxx'
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
-      field: 'is_active'
+      defaultValue: false,
+      field: 'is_active',
+      comment: 'Флаг активации пользователя администратором'
     },
     lastLogin: {
       type: DataTypes.DATE,

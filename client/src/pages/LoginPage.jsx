@@ -1,32 +1,47 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Form, Input, Button, Card, Typography, message, Tabs } from 'antd'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Form, Input, Button, Card, Typography, message, Tabs, Alert } from 'antd'
 import { UserOutlined, LockOutlined, LoginOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 
-const { Title, Text } = Typography
+const { Title, Text, Link } = Typography
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { login, register } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()
   const [activeTab, setActiveTab] = useState('login')
+  const [registrationCode, setRegistrationCode] = useState(null)
+
+  useEffect(() => {
+    // Получаем registration_code из URL (например: /login?registrationCode=12345678)
+    const codeFromUrl = searchParams.get('registrationCode')
+    if (codeFromUrl) {
+      setRegistrationCode(codeFromUrl)
+      message.info('Регистрация по приглашению контрагента')
+    }
+  }, [searchParams])
 
   const handleLogin = async (values) => {
     setLoading(true)
     try {
       const response = await login(values)
+      
+      // Проверяем активацию аккаунта
+      const userIsActive = response.data.user.isActive
+      if (!userIsActive) {
+        // Если аккаунт не активирован - перенаправляем на страницу блокировки
+        navigate('/blocked')
+        return
+      }
+      
       message.success('Вход выполнен успешно!')
       
-      // Перенаправление на основе роли пользователя
-      const userRole = response.data.user.role
-      if (userRole === 'user') {
-        navigate('/my-profile')
-      } else {
-        navigate('/employees')
-      }
+      // Перенаправление на страницу сотрудников для всех ролей
+      navigate('/employees')
     } catch (err) {
       console.error('Login error:', err);
       
@@ -59,9 +74,27 @@ const LoginPage = () => {
     setLoading(true)
     try {
       console.log('Attempting registration with:', { ...values, password: '***' }); // Безопасное логирование
-      await register(values)
-      message.success('Регистрация прошла успешно!')
-      navigate('/employees')
+      
+      // Добавляем registrationCode если он есть
+      const registrationData = {
+        ...values,
+        ...(registrationCode && { registrationCode })
+      };
+      
+      const response = await register(registrationData)
+      
+      // Проверяем, нужна ли активация
+      if (response?.data?.user?.isActive === false) {
+        message.success({
+          content: `Регистрация прошла успешно! Ваш УИН: ${response.data.user.identificationNumber}. Дождитесь активации администратором.`,
+          duration: 10
+        })
+        // Перенаправляем на страницу входа
+        navigate('/login')
+      } else {
+        message.success('Регистрация прошла успешно!')
+        navigate('/employees')
+      }
     } catch (err) {
       console.error('Registration error:', err);
       
@@ -148,6 +181,16 @@ const LoginPage = () => {
       requiredMark={true}
       autoComplete="off"
     >
+      {registrationCode && (
+        <Alert
+          message="Регистрация по приглашению"
+          description="Вы регистрируетесь по ссылке контрагента"
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      
       <Form.Item
         name="fullName"
         label="ФИО"
@@ -244,10 +287,83 @@ const LoginPage = () => {
           Зарегистрироваться
         </Button>
       </Form.Item>
+
+      {/* Ссылка для входа, если пользователь уже зарегистрирован */}
+      {registrationCode && (
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Text type="secondary">
+            Уже есть аккаунт?{' '}
+            <Link onClick={() => navigate('/login')}>Войти</Link>
+          </Text>
+        </div>
+      )}
     </Form>
   )
 
-  const tabItems = [
+  // Если есть registrationCode - показываем только форму регистрации
+  if (registrationCode) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          padding: '20px',
+        }}
+      >
+        <Card
+          style={{
+            width: '100%',
+            maxWidth: 500,
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          }}
+        >
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: '12px',
+              marginBottom: 8
+            }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  background: '#2563eb',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <UserAddOutlined style={{ fontSize: 20, color: '#fff' }} />
+              </div>
+              <Title level={2} style={{ margin: 0 }}>
+                Регистрация
+              </Title>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <Text type="secondary">Портал управления пропусками</Text>
+            </div>
+          </div>
+
+          {registerTabContent}
+
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              © 2025 PassDesk. Все права защищены.
+            </Text>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // Обычная страница входа (без вкладки регистрации)
+  const loginOnlyTabItems = [
     {
       key: 'login',
       label: (
@@ -257,16 +373,6 @@ const LoginPage = () => {
         </span>
       ),
       children: loginTabContent
-    },
-    {
-      key: 'register',
-      label: (
-        <span>
-          <UserAddOutlined />
-          Регистрация
-        </span>
-      ),
-      children: registerTabContent
     }
   ]
 
@@ -319,9 +425,8 @@ const LoginPage = () => {
         </div>
 
         <Tabs 
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
+          activeKey="login"
+          items={loginOnlyTabItems}
           centered
         />
 

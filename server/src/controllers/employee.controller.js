@@ -1,4 +1,4 @@
-import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position, Setting } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import yandexDiskClient, { basePath } from '../config/storage.js';
@@ -43,6 +43,9 @@ export const getAllEmployees = async (req, res, next) => {
   try {
     const { page = 1, limit = 100, search = '' } = req.query;
     const offset = (page - 1) * limit;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const userCounterpartyId = req.user.counterpartyId;
 
     const where = {};
     
@@ -57,49 +60,78 @@ export const getAllEmployees = async (req, res, next) => {
       ];
     }
 
+    // Фильтрация по роли пользователя
+    let employeeInclude = [
+      {
+        model: Citizenship,
+        as: 'citizenship',
+        attributes: ['id', 'name', 'code', 'requiresPatent']
+      },
+      {
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'firstName', 'lastName']
+      },
+      {
+        model: Position,
+        as: 'position',
+        attributes: ['id', 'name']
+      },
+      {
+        model: EmployeeCounterpartyMapping,
+        as: 'employeeCounterpartyMappings',
+        include: [
+          {
+            model: Counterparty,
+            as: 'counterparty',
+            attributes: ['id', 'name', 'type', 'inn', 'kpp']
+          },
+          {
+            model: Department,
+            as: 'department',
+            attributes: ['id', 'name']
+          },
+          {
+            model: ConstructionSite,
+            as: 'constructionSite',
+            attributes: ['id', 'shortName', 'fullName']
+          }
+        ]
+      }
+    ];
+
+    // Для роли 'user' - применяем фильтрацию
+    if (userRole === 'user') {
+      // Получаем контрагента по умолчанию
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      
+      if (userCounterpartyId === defaultCounterpartyId) {
+        // Контрагент по умолчанию: показываем только сотрудников, созданных пользователем
+        // Используем UserEmployeeMapping где counterpartyId = NULL
+        employeeInclude.push({
+          model: UserEmployeeMapping,
+          as: 'userEmployeeMappings',
+          where: {
+            userId: userId,
+            counterpartyId: null
+          },
+          required: true
+        });
+      } else {
+        // Другие контрагенты: показываем всех сотрудников контрагента
+        employeeInclude[3].where = {
+          counterpartyId: userCounterpartyId
+        };
+        employeeInclude[3].required = true;
+      }
+    }
+
     const { count, rows } = await Employee.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
       order: [['lastName', 'ASC']],
-      include: [
-        {
-          model: Citizenship,
-          as: 'citizenship',
-          attributes: ['id', 'name', 'code', 'requiresPatent']
-        },
-        {
-          model: User,
-          as: 'creator',
-          attributes: ['id', 'firstName', 'lastName']
-        },
-        {
-          model: Position, // Добавлена связь с Position
-          as: 'position',
-          attributes: ['id', 'name']
-        },
-        {
-          model: EmployeeCounterpartyMapping,
-          as: 'employeeCounterpartyMappings',
-          include: [
-            {
-              model: Counterparty,
-              as: 'counterparty',
-              attributes: ['id', 'name', 'type', 'inn', 'kpp']
-            },
-            {
-              model: Department,
-              as: 'department',
-              attributes: ['id', 'name']
-            },
-            {
-              model: ConstructionSite,
-              as: 'constructionSite',
-              attributes: ['id', 'shortName', 'fullName']
-            }
-          ]
-        }
-      ],
+      include: employeeInclude,
       // Добавляем подсчет файлов для каждого сотрудника
       attributes: {
         include: [
@@ -114,7 +146,8 @@ export const getAllEmployees = async (req, res, next) => {
             'filesCount'
           ]
         ]
-      }
+      },
+      distinct: true // Важно для правильного подсчета при фильтрации через include
     });
 
     // Пересчитываем statusCard для каждого сотрудника

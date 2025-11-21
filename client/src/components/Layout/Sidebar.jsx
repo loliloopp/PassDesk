@@ -25,14 +25,19 @@ const Sidebar = () => {
   // Меню для обычных пользователей (role: user)
   const userMenuItems = [
     {
-      key: '/my-profile',
-      icon: <ProfileOutlined />,
-      label: 'Мой профиль',
+      key: '/employees',
+      icon: <TeamOutlined />,
+      label: 'Сотрудники',
+    },
+    {
+      key: '/applications',
+      icon: <FileTextOutlined />,
+      label: 'Заявки',
     }
   ]
 
-  // Меню для администраторов и менеджеров
-  const adminManagerMenuItems = [
+  // Меню для администраторов
+  const adminMenuItems = [
     {
       key: '/employees',
       icon: <UserOutlined />,
@@ -69,6 +74,11 @@ const Sidebar = () => {
           label: 'Подразделения',
         },
       ],
+    },
+    {
+      key: '/administration',
+      icon: <ControlOutlined />,
+      label: 'Администрирование',
     }
   ]
 
@@ -76,17 +86,8 @@ const Sidebar = () => {
   let menuItems = []
   if (user?.role === 'user') {
     menuItems = [...userMenuItems]
-  } else {
-    menuItems = [...adminManagerMenuItems]
-    
-    // Добавляем "Администрирование" только для администраторов
-    if (user?.role === 'admin') {
-      menuItems.push({
-        key: '/administration',
-        icon: <ControlOutlined />,
-        label: 'Администрирование',
-      })
-    }
+  } else if (user?.role === 'admin') {
+    menuItems = [...adminMenuItems]
   }
 
   const handleMenuClick = ({ key }) => {

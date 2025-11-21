@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../middleware/errorHandler.js';
-import { User, Employee, Setting, UserEmployeeMapping } from '../models/index.js';
+import { User, Employee, Setting, UserEmployeeMapping, Counterparty, EmployeeCounterpartyMapping } from '../models/index.js';
 import sequelize from '../config/database.js';
 
 // Генерация JWT токена
@@ -20,6 +20,29 @@ const generateRefreshToken = (userId) => {
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: process.env.JWT_REFRESH_EXPIRE || '30d' }
   );
+};
+
+/**
+ * Генерация уникального УИН (6-значный)
+ */
+const generateUniqueUIN = async () => {
+  const maxAttempts = 1000;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    // Генерация случайного 6-значного числа
+    const uin = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    
+    // Проверка уникальности
+    const existing = await User.findOne({ where: { identificationNumber: uin } });
+    if (!existing) {
+      return uin;
+    }
+    
+    attempts++;
+  }
+  
+  throw new AppError('Не удалось сгенерировать уникальный УИН', 500);
 };
 
 /**
@@ -42,7 +65,7 @@ export const register = async (req, res, next) => {
   
   try {
     console.log('📝 Registration request body:', req.body);
-    const { email, password, fullName } = req.body;
+    const { email, password, fullName, registrationCode } = req.body;
 
     // Валидация входных данных
     if (!email || !password || !fullName) {
@@ -63,12 +86,36 @@ export const register = async (req, res, next) => {
       throw new AppError('Пользователь с таким email уже существует', 409);
     }
 
-    // Получаем контрагента по умолчанию из настроек
-    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
-    
-    if (!defaultCounterpartyId || defaultCounterpartyId === '') {
-      throw new AppError('Регистрация временно недоступна. Обратитесь к администратору.', 503);
+    // Определяем контрагента
+    let counterpartyId;
+    let isDefaultCounterparty = false;
+
+    if (registrationCode) {
+      // Регистрация по коду контрагента
+      const counterparty = await Counterparty.findOne({ 
+        where: { registrationCode } 
+      });
+      
+      if (!counterparty) {
+        throw new AppError('Неверный код регистрации', 400);
+      }
+      
+      counterpartyId = counterparty.id;
+      isDefaultCounterparty = false;
+    } else {
+      // Регистрация с контрагентом по умолчанию
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      
+      if (!defaultCounterpartyId || defaultCounterpartyId === '') {
+        throw new AppError('Регистрация временно недоступна. Обратитесь к администратору.', 503);
+      }
+      
+      counterpartyId = defaultCounterpartyId;
+      isDefaultCounterparty = true;
     }
+
+    // Генерируем УИН
+    const identificationNumber = await generateUniqueUIN();
 
     // Создаем пользователя (пароль автоматически хешируется в хуке модели)
     const user = await User.create({
@@ -77,8 +124,9 @@ export const register = async (req, res, next) => {
       firstName: fullName, // Сохраняем полное ФИО в first_name
       lastName: null, // last_name теперь NULL
       role: 'user',
-      counterpartyId: defaultCounterpartyId,
-      isActive: true
+      counterpartyId,
+      identificationNumber,
+      isActive: false // Пользователь неактивен до активации администратором
     }, { transaction });
 
     // Создаем запись сотрудника
@@ -86,32 +134,30 @@ export const register = async (req, res, next) => {
       firstName,
       lastName,
       middleName: middleName || null,
-      position: 'Не указана', // Должность по умолчанию
       email,
-      counterpartyId: defaultCounterpartyId,
       isActive: true,
       createdBy: user.id
+    }, { transaction });
+
+    // Создаем связь сотрудник-контрагент
+    await EmployeeCounterpartyMapping.create({
+      employeeId: employee.id,
+      counterpartyId
     }, { transaction });
 
     // Создаем связь пользователь-сотрудник
     await UserEmployeeMapping.create({
       userId: user.id,
-      employeeId: employee.id
+      employeeId: employee.id,
+      counterpartyId: isDefaultCounterparty ? null : counterpartyId
     }, { transaction });
 
     // Коммитим транзакцию
     await transaction.commit();
 
-    // Генерируем токены
-    const token = generateToken(user.id, user.role);
-    const refreshToken = generateRefreshToken(user.id);
-
-    // Обновляем lastLogin (вне транзакции, так как транзакция уже закоммичена)
-    await user.update({ lastLogin: new Date() });
-
     res.status(201).json({
       success: true,
-      message: 'Регистрация прошла успешно',
+      message: 'Регистрация прошла успешно. Дождитесь активации аккаунта администратором.',
       data: {
         user: {
           id: user.id,
@@ -120,6 +166,7 @@ export const register = async (req, res, next) => {
           lastName: user.lastName,
           role: user.role,
           counterpartyId: user.counterpartyId,
+          identificationNumber: user.identificationNumber,
           isActive: user.isActive,
         },
         employee: {
@@ -127,9 +174,7 @@ export const register = async (req, res, next) => {
           firstName: employee.firstName,
           lastName: employee.lastName,
           middleName: employee.middleName
-        },
-        token,
-        refreshToken,
+        }
       },
     });
   } catch (error) {
@@ -265,6 +310,7 @@ export const getCurrentUser = async (req, res, next) => {
           lastName: user.lastName,
           role: user.role,
           isActive: user.isActive,
+          identificationNumber: user.identificationNumber,
           counterpartyId: user.counterpartyId,
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,

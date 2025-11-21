@@ -5,7 +5,8 @@ import {
   createCounterparty,
   updateCounterparty,
   deleteCounterparty,
-  getCounterpartiesStats
+  getCounterpartiesStats,
+  generateRegistrationCode
 } from '../controllers/counterparty.controller.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -18,6 +19,7 @@ router.get('/', getAllCounterparties);
 router.get('/stats', getCounterpartiesStats);
 router.get('/:id', getCounterpartyById);
 router.post('/', createCounterparty);
+router.post('/:id/generate-registration-code', generateRegistrationCode);
 router.put('/:id', updateCounterparty);
 router.delete('/:id', deleteCounterparty);
 

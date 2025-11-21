@@ -16,9 +16,9 @@ export const authenticate = async (req, res, next) => {
     // Проверяем токен
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Загружаем пользователя с counterpartyId
+    // Загружаем пользователя с counterpartyId и identificationNumber
     const user = await User.findByPk(decoded.id, {
-      attributes: ['id', 'role', 'counterpartyId', 'isActive']
+      attributes: ['id', 'role', 'counterpartyId', 'isActive', 'identificationNumber']
     });
     
     if (!user) {
@@ -27,7 +27,7 @@ export const authenticate = async (req, res, next) => {
 
     // Проверяем, активен ли пользователь
     if (!user.isActive) {
-      throw new AppError('Ваш аккаунт деактивирован', 403);
+      throw new AppError('Ваш аккаунт не активирован администратором. УИН: ' + user.identificationNumber || 'не указан', 403);
     }
     
     // Добавляем данные пользователя в запрос

@@ -6,6 +6,7 @@ export const counterpartyService = {
   create: (data) => api.post('/counterparties', data),
   update: (id, data) => api.put(`/counterparties/${id}`, data),
   delete: (id) => api.delete(`/counterparties/${id}`),
-  getStats: () => api.get('/counterparties/stats')
+  getStats: () => api.get('/counterparties/stats'),
+  generateRegistrationCode: (id) => api.post(`/counterparties/${id}/generate-registration-code`)
 };
 

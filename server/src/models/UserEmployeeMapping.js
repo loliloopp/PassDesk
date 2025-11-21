@@ -31,6 +31,17 @@ UserEmployeeMapping.init(
       },
       onDelete: 'CASCADE',
       comment: 'ID сотрудника'
+    },
+    counterpartyId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'counterparty_id',
+      references: {
+        model: 'counterparties',
+        key: 'id'
+      },
+      onDelete: 'SET NULL',
+      comment: 'ID контрагента для быстрой фильтрации (NULL для контрагента по умолчанию)'
     }
   },
   {
@@ -45,6 +56,9 @@ UserEmployeeMapping.init(
       },
       {
         fields: ['employee_id']
+      },
+      {
+        fields: ['counterparty_id']
       },
       {
         unique: true,
