@@ -147,6 +147,13 @@ const EmployeesPage = () => {
           marginBottom: 16,
           flexWrap: 'wrap',
           gap: 16,
+          // Закрепление заголовка страницы для desktop версии
+          position: isMobile ? 'relative' : 'sticky',
+          top: isMobile ? 0 : 64, // 64px - высота header
+          zIndex: 999,
+          backgroundColor: '#fff',
+          paddingTop: 8,
+          paddingBottom: 8,
         }}
       >
         <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>

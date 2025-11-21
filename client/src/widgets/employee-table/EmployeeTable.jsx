@@ -73,7 +73,10 @@ export const EmployeeTable = ({
         rowClassName={(record, index) =>
           index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
         }
-        scroll={{ x: 1300 }}
+        scroll={{ x: 1300, y: 'calc(100vh - 320px)' }}
+        sticky={{
+          offsetHeader: 120, // 64px header + ~56px заголовок страницы
+        }}
       />
     </>
   );
