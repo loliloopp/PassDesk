@@ -28,11 +28,6 @@ const Sidebar = () => {
       key: '/employees',
       icon: <TeamOutlined />,
       label: 'Сотрудники',
-    },
-    {
-      key: '/applications',
-      icon: <FileTextOutlined />,
-      label: 'Заявки',
     }
   ]
 
@@ -42,11 +37,6 @@ const Sidebar = () => {
       key: '/employees',
       icon: <UserOutlined />,
       label: 'Сотрудники',
-    },
-    {
-      key: '/applications',
-      icon: <FileTextOutlined />,
-      label: 'Заявки',
     },
     {
       key: 'references',

@@ -11,7 +11,6 @@ import PassesPage from './pages/PassesPage'
 import CounterpartiesPage from './pages/CounterpartiesPage'
 import ConstructionSitesPage from './pages/ConstructionSitesPage'
 import ContractsPage from './pages/ContractsPage'
-import ApplicationsPage from './pages/ApplicationsPage'
 import UserProfilePage from './pages/UserProfilePage'
 import AdministrationPage from './pages/AdministrationPage'
 import DirectoriesPage from './pages/DirectoriesPage'
@@ -46,10 +45,6 @@ function App() {
             <Route 
               path="employees" 
               element={<ProtectedRoute allowedRoles={['admin', 'user']}><EmployeesPage /></ProtectedRoute>} 
-            />
-            <Route 
-              path="applications" 
-              element={<ProtectedRoute allowedRoles={['admin', 'user']}><ApplicationsPage /></ProtectedRoute>} 
             />
             <Route 
               path="passes" 
