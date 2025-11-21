@@ -43,6 +43,7 @@ export const EmployeeTable = ({
   onViewFiles,
   onDepartmentChange,
   canExport,
+  canDeleteEmployee,
   uniqueFilters,
 }) => {
   const columns = useEmployeeColumns({
@@ -53,6 +54,7 @@ export const EmployeeTable = ({
     onViewFiles,
     onDepartmentChange,
     canExport,
+    canDeleteEmployee,
     uniqueFilters,
   });
 

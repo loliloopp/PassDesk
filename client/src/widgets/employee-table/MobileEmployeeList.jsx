@@ -1,4 +1,5 @@
-import { Card, Avatar, Typography, Tag, Space, Dropdown, Spin, Empty } from 'antd';
+import { useState } from 'react';
+import { Card, Avatar, Typography, Tag, Space, Dropdown, Spin, Empty, Popconfirm, App } from 'antd';
 import {
   UserOutlined,
   PhoneOutlined,
@@ -24,8 +25,11 @@ const MobileEmployeeList = ({
   onEdit, 
   onDelete, 
   onViewFiles,
-  canExport 
+  canExport,
+  canDeleteEmployee
 }) => {
+  const [deletingId, setDeletingId] = useState(null);
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -61,8 +65,8 @@ const MobileEmployeeList = ({
       },
     ];
 
-    // Добавляем удаление только для контрагента по умолчанию
-    if (canExport) {
+    // Добавляем удаление, если пользователь имеет право удалять этого сотрудника
+    if (canDeleteEmployee && canDeleteEmployee(employee)) {
       items.push({
         type: 'divider',
       });
@@ -71,76 +75,105 @@ const MobileEmployeeList = ({
         label: 'Удалить',
         icon: <DeleteOutlined />,
         danger: true,
-        onClick: () => onDelete(employee.id),
+        onClick: () => setDeletingId(employee.id),
       });
     }
 
     return items;
   };
 
+  // Обработчик подтверждения удаления
+  const handleDeleteConfirm = async () => {
+    try {
+      await onDelete(deletingId);
+      setDeletingId(null);
+    } catch (error) {
+      // Ошибка уже обработана в хуке
+    }
+  };
+
+  // Находим сотрудника, который удаляется
+  const employeeToDelete = employees.find(emp => emp.id === deletingId);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {employees.map((employee) => (
-        <Card
-          key={employee.id}
-          size="small"
-          onClick={() => onView(employee)}
-          style={{ 
-            cursor: 'pointer',
-            borderRadius: 4,
-          }}
-          styles={{
-            body: { padding: '6px 8px' }
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {/* Левая часть - основная информация */}
-            <div style={{ flex: 1, display: 'flex', gap: 6, minWidth: 0 }}>
-              {/* Аватар */}
-              <Avatar 
-                size={32} 
-                icon={<UserOutlined />} 
-                style={{ backgroundColor: '#2563eb', flexShrink: 0 }}
-              />
+    <>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {employees.map((employee) => (
+          <Card
+            key={employee.id}
+            size="small"
+            onClick={() => onView(employee)}
+            style={{ 
+              cursor: 'pointer',
+              borderRadius: 4,
+            }}
+            styles={{
+              body: { padding: '6px 8px' }
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Левая часть - основная информация */}
+              <div style={{ flex: 1, display: 'flex', gap: 6, minWidth: 0 }}>
+                {/* Аватар */}
+                <Avatar 
+                  size={32} 
+                  icon={<UserOutlined />} 
+                  style={{ backgroundColor: '#2563eb', flexShrink: 0 }}
+                />
 
-              {/* Информация */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {/* ФИО */}
-                <Text strong style={{ fontSize: 13 }}>
-                  {employee.lastName} {employee.firstName}
-                </Text>
+                {/* Информация */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* ФИО */}
+                  <Text strong style={{ fontSize: 13 }}>
+                    {employee.lastName} {employee.firstName}
+                  </Text>
 
-                {/* Телефон */}
-                {employee.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#666', marginTop: 2 }}>
-                    <PhoneOutlined style={{ fontSize: 10, flexShrink: 0 }} />
-                    <span>{formatPhone(employee.phone)}</span>
-                  </div>
-                )}
+                  {/* Телефон */}
+                  {employee.phone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#666', marginTop: 2 }}>
+                      <PhoneOutlined style={{ fontSize: 10, flexShrink: 0 }} />
+                      <span>{formatPhone(employee.phone)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Правая часть - меню действий */}
-            <Dropdown 
-              menu={{ items: getMenuItems(employee) }} 
-              trigger={['click']}
-              placement="bottomRight"
-            >
-              <EllipsisOutlined 
-                style={{ 
-                  fontSize: 16, 
-                  padding: 2,
-                  cursor: 'pointer',
-                  color: '#666',
-                  flexShrink: 0
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Dropdown>
-          </div>
-        </Card>
-      ))}
-    </div>
+              {/* Правая часть - меню действий */}
+              <Dropdown 
+                menu={{ items: getMenuItems(employee) }} 
+                trigger={['click']}
+                placement="bottomRight"
+              >
+                <EllipsisOutlined 
+                  style={{ 
+                    fontSize: 16, 
+                    padding: 2,
+                    cursor: 'pointer',
+                    color: '#666',
+                    flexShrink: 0
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Dropdown>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Модальное окно подтверждения удаления */}
+      {employeeToDelete && (
+        <Popconfirm
+          title="Удалить сотрудника?"
+          description={`${employeeToDelete.lastName} ${employeeToDelete.firstName} будет удален. Это действие нельзя отменить.`}
+          open={!!deletingId}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeletingId(null)}
+          okText="Удалить"
+          okType="danger"
+          cancelText="Отмена"
+        />
+      )}
+    </>
   );
 };
 

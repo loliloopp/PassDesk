@@ -58,7 +58,7 @@ router.post('/', employeeController.createEmployee); // Убрана валид�
 router.put('/:id', updateEmployeeValidation, validate, employeeController.updateEmployee); // Убрали authorize('admin'), проверка внутри контроллера
 router.put('/:id/construction-sites', employeeController.updateEmployeeConstructionSites); // Убрали authorize('admin')
 router.put('/:id/department', employeeController.updateEmployeeDepartment); // Убрали authorize('admin')
-router.delete('/:id', authorize('admin'), employeeController.deleteEmployee);
+router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере
 router.get('/search', employeeController.searchEmployees);
 
 // Employee files routes

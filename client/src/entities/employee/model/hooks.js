@@ -166,7 +166,9 @@ export const useEmployeeActions = (onSuccess) => {
       message.success('Сотрудник удален');
       onSuccess?.();
     } catch (error) {
-      message.error('Ошибка при удалении сотрудника');
+      // Проверяем наличие сообщения об ошибке от сервера
+      const errorMessage = error.response?.data?.message || 'Ошибка при удалении сотрудника';
+      message.error(errorMessage);
       throw error;
     }
   };

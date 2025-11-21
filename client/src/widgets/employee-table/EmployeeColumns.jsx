@@ -22,6 +22,7 @@ export const useEmployeeColumns = ({
   onViewFiles,
   onDepartmentChange,
   canExport,
+  canDeleteEmployee,
   uniqueFilters,
 }) => {
   return useMemo(() => {
@@ -344,18 +345,20 @@ export const useEmployeeColumns = ({
             <Tooltip title="Редактировать">
               <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
             </Tooltip>
-            <Tooltip title="Удалить">
-              <Popconfirm
-                title="Удалить сотрудника?"
-                description="Это действие нельзя отменить."
-                onConfirm={() => onDelete(record.id)}
-                okText="Удалить"
-                okType="danger"
-                cancelText="Отмена"
-              >
-                <Button type="text" danger icon={<DeleteOutlined />} />
-              </Popconfirm>
-            </Tooltip>
+            {canDeleteEmployee && canDeleteEmployee(record) && (
+              <Tooltip title="Удалить">
+                <Popconfirm
+                  title="Удалить сотрудника?"
+                  description="Это действие нельзя отменить."
+                  onConfirm={() => onDelete(record.id)}
+                  okText="Удалить"
+                  okType="danger"
+                  cancelText="Отмена"
+                >
+                  <Button type="text" danger icon={<DeleteOutlined />} />
+                </Popconfirm>
+              </Tooltip>
+            )}
           </Space>
         ),
       },
@@ -370,6 +373,7 @@ export const useEmployeeColumns = ({
     onViewFiles,
     onDepartmentChange,
     canExport,
+    canDeleteEmployee,
     uniqueFilters,
   ]);
 };

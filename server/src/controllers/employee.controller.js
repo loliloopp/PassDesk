@@ -707,6 +707,33 @@ export const deleteEmployee = async (req, res, next) => {
       });
     }
 
+    // Проверка прав доступа
+    if (req.user.role !== 'admin') {
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      
+      // Контрагент по умолчанию - только свои созданные сотрудники
+      if (req.user.counterpartyId === defaultCounterpartyId) {
+        if (employee.createdBy !== req.user.id) {
+          await transaction.rollback();
+          throw new AppError('Недостаточно прав. Вы можете удалять только созданных вами сотрудников.', 403);
+        }
+      } else {
+        // Другие контрагенты - проверяем, что сотрудник принадлежит контрагенту пользователя
+        const employeeMapping = await EmployeeCounterpartyMapping.findOne({
+          where: {
+            employeeId: id,
+            counterpartyId: req.user.counterpartyId
+          },
+          transaction
+        });
+        
+        if (!employeeMapping) {
+          await transaction.rollback();
+          throw new AppError('Недостаточно прав. Вы можете удалять только сотрудников своего контрагента.', 403);
+        }
+      }
+    }
+
     console.log('=== DELETING EMPLOYEE ===');
     console.log('Employee:', {
       id: employee.id,
