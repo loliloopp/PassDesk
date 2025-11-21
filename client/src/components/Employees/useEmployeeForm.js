@@ -153,6 +153,17 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     return value.replace(/\s/g, '');
   };
 
+  // Нормализация СНИЛС и ИНН - удаляем маску, оставляем только цифры
+  const normalizeSnils = (value) => {
+    if (!value) return value;
+    return value.replace(/[^\d]/g, '');
+  };
+
+  const normalizeInn = (value) => {
+    if (!value) return value;
+    return value.replace(/[^\d]/g, '');
+  };
+
   // Загрузка справочников при монтировании
   useEffect(() => {
     loadReferences();
@@ -201,6 +212,8 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         passportDate: values.passportDate ? values.passportDate.format('YYYY-MM-DD') : null,
         patentIssueDate: values.patentIssueDate ? values.patentIssueDate.format('YYYY-MM-DD') : null,
         phone: normalizePhoneNumber(values.phone),
+        snils: normalizeSnils(values.snils),
+        inn: normalizeInn(values.inn),
         kig: normalizeKig(values.kig),
         patentNumber: normalizePatentNumber(values.patentNumber),
         // Статусы
@@ -235,6 +248,8 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         passportDate: values.passportDate ? values.passportDate.format('YYYY-MM-DD') : null,
         patentIssueDate: values.patentIssueDate ? values.patentIssueDate.format('YYYY-MM-DD') : null,
         phone: values.phone ? normalizePhoneNumber(values.phone) : null,
+        snils: values.snils ? normalizeSnils(values.snils) : null,
+        inn: values.inn ? normalizeInn(values.inn) : null,
         kig: values.kig ? normalizeKig(values.kig) : null,
         patentNumber: values.patentNumber ? normalizePatentNumber(values.patentNumber) : null,
         // Статусы
