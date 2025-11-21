@@ -194,8 +194,17 @@ const EmployeesPage = () => {
 
       {/* Поиск на мобильных - отдельной строкой */}
       {isMobile && (
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAdd}
+            block
+            size="large"
+          >
+            Добавить
+          </Button>
         </div>
       )}
 
