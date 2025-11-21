@@ -21,7 +21,6 @@ const LoginPage = () => {
     const codeFromUrl = searchParams.get('registrationCode')
     if (codeFromUrl) {
       setRegistrationCode(codeFromUrl)
-      message.info('Регистрация по приглашению контрагента')
     }
   }, [searchParams])
 
@@ -181,16 +180,6 @@ const LoginPage = () => {
       requiredMark={true}
       autoComplete="off"
     >
-      {registrationCode && (
-        <Alert
-          message="Регистрация по приглашению"
-          description="Вы регистрируетесь по ссылке контрагента"
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      )}
-      
       <Form.Item
         name="fullName"
         label="ФИО"
@@ -293,7 +282,10 @@ const LoginPage = () => {
         <div style={{ textAlign: 'center', marginTop: 16 }}>
           <Text type="secondary">
             Уже есть аккаунт?{' '}
-            <Link onClick={() => navigate('/login')}>Войти</Link>
+            <Link onClick={() => {
+              setRegistrationCode(null);
+              navigate('/login', { replace: true });
+            }}>Войти</Link>
           </Text>
         </div>
       )}
