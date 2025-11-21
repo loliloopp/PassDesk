@@ -18,6 +18,9 @@ const { Option } = Select;
 // Типы документов
 const DOCUMENT_TYPES = [
   { value: 'passport', label: 'Паспорт' },
+  { value: 'consent', label: 'Согласие на обработку персональных данных' },
+  { value: 'bank_details', label: 'Реквизиты счета' },
+  { value: 'kig', label: 'КИГ (Карта иностранного гражданина)' },
   { value: 'patent_front', label: 'Лицевая сторона патента (с фото)' },
   { value: 'patent_back', label: 'Задняя сторона патента' },
   { value: 'biometric_consent', label: 'Согласие на обработку биометрических данных' },

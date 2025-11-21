@@ -3,6 +3,7 @@ import { SaveOutlined, CaretRightOutlined, FileOutlined } from '@ant-design/icon
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import EmployeeFileUpload from './EmployeeFileUpload';
+import EmployeeDocumentUpload from './EmployeeDocumentUpload';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -39,7 +40,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   } = useEmployeeForm(employee, true, onSuccess);
 
   // Состояние для открытых панелей (по умолчанию все открыты)
-  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'files', 'statuses']);
+  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'files', 'statuses']);
 
   // Инициализируем данные формы после загрузки справочников
   useEffect(() => {
@@ -62,29 +63,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
   // Проверяем права доступа
   const canEditConstructionSite = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
-
-  // Показываем загрузку пока загружаются справочники
-  if (loadingReferences) {
-    return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
-        <Spin size="large" />
-        <div style={{ marginTop: 16 }}>Загрузка справочников...</div>
-      </div>
-    );
-  }
-
-  // Если справочники не загрузились, показываем ошибку
-  if (!citizenships.length || !positions.length) {
-    return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
-        <Text type="danger">Ошибка загрузки справочников. Обновите страницу.</Text>
-        <br />
-        <Button type="primary" onClick={onCancel} style={{ marginTop: 16 }}>
-          Назад
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -133,7 +111,13 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               name="positionId"
               rules={[{ required: true, message: 'Выберите должность' }]}
             >
-              <Select placeholder="Выберите должность" size="large" showSearch>
+              <Select 
+                placeholder="Выберите должность" 
+                size="large" 
+                showSearch
+                loading={loadingReferences}
+                disabled={loadingReferences || positions.length === 0}
+              >
                 {positions.map((pos) => (
                   <Option key={pos.id} value={pos.id}>
                     {pos.name}
@@ -152,6 +136,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 size="large"
                 showSearch
                 onChange={handleCitizenshipChange}
+                loading={loadingReferences}
+                disabled={loadingReferences || citizenships.length === 0}
               >
                 {citizenships.map((c) => (
                   <Option key={c.id} value={c.id}>
@@ -203,7 +189,14 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
             {canEditConstructionSite && (
               <Form.Item label="Объект" name="constructionSiteId">
-                <Select placeholder="Выберите объект" size="large" showSearch allowClear>
+                <Select 
+                  placeholder="Выберите объект" 
+                  size="large" 
+                  showSearch 
+                  allowClear
+                  loading={loadingReferences}
+                  disabled={loadingReferences || constructionSites.length === 0}
+                >
                   {constructionSites.map((site) => (
                     <Option key={site.id} value={site.id}>
                       {site.name}
@@ -357,14 +350,89 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             </Panel>
           )}
 
-          {/* Блок 4: Файлы (если редактирование) */}
+          {/* Блок 4: Фото документов */}
+          <Panel header={<Title level={5} style={{ margin: 0 }}>📸 Фото документов</Title>} key="photos">
+            {!employee?.id ? (
+              <div style={{ 
+                padding: 16, 
+                background: '#f5f5f5', 
+                borderRadius: 4,
+                textAlign: 'center',
+                color: '#8c8c8c'
+              }}>
+                📝 Загрузка документов будет доступна после первого сохранения сотрудника
+              </div>
+            ) : (
+              <>
+                {/* Паспорт */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="passport"
+                  label="Паспорт"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* Согласие на обработку персональных данных */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="consent"
+                  label="Согласие на обработку персональных данных"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* Реквизиты счета */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="bank_details"
+                  label="Реквизиты счета"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* КИГ (если требуется патент) */}
+                {requiresPatent && (
+                  <>
+                    <EmployeeDocumentUpload
+                      employeeId={employee.id}
+                      documentType="kig"
+                      label="КИГ (Карта иностранного гражданина)"
+                      readonly={false}
+                      multiple={true}
+                    />
+
+                    {/* Патент лицевая сторона */}
+                    <EmployeeDocumentUpload
+                      employeeId={employee.id}
+                      documentType="patent_front"
+                      label="Патент лицевая сторона (с фото)"
+                      readonly={false}
+                      multiple={false}
+                    />
+
+                    {/* Патент задняя сторона */}
+                    <EmployeeDocumentUpload
+                      employeeId={employee.id}
+                      documentType="patent_back"
+                      label="Патент задняя сторона"
+                      readonly={false}
+                      multiple={false}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </Panel>
+
+          {/* Блок 5: Файлы (если редактирование) */}
           {employee?.id && (
             <Panel header={<Title level={5} style={{ margin: 0 }}>📎 Файлы</Title>} key="files">
               <EmployeeFileUpload employeeId={employee.id} readonly={false} />
             </Panel>
           )}
 
-          {/* Блок 5: Статусы (если редактирование) */}
+          {/* Блок 6: Статусы (если редактирование) */}
           {employee?.id && canEditConstructionSite && (
             <Panel header={<Title level={5} style={{ margin: 0 }}>⚙️ Статусы</Title>} key="statuses">
               <Form.Item name="isFired" valuePropName="checked">
