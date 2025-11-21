@@ -22,9 +22,15 @@ export const employeeApi = {
     return response.data;
   },
 
-  // Обновить сотрудника
+  // Обновить сотрудника (полное сохранение со строгой валидацией)
   update: async (id, employeeData) => {
     const response = await api.put(`/employees/${id}`, employeeData);
+    return response.data;
+  },
+
+  // Обновить черновик сотрудника (мягкая валидация)
+  updateDraft: async (id, employeeData) => {
+    const response = await api.put(`/employees/${id}/draft`, employeeData);
     return response.data;
   },
 

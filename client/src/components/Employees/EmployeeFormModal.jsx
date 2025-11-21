@@ -531,6 +531,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       const values = form.getFieldsValue(true);
       
       const formattedValues = {};
+      const uuidFields = ['positionId', 'citizenshipId']; // UUID поля требуют null вместо пустых строк
+      
       Object.keys(values).forEach(key => {
         // Пропускаем чекбоксы статусов и constructionSiteId - они не сохраняются при обновлении сотрудника
         if (key === 'isFired' || key === 'isInactive' || key === 'constructionSiteId') {
@@ -538,10 +540,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         }
         
         const value = values[key];
-        if (value === '' || value === undefined) {
+        if (value === '' || value === undefined || value === null) {
           formattedValues[key] = null;
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
-          formattedValues[key] = value ? value.format('YYYY-MM-DD') : null;
+          // Проверяем что это dayjs объект (имеет метод format), а не строка
+          formattedValues[key] = (value && value.format) ? value.format('YYYY-MM-DD') : null;
         } else if (key === 'phone') {
           // Убираем форматирование телефона и добавляем + в начало
           formattedValues[key] = normalizePhoneNumber(value);
@@ -554,6 +557,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
+        } else if (uuidFields.includes(key)) {
+          // Для UUID полей - убеждаемся что пустые строки становятся null
+          formattedValues[key] = (value && String(value).trim()) ? value : null;
         } else {
           formattedValues[key] = value;
         }
@@ -573,19 +579,18 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       }
 
       formattedValues.statusCard = 'draft';
+      formattedValues.isDraft = true; // Флаг для бэкенда и фронтенда
       await onSuccess(formattedValues);
       
-      // Если это добавление нового сотрудника - НЕ закрываем окно
+      // При сохранении черновика модальное окно НЕ закрывается
+      // Если это добавление нового сотрудника - сбрасываем форму
       if (!employee) {
-        // Сбрасываем форму для добавления следующего сотрудника
         form.resetFields();
         setActiveTab('1');
         setTabsValidation({ '1': false, '2': false, '3': false });
         setSelectedCitizenship(null);
-      } else {
-        // Если это редактирование - закрываем окно
-        onCancel();
       }
+      // Если это редактирование - оставляем окно открытым с загруженными данными
     } catch (error) {
       console.error('Save draft error:', error);
       // Ошибка уже показана в родительском компоненте через message.error
@@ -606,6 +611,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       const values = form.getFieldsValue(true);
       
       const formattedValues = {};
+      const uuidFields = ['positionId', 'citizenshipId']; // UUID поля требуют null вместо пустых строк
+      
       Object.keys(values).forEach(key => {
         // Пропускаем чекбоксы статусов и constructionSiteId - они не сохраняются при обновлении сотрудника
         if (key === 'isFired' || key === 'isInactive' || key === 'constructionSiteId') {
@@ -613,10 +620,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         }
         
         const value = values[key];
-        if (value === '' || value === undefined) {
+        if (value === '' || value === undefined || value === null) {
           formattedValues[key] = null;
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
-          formattedValues[key] = value ? value.format('YYYY-MM-DD') : null;
+          // Проверяем что это dayjs объект (имеет метод format), а не строка
+          formattedValues[key] = (value && value.format) ? value.format('YYYY-MM-DD') : null;
         } else if (key === 'phone') {
           // Убираем форматирование телефона и добавляем + в начало
           formattedValues[key] = normalizePhoneNumber(value);
@@ -629,6 +637,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
+        } else if (uuidFields.includes(key)) {
+          // Для UUID полей - убеждаемся что пустые строки становятся null
+          formattedValues[key] = (value && String(value).trim()) ? value : null;
         } else {
           formattedValues[key] = value;
         }

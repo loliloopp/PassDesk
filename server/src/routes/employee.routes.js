@@ -12,20 +12,42 @@ const router = express.Router();
 router.use(authenticate);
 
 // Validation rules
+// Для черновиков - мягкая валидация (только фамилия обязательна)
 const createEmployeeValidation = [
-  body('firstName').notEmpty().trim(),
   body('lastName').notEmpty().trim(),
+  body('firstName').optional().trim(),
   body('middleName').optional().trim(),
-  body('positionId').notEmpty().withMessage('Должность обязательна'), // Изменено с position на positionId
+  body('positionId').optional().trim(),
   body('email').optional().trim(),
   body('phone').optional().trim()
 ];
 
+// Для обновления черновика - мягкая валидация
+const updateEmployeeDraftValidation = [
+  body('lastName').optional().notEmpty().trim(),
+  body('firstName').optional().trim(),
+  body('middleName').optional().trim(),
+  body('positionId').optional().trim(),
+  body('email').optional().trim(),
+  body('phone').optional().trim(),
+  body('inn').optional().trim(),
+  body('snils').optional().trim(),
+  body('kig').optional().trim(),
+  body('passportNumber').optional().trim(),
+  body('passportDate').optional().trim(),
+  body('passportIssuer').optional().trim(),
+  body('registrationAddress').optional().trim(),
+  body('patentNumber').optional().trim(),
+  body('blankNumber').optional().trim(),
+  body('notes').optional().trim()
+];
+
+// Для полного сохранения - строгая валидация
 const updateEmployeeValidation = [
   body('firstName').optional().notEmpty().trim(),
   body('lastName').optional().notEmpty().trim(),
   body('middleName').optional().trim(),
-  body('positionId').optional().notEmpty().withMessage('Должность обязательна'), // Изменено с position на positionId
+  body('positionId').optional().notEmpty().withMessage('Должность обязательна'),
   body('email').optional().trim(),
   body('phone').optional().trim()
 ];
@@ -54,8 +76,9 @@ router.get('/my-profile', employeeController.getMyProfile); // Получить 
 router.put('/my-profile', updateMyProfileValidation, validate, employeeController.updateMyProfile); // Обновить свой профиль
 router.get('/', employeeController.getAllEmployees);
 router.get('/:id', employeeController.getEmployeeById);
-router.post('/', employeeController.createEmployee); // Убрана валидация для поддержки черновиков
-router.put('/:id', updateEmployeeValidation, validate, employeeController.updateEmployee); // Убрали authorize('admin'), проверка внутри контроллера
+router.post('/', createEmployeeValidation, validate, employeeController.createEmployee); // Валидация для создания (нужна минимум фамилия)
+router.put('/:id/draft', updateEmployeeDraftValidation, validate, employeeController.updateEmployee); // Обновление черновика - мягкая валидация
+router.put('/:id', updateEmployeeValidation, validate, employeeController.updateEmployee); // Полное обновление - строгая валидация
 router.put('/:id/construction-sites', employeeController.updateEmployeeConstructionSites); // Убрали authorize('admin')
 router.put('/:id/department', employeeController.updateEmployeeDepartment); // Убрали authorize('admin')
 router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере

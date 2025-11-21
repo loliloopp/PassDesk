@@ -418,10 +418,32 @@ export const updateEmployee = async (req, res, next) => {
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     // Не перезаписываем counterpartyId при обновлении, constructionSiteId идет в маппинг
-    const { counterpartyId, constructionSiteId, ...updateData } = req.body;
+    const { counterpartyId, constructionSiteId, isDraft, ...updateData } = req.body;
+    
+    // Очищаем данные - преобразуем пустые строки в null для всех полей
+    const cleanedData = {};
+    const uuidFields = ['positionId', 'citizenshipId'];
+    const dateFields = ['birthDate', 'passportDate', 'patentIssueDate'];
+    const fieldsToIgnore = ['id', 'createdBy', 'createdAt', 'updatedAt', 'created_by', 'updated_at', 'citizenship', 'position', 'employeeCounterpartyMappings'];
+    
+    Object.keys(updateData).forEach(key => {
+      // Пропускаем системные поля
+      if (fieldsToIgnore.includes(key)) {
+        return;
+      }
+      
+      const value = updateData[key];
+      
+      // Преобразуем пустые строки в null
+      if (value === '' || value === undefined) {
+        cleanedData[key] = null;
+      } else {
+        cleanedData[key] = value;
+      }
+    });
     
     const updates = {
-      ...updateData,
+      ...cleanedData,
       updatedBy: req.user.id
     };
     

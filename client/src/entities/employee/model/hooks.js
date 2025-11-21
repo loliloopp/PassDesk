@@ -121,7 +121,10 @@ export const useEmployeeActions = (onSuccess) => {
       const valuesToSend = { ...values };
       delete valuesToSend.isDraft;
 
-      const response = await employeeApi.update(id, valuesToSend);
+      // Используем разные методы API для черновиков и полного сохранения
+      const response = isDraft 
+        ? await employeeApi.updateDraft(id, valuesToSend)
+        : await employeeApi.update(id, valuesToSend);
       
       // Показываем сообщение в зависимости от того, черновик это или полная карточка
       if (isDraft) {
@@ -130,7 +133,7 @@ export const useEmployeeActions = (onSuccess) => {
         message.success('Сотрудник обновлен');
       }
       
-      // employeeApi.update уже возвращает response.data, которая имеет структуру:
+      // API уже возвращает response.data, которая имеет структуру:
       // {success: true, message: "...", data: {id, firstName, ...}}
       // Поэтому нужно взять response.data (это данные сотрудника)
       const updatedEmployee = response.data;
