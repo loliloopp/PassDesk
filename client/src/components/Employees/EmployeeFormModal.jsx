@@ -209,7 +209,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [dataLoaded, setDataLoaded] = useState(false); // Новый флаг: данные полностью загружены
   const [activeTab, setActiveTab] = useState('1');
   const [tabsValidation, setTabsValidation] = useState({
-    '1': false, // Основная информация
+    '1': false, // Личная информация
     '2': false, // Документы
     '3': false, // Патент
   });
@@ -712,13 +712,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   // Генерируем items для Tabs в новом формате
   const getTabsItems = () => {
     const items = [
-      // Вкладка 1: Основная информация
+      // Вкладка 1: Личная информация
       {
         key: '1',
         label: (
           <span style={getTabStyle()}>
             {getTabIcon('1')}
-            Основная информация
+            Личная информация
           </span>
         ),
         children: (
@@ -1138,6 +1138,61 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     return items;
   };
 
+  // Контент формы
+  const formContent = (
+    <Form 
+      form={form} 
+      layout="vertical"
+      onFieldsChange={handleFieldsChange}
+      validateTrigger={['onChange', 'onBlur']}
+      autoComplete="off"
+      requiredMark={(label, { required }) => (
+        <>
+          {label}
+          {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+        </>
+      )}
+    >
+      <Tabs 
+        activeKey={activeTab}
+        onChange={(key) => {
+          setActiveTab(key);
+          // Валидация запустится через useEffect при изменении activeTab
+        }}
+        style={{ marginTop: 16 }}
+        destroyOnHidden={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
+        items={getTabsItems()}
+      />
+    </Form>
+  );
+
+  // Футер с кнопками
+  const footer = (
+    <Space>
+      <Button onClick={handleModalCancel}>
+        {employee ? 'Закрыть' : 'Отмена'}
+      </Button>
+      <Button onClick={handleSaveDraft} loading={loading}>
+        Сохранить черновик
+      </Button>
+      {allTabsValid() ? (
+        <Button 
+          type="primary" 
+          onClick={handleSave} 
+          loading={loading}
+          style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+        >
+          Сохранить
+        </Button>
+      ) : (
+        <Button type="primary" onClick={handleNext}>
+          Следующая
+        </Button>
+      )}
+    </Space>
+  );
+
+  // Модальное окно
   return (
     <Modal
       title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
@@ -1145,55 +1200,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       onCancel={handleModalCancel}
       maskClosable={false}
       width={1200}
-      footer={
-        <Space>
-          <Button onClick={handleModalCancel}>
-            {employee ? 'Закрыть' : 'Отмена'}
-          </Button>
-          <Button onClick={handleSaveDraft} loading={loading}>
-            Сохранить черновик
-          </Button>
-          {allTabsValid() ? (
-            <Button 
-              type="primary" 
-              onClick={handleSave} 
-              loading={loading}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-            >
-              Сохранить
-            </Button>
-          ) : (
-            <Button type="primary" onClick={handleNext}>
-              Следующая
-            </Button>
-          )}
-        </Space>
-      }
+      footer={footer}
     >
-      <Form 
-        form={form} 
-        layout="vertical"
-        onFieldsChange={handleFieldsChange}
-        validateTrigger={['onChange', 'onBlur']}
-        autoComplete="off"
-        requiredMark={(label, { required }) => (
-          <>
-            {label}
-            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
-          </>
-        )}
-      >
-        <Tabs 
-          activeKey={activeTab}
-          onChange={(key) => {
-            setActiveTab(key);
-            // Валидация запустится через useEffect при изменении activeTab
-          }}
-          style={{ marginTop: 16 }}
-          destroyOnHidden={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
-          items={getTabsItems()}
-        />
-      </Form>
+      {formContent}
     </Modal>
   );
 };

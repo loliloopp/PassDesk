@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Typography, App } from 'antd';
+import { Typography, App, Grid, Button } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useEmployees, useEmployeeActions, filterEmployees, getUniqueFilterValues } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
 import { useSettings } from '@/entities/settings';
 import { useAuthStore } from '@/store/authStore';
-import { EmployeeTable } from '@/widgets/employee-table';
+import { EmployeeTable, MobileEmployeeList } from '@/widgets/employee-table';
 import { EmployeeSearchFilter } from '@/features/employee-search';
 import { EmployeeActions } from '@/features/employee-actions';
 import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
@@ -14,13 +16,19 @@ import ExportToExcelModal from '@/components/Employees/ExportToExcelModal';
 import SecurityModal from '@/components/Employees/SecurityModal';
 
 const { Title } = Typography;
+const { useBreakpoint } = Grid;
 
 /**
  * Страница управления сотрудниками
  * Оптимизирована для быстрой загрузки с параллельными запросами и мемоизацией
+ * Адаптивный дизайн: таблица на десктопе, карточки на мобильных
  */
 const EmployeesPage = () => {
   const { message } = App.useApp();
+  const navigate = useNavigate();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+
   const [searchText, setSearchText] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -62,13 +70,25 @@ const EmployeesPage = () => {
 
   // Handlers
   const handleAdd = () => {
-    setEditingEmployee(null);
-    setIsModalOpen(true);
+    if (isMobile) {
+      // На мобильных переходим на отдельную страницу
+      navigate('/employees/add');
+    } else {
+      // На десктопе открываем модальное окно
+      setEditingEmployee(null);
+      setIsModalOpen(true);
+    }
   };
 
   const handleEdit = (employee) => {
-    setEditingEmployee(employee);
-    setIsModalOpen(true);
+    if (isMobile) {
+      // На мобильных переходим на отдельную страницу
+      navigate(`/employees/edit/${employee.id}`);
+    } else {
+      // На десктопе открываем модальное окно
+      setEditingEmployee(employee);
+      setIsModalOpen(true);
+    }
   };
 
   const handleView = (employee) => {
@@ -129,56 +149,91 @@ const EmployeesPage = () => {
           gap: 16,
         }}
       >
-        <Title level={2} style={{ margin: 0 }}>
+        <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
           Сотрудники
         </Title>
 
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
-          <EmployeeActions
-            onAdd={handleAdd}
-            onExport={() => setIsExportModalOpen(true)}
-            onSecurity={() => setIsSecurityModalOpen(true)}
-            canExport={canExport}
-          />
-        </div>
+        {/* На мобильных показываем только кнопку добавить */}
+        {isMobile ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAdd}
+            size="large"
+          >
+            Добавить
+          </Button>
+        ) : (
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
+            <EmployeeActions
+              onAdd={handleAdd}
+              onExport={() => setIsExportModalOpen(true)}
+              onSecurity={() => setIsSecurityModalOpen(true)}
+              canExport={canExport}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Таблица сотрудников */}
-      <EmployeeTable
-        employees={filteredEmployees}
-        departments={departments}
-        loading={loading}
-        onEdit={handleEdit}
-        onView={handleView}
-        onDelete={handleDelete}
-        onViewFiles={handleViewFiles}
-        onDepartmentChange={handleDepartmentChange}
-        canExport={canExport}
-        uniqueFilters={uniqueFilters}
-      />
+      {/* Поиск на мобильных - отдельной строкой */}
+      {isMobile && (
+        <div style={{ marginBottom: 16 }}>
+          <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
+        </div>
+      )}
 
-      {/* Модальные окна */}
-      <EmployeeFormModal
-        visible={isModalOpen}
-        employee={editingEmployee}
-        onCancel={() => {
-          setIsModalOpen(false);
-          setEditingEmployee(null);
-        }}
-        onSuccess={handleFormSuccess}
-      />
+      {/* Таблица сотрудников на десктопе / Карточки на мобильных */}
+      {isMobile ? (
+        <MobileEmployeeList
+          employees={filteredEmployees}
+          loading={loading}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onViewFiles={handleViewFiles}
+          canExport={canExport}
+        />
+      ) : (
+        <EmployeeTable
+          employees={filteredEmployees}
+          departments={departments}
+          loading={loading}
+          onEdit={handleEdit}
+          onView={handleView}
+          onDelete={handleDelete}
+          onViewFiles={handleViewFiles}
+          onDepartmentChange={handleDepartmentChange}
+          canExport={canExport}
+          uniqueFilters={uniqueFilters}
+        />
+      )}
 
-      <EmployeeViewModal
-        visible={isViewModalOpen}
-        employee={viewingEmployee}
-        onCancel={() => setIsViewModalOpen(false)}
-        onEdit={() => {
-          setIsViewModalOpen(false);
-          setEditingEmployee(viewingEmployee);
-          setIsModalOpen(true);
-        }}
-      />
+      {/* Модальные окна - только для десктопа */}
+      {!isMobile && (
+        <>
+          <EmployeeFormModal
+            visible={isModalOpen}
+            employee={editingEmployee}
+            onCancel={() => {
+              setIsModalOpen(false);
+              setEditingEmployee(null);
+            }}
+            onSuccess={handleFormSuccess}
+          />
+
+          <EmployeeViewModal
+            visible={isViewModalOpen}
+            employee={viewingEmployee}
+            onCancel={() => setIsViewModalOpen(false)}
+            onEdit={() => {
+              setIsViewModalOpen(false);
+              setEditingEmployee(viewingEmployee);
+              setIsModalOpen(true);
+            }}
+          />
+        </>
+      )}
 
       <EmployeeFilesModal
         visible={isFilesModalOpen}

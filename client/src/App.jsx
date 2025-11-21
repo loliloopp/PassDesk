@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import BlockedAccountPage from './pages/BlockedAccountPage'
 import ProfilePage from './pages/ProfilePage'
 import EmployeesPage from './pages/employees'
+import AddEmployeePage from './pages/employees/AddEmployeePage'
 import PassesPage from './pages/PassesPage'
 import CounterpartiesPage from './pages/CounterpartiesPage'
 import ConstructionSitesPage from './pages/ConstructionSitesPage'
@@ -45,6 +46,14 @@ function App() {
             <Route 
               path="employees" 
               element={<ProtectedRoute allowedRoles={['admin', 'user']}><EmployeesPage /></ProtectedRoute>} 
+            />
+            <Route 
+              path="employees/add" 
+              element={<ProtectedRoute allowedRoles={['admin', 'user']}><AddEmployeePage /></ProtectedRoute>} 
+            />
+            <Route 
+              path="employees/edit/:id" 
+              element={<ProtectedRoute allowedRoles={['admin', 'user']}><AddEmployeePage /></ProtectedRoute>} 
             />
             <Route 
               path="passes" 
