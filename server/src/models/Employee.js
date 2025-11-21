@@ -6,9 +6,9 @@ class Employee extends Model {}
 Employee.init(
   {
     id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
     },
     firstName: {
       type: DataTypes.STRING,

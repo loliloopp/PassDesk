@@ -239,7 +239,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         patentNumber: values.patentNumber ? normalizePatentNumber(values.patentNumber) : null,
         // Статусы
         statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : 'active'),
-        isDraft: true, // Помечаем как черновик
+        isDraft: true, // Помечаем как черновик для фронтенда
       };
 
       // Убираем временные поля

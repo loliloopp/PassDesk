@@ -40,6 +40,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
   // Состояние для открытых панелей (по умолчанию все открыты)
   const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'files', 'statuses']);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Инициализируем данные формы после загрузки справочников
   useEffect(() => {
@@ -54,9 +55,14 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             handleCitizenshipChange(employee.citizenshipId);
           }
         }
-      } else {
+        setIsInitialized(true);
+      } else if (!isInitialized) {
+        // Только при первой загрузке (создание нового сотрудника) очищаем форму
         form.resetFields();
+        setIsInitialized(true);
       }
+      // Если isInitialized === true и employee === null, значит мы только что сохранили черновик
+      // В этом случае НЕ очищаем форму, чтобы сохранить введенные данные
     }
   }, [employee, citizenships.length, positions.length]);
 

@@ -291,6 +291,17 @@ export const createEmployee = async (req, res, next) => {
     
     console.log('✓ Employee-Counterparty mapping created');
     
+    // Для пользователей с контрагентом по умолчанию создаем UserEmployeeMapping
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    if (req.user.counterpartyId === defaultCounterpartyId) {
+      await UserEmployeeMapping.create({
+        userId: req.user.id,
+        employeeId: employee.id,
+        counterpartyId: null // Для контрагента по умолчанию counterpartyId = NULL
+      });
+      console.log('✓ User-Employee mapping created');
+    }
+    
     // Получаем созданного сотрудника с гражданством для правильного расчета statusCard
     const createdEmployee = await Employee.findByPk(employee.id, {
       include: [
@@ -324,7 +335,11 @@ export const createEmployee = async (req, res, next) => {
     });
     
     const employeeDataWithStatus = createdEmployee.toJSON();
-    employeeDataWithStatus.statusCard = calculateStatusCard(employeeDataWithStatus);
+    const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus);
+    
+    // Сохраняем вычисленный statusCard в базу данных
+    await employee.update({ statusCard: calculatedStatusCard });
+    employeeDataWithStatus.statusCard = calculatedStatusCard;
 
     res.status(201).json({
       success: true,
@@ -472,7 +487,11 @@ export const updateEmployee = async (req, res, next) => {
     });
     
     const employeeDataWithStatus = updatedEmployee.toJSON();
-    employeeDataWithStatus.statusCard = calculateStatusCard(employeeDataWithStatus);
+    const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus);
+    
+    // Сохраняем вычисленный statusCard в базу данных
+    await employee.update({ statusCard: calculatedStatusCard });
+    employeeDataWithStatus.statusCard = calculatedStatusCard;
 
     res.json({
       success: true,

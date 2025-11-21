@@ -56,16 +56,28 @@ const AddEmployeePage = () => {
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
         // message.success уже показан в хуке updateEmployee
+        
+        // При сохранении черновика остаемся на странице
+        if (!values.isDraft) {
+          // После полного сохранения возвращаемся к списку
+          setTimeout(() => {
+            navigate('/employees');
+          }, 1000);
+        }
       } else {
         // Создание нового сотрудника
         const newEmployee = await createEmployee(values);
         setEditingEmployee(newEmployee);
         // message.success уже показан в хуке createEmployee
+        
+        // При сохранении черновика остаемся на странице
+        if (!values.isDraft) {
+          // После полного сохранения возвращаемся к списку
+          setTimeout(() => {
+            navigate('/employees');
+          }, 1000);
+        }
       }
-      // После успешного сохранения возвращаемся к списку
-      setTimeout(() => {
-        navigate('/employees');
-      }, 1000);
     } catch (error) {
       // Ошибка уже обработана в хуке
       throw error;
