@@ -10,7 +10,7 @@ import {
   Modal,
   Form,
   Select,
-  message,
+  App,
   Popconfirm,
   Switch,
 } from 'antd'
@@ -31,6 +31,7 @@ import { useAuthStore } from '@/store/authStore'
 const { Title } = Typography
 
 const UsersPage = () => {
+  const { message } = App.useApp()
   const [users, setUsers] = useState([])
   const [counterparties, setCounterparties] = useState([])
   const [loading, setLoading] = useState(false)
@@ -72,7 +73,6 @@ const UsersPage = () => {
 
   const roleLabels = {
     admin: { text: 'Администратор', color: 'red' },
-    manager: { text: 'Менеджер', color: 'blue' },
     user: { text: 'Пользователь', color: 'default' },
   }
 
@@ -383,16 +383,8 @@ const UsersPage = () => {
 
           <Form.Item
             name="firstName"
-            label="Имя"
-            rules={[{ required: true, message: 'Введите имя' }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="lastName"
-            label="Фамилия"
-            rules={[{ required: true, message: 'Введите фамилию' }]}
+            label="ФИО"
+            rules={[{ required: true, message: 'Введите ФИО' }]}
           >
             <Input />
           </Form.Item>

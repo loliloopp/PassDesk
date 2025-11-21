@@ -56,12 +56,12 @@ const MobileMenu = () => {
   // Проверяем, должен ли пользователь видеть дашборд
   const canSeeDashboard = user?.counterpartyId === defaultCounterpartyId
 
-  // Меню для админов и менеджеров
-  const adminManagerMenuItems = []
+  // Меню для админов
+  const adminMenuItems = []
 
   // Добавляем "Дашборд" только если пользователь принадлежит к контрагенту по умолчанию
   if (canSeeDashboard) {
-    adminManagerMenuItems.push({
+    adminMenuItems.push({
       key: '/dashboard',
       icon: <DashboardOutlined />,
       label: 'Дашборд',
@@ -69,7 +69,7 @@ const MobileMenu = () => {
   }
 
   // Остальные пункты меню
-  adminManagerMenuItems.push(
+  adminMenuItems.push(
     {
       key: '/employees',
       icon: <UserOutlined />,
@@ -94,7 +94,7 @@ const MobileMenu = () => {
 
   // Добавляем Администрирование для админов
   if (user?.role === 'admin') {
-    adminManagerMenuItems.push({
+    adminMenuItems.push({
       key: '/administration',
       icon: <ControlOutlined />,
       label: 'Админ',
@@ -102,14 +102,14 @@ const MobileMenu = () => {
   }
 
   // Добавляем выход для всех
-  adminManagerMenuItems.push({
+  adminMenuItems.push({
     key: 'logout',
     icon: <LogoutOutlined />,
     label: 'Выйти',
     danger: true
   })
 
-  const menuItems = user?.role === 'user' ? userMenuItems : adminManagerMenuItems
+  const menuItems = user?.role === 'user' ? userMenuItems : adminMenuItems
 
   const handleMenuClick = ({ key }) => {
     if (key === 'logout') {

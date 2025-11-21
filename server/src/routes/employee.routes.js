@@ -54,10 +54,10 @@ router.get('/my-profile', employeeController.getMyProfile); // Получить 
 router.put('/my-profile', updateMyProfileValidation, validate, employeeController.updateMyProfile); // Обновить свой профиль
 router.get('/', employeeController.getAllEmployees);
 router.get('/:id', employeeController.getEmployeeById);
-router.post('/', authorize('admin', 'manager'), createEmployeeValidation, validate, employeeController.createEmployee);
-router.put('/:id', authorize('admin', 'manager'), updateEmployeeValidation, validate, employeeController.updateEmployee);
-router.put('/:id/construction-sites', authorize('admin', 'manager'), employeeController.updateEmployeeConstructionSites);
-router.put('/:id/department', authorize('admin', 'manager'), employeeController.updateEmployeeDepartment);
+router.post('/', authorize('admin'), createEmployeeValidation, validate, employeeController.createEmployee);
+router.put('/:id', authorize('admin'), updateEmployeeValidation, validate, employeeController.updateEmployee);
+router.put('/:id/construction-sites', authorize('admin'), employeeController.updateEmployeeConstructionSites);
+router.put('/:id/department', authorize('admin'), employeeController.updateEmployeeDepartment);
 router.delete('/:id', authorize('admin'), employeeController.deleteEmployee);
 router.get('/search', employeeController.searchEmployees);
 

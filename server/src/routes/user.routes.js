@@ -17,15 +17,15 @@ const createUserValidation = [
     .isLength({ min: 6 })
     .withMessage('Пароль должен содержать минимум 6 символов'),
   body('firstName').notEmpty().trim(),
-  body('lastName').notEmpty().trim(),
-  body('role').optional().isIn(['admin', 'manager', 'user']),
+  body('lastName').optional().trim(),
+  body('role').optional().isIn(['admin', 'user']),
 ];
 
 const updateUserValidation = [
   body('email').optional().isEmail().normalizeEmail(),
   body('firstName').optional().notEmpty().trim(),
-  body('lastName').optional().notEmpty().trim(),
-  body('role').optional().isIn(['admin', 'manager', 'user']),
+  body('lastName').optional().trim(),
+  body('role').optional().isIn(['admin', 'user']),
 ];
 
 const updatePasswordValidation = [

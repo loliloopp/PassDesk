@@ -30,10 +30,10 @@ const updatePassValidation = [
 router.get('/', passController.getAllPasses);
 router.get('/:id', passController.getPassById);
 router.get('/employee/:employeeId', passController.getPassesByEmployee);
-router.post('/', authorize('admin', 'manager'), createPassValidation, validate, passController.createPass);
-router.put('/:id', authorize('admin', 'manager'), updatePassValidation, validate, passController.updatePass);
+router.post('/', authorize('admin'), createPassValidation, validate, passController.createPass);
+router.put('/:id', authorize('admin'), updatePassValidation, validate, passController.updatePass);
 router.delete('/:id', authorize('admin'), passController.deletePass);
-router.patch('/:id/revoke', authorize('admin', 'manager'), passController.revokePass);
+router.patch('/:id/revoke', authorize('admin'), passController.revokePass);
 
 export default router;
 
