@@ -82,7 +82,7 @@ const AddEmployeePage = () => {
 
   return (
     <div>
-      {/* Шапка с кнопкой назад */}
+      {/* Шапка с кнопкой назад (только для десктопа) */}
       <div
         style={{
           display: 'flex',
@@ -91,14 +91,16 @@ const AddEmployeePage = () => {
           gap: 16,
         }}
       >
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/employees')}
-          size={isMobile ? 'middle' : 'large'}
-        >
-          Назад
-        </Button>
-        <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
+        {!isMobile && (
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/employees')}
+            size="large"
+          >
+            Назад
+          </Button>
+        )}
+        <Title level={isMobile ? 4 : 2} style={{ margin: 0 }}>
           {id ? 'Редактирование сотрудника' : 'Добавление сотрудника'}
         </Title>
       </div>

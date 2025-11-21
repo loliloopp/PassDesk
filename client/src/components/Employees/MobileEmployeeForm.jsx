@@ -1,12 +1,13 @@
-import { Form, Input, Select, DatePicker, Button, Space, Divider, Typography, Checkbox, Spin } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
-import { useEffect } from 'react';
+import { Form, Input, Select, DatePicker, Button, Space, Divider, Typography, Checkbox, Spin, Collapse } from 'antd';
+import { SaveOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import EmployeeFileUpload from './EmployeeFileUpload';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
+const { Panel } = Collapse;
 const DATE_FORMAT = 'DD.MM.YYYY';
 
 /**
@@ -35,6 +36,9 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     formatPatentNumber,
     formatBlankNumber,
   } = useEmployeeForm(employee, true, onSuccess);
+
+  // Состояние для открытых панелей (по умолчанию все открыты)
+  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'files', 'statuses']);
 
   // Инициализируем данные формы после загрузки справочников
   useEffect(() => {
@@ -94,224 +98,215 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
           </>
         )}
       >
-        {/* Блок 1: Личная информация */}
-        <div style={{ marginBottom: 24 }}>
-          <Title level={5} style={{ marginBottom: 16 }}>
-            📋 Личная информация
-          </Title>
-
-          <Form.Item
-            label="Фамилия"
-            name="lastName"
-            rules={[{ required: true, message: 'Введите фамилию' }]}
-          >
-            <Input placeholder="Иванов" size="large" />
-          </Form.Item>
-
-          <Form.Item
-            label="Имя"
-            name="firstName"
-            rules={[{ required: true, message: 'Введите имя' }]}
-          >
-            <Input placeholder="Иван" size="large" />
-          </Form.Item>
-
-          <Form.Item label="Отчество" name="middleName">
-            <Input placeholder="Иванович" size="large" />
-          </Form.Item>
-
-          <Form.Item
-            label="Должность"
-            name="positionId"
-            rules={[{ required: true, message: 'Выберите должность' }]}
-          >
-            <Select placeholder="Выберите должность" size="large" showSearch>
-              {positions.map((pos) => (
-                <Option key={pos.id} value={pos.id}>
-                  {pos.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label="Гражданство"
-            name="citizenshipId"
-            rules={[{ required: true, message: 'Выберите гражданство' }]}
-          >
-            <Select
-              placeholder="Выберите гражданство"
-              size="large"
-              showSearch
-              onChange={handleCitizenshipChange}
+        <Collapse
+          activeKey={activeKeys}
+          onChange={setActiveKeys}
+          expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+          expandIconPosition="start"
+          ghost
+        >
+          {/* Блок 1: Личная информация */}
+          <Panel header={<Title level={5} style={{ margin: 0 }}>📋 Личная информация</Title>} key="personal">
+            <Form.Item
+              label="Фамилия"
+              name="lastName"
+              rules={[{ required: true, message: 'Введите фамилию' }]}
             >
-              {citizenships.map((c) => (
-                <Option key={c.id} value={c.id}>
-                  {c.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+              <Input placeholder="Иванов" size="large" />
+            </Form.Item>
 
-          <Form.Item
-            label="Дата рождения"
-            name="birthDate"
-            rules={[{ required: true, message: 'Укажите дату рождения' }]}
-          >
-            <DatePicker
-              placeholder="Выберите дату"
-              format={DATE_FORMAT}
-              size="large"
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
+            <Form.Item
+              label="Имя"
+              name="firstName"
+              rules={[{ required: true, message: 'Введите имя' }]}
+            >
+              <Input placeholder="Иван" size="large" />
+            </Form.Item>
 
-          <Form.Item
-            label="Адрес регистрации"
-            name="registrationAddress"
-            rules={[{ required: true, message: 'Введите адрес регистрации' }]}
-          >
-            <TextArea placeholder="г. Москва, ул. Ленина, д. 1" rows={3} size="large" />
-          </Form.Item>
+            <Form.Item label="Отчество" name="middleName">
+              <Input placeholder="Иванович" size="large" />
+            </Form.Item>
 
-          <Form.Item
-            label="Телефон"
-            name="phone"
-            rules={[
-              { required: true, message: 'Введите телефон' },
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  const digits = value.replace(/[^\d]/g, '');
-                  if (digits.length === 11) return Promise.resolve();
-                  return Promise.reject(new Error('Телефон должен содержать 11 цифр'));
-                },
-              },
-            ]}
-            getValueFromEvent={(e) => formatPhoneNumber(e.target.value)}
-          >
-            <Input placeholder="+7 (___) ___-__-__" size="large" />
-          </Form.Item>
-
-          {canEditConstructionSite && (
-            <Form.Item label="Объект" name="constructionSiteId">
-              <Select placeholder="Выберите объект" size="large" showSearch allowClear>
-                {constructionSites.map((site) => (
-                  <Option key={site.id} value={site.id}>
-                    {site.name}
+            <Form.Item
+              label="Должность"
+              name="positionId"
+              rules={[{ required: true, message: 'Выберите должность' }]}
+            >
+              <Select placeholder="Выберите должность" size="large" showSearch>
+                {positions.map((pos) => (
+                  <Option key={pos.id} value={pos.id}>
+                    {pos.name}
                   </Option>
                 ))}
               </Select>
             </Form.Item>
-          )}
 
-          <Form.Item label="Примечание" name="note">
-            <TextArea rows={2} placeholder="Дополнительная информация" size="large" />
-          </Form.Item>
-        </div>
-
-        <Divider />
-
-        {/* Блок 2: Документы */}
-        <div style={{ marginBottom: 24 }}>
-          <Title level={5} style={{ marginBottom: 16 }}>
-            📄 Документы
-          </Title>
-
-          <Form.Item
-            label="ИНН"
-            name="inn"
-            rules={[
-              { required: true, message: 'Введите ИНН' },
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  const digits = value.replace(/[^\d]/g, '');
-                  if (digits.length === 10 || digits.length === 12) return Promise.resolve();
-                  return Promise.reject(new Error('ИНН должен содержать 10 или 12 цифр'));
-                },
-              },
-            ]}
-            getValueFromEvent={(e) => formatInn(e.target.value)}
-          >
-            <Input placeholder="1234-567890-12" size="large" />
-          </Form.Item>
-
-          <Form.Item
-            label="СНИЛС"
-            name="snils"
-            rules={[
-              { required: true, message: 'Введите СНИЛС' },
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  const digits = value.replace(/[^\d]/g, '');
-                  if (digits.length === 11) return Promise.resolve();
-                  return Promise.reject(new Error('СНИЛС должен содержать 11 цифр'));
-                },
-              },
-            ]}
-            getValueFromEvent={(e) => formatSnils(e.target.value)}
-          >
-            <Input placeholder="123-456-789 00" size="large" />
-          </Form.Item>
-
-          {requiresPatent && (
             <Form.Item
-              label="КИГ (Карта иностранного гражданина)"
-              name="kig"
+              label="Гражданство"
+              name="citizenshipId"
+              rules={[{ required: true, message: 'Выберите гражданство' }]}
+            >
+              <Select
+                placeholder="Выберите гражданство"
+                size="large"
+                showSearch
+                onChange={handleCitizenshipChange}
+              >
+                {citizenships.map((c) => (
+                  <Option key={c.id} value={c.id}>
+                    {c.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Дата рождения"
+              name="birthDate"
+              rules={[{ required: true, message: 'Укажите дату рождения' }]}
+            >
+              <DatePicker
+                placeholder="Выберите дату"
+                format={DATE_FORMAT}
+                size="large"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Адрес регистрации"
+              name="registrationAddress"
+              rules={[{ required: true, message: 'Введите адрес регистрации' }]}
+            >
+              <TextArea placeholder="г. Москва, ул. Ленина, д. 1" rows={3} size="large" />
+            </Form.Item>
+
+            <Form.Item
+              label="Телефон"
+              name="phone"
               rules={[
-                { required: true, message: 'Введите КИГ' },
+                { required: true, message: 'Введите телефон' },
                 {
-                  pattern: /^[A-Z]{2}\s?\d{7}$/i,
-                  message: 'КИГ должен быть в формате: AA 1234567',
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const digits = value.replace(/[^\d]/g, '');
+                    if (digits.length === 11) return Promise.resolve();
+                    return Promise.reject(new Error('Телефон должен содержать 11 цифр'));
+                  },
                 },
               ]}
-              getValueFromEvent={(e) => formatKig(e.target.value)}
+              getValueFromEvent={(e) => formatPhoneNumber(e.target.value)}
             >
-              <Input placeholder="AA 1234567" size="large" maxLength={10} />
+              <Input placeholder="+7 (___) ___-__-__" size="large" />
             </Form.Item>
-          )}
 
-          <Form.Item
-            label="Паспорт (серия и номер)"
-            name="passportNumber"
-            rules={[{ required: true, message: 'Введите серию и номер паспорта' }]}
-          >
-            <Input placeholder="1234 567890" size="large" />
-          </Form.Item>
+            {canEditConstructionSite && (
+              <Form.Item label="Объект" name="constructionSiteId">
+                <Select placeholder="Выберите объект" size="large" showSearch allowClear>
+                  {constructionSites.map((site) => (
+                    <Option key={site.id} value={site.id}>
+                      {site.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            )}
 
-          <Form.Item
-            label="Дата выдачи паспорта"
-            name="passportDate"
-            rules={[{ required: true, message: 'Укажите дату выдачи' }]}
-          >
-            <DatePicker
-              placeholder="Выберите дату"
-              format={DATE_FORMAT}
-              size="large"
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
+            <Form.Item label="Примечание" name="note">
+              <TextArea rows={2} placeholder="Дополнительная информация" size="large" />
+            </Form.Item>
+          </Panel>
 
-          <Form.Item
-            label="Кем выдан паспорт"
-            name="passportIssuer"
-            rules={[{ required: true, message: 'Укажите орган выдачи' }]}
-          >
-            <TextArea placeholder="Наименование органа выдачи" rows={3} size="large" />
-          </Form.Item>
-        </div>
+          {/* Блок 2: Документы */}
+          <Panel header={<Title level={5} style={{ margin: 0 }}>📄 Документы</Title>} key="documents">
+            <Form.Item
+              label="ИНН"
+              name="inn"
+              rules={[
+                { required: true, message: 'Введите ИНН' },
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const digits = value.replace(/[^\d]/g, '');
+                    if (digits.length === 10 || digits.length === 12) return Promise.resolve();
+                    return Promise.reject(new Error('ИНН должен содержать 10 или 12 цифр'));
+                  },
+                },
+              ]}
+              getValueFromEvent={(e) => formatInn(e.target.value)}
+            >
+              <Input placeholder="1234-567890-12" size="large" />
+            </Form.Item>
 
-        {/* Блок 3: Патент (если требуется) */}
-        {requiresPatent && (
-          <>
-            <Divider />
-            <div style={{ marginBottom: 24 }}>
-              <Title level={5} style={{ marginBottom: 16 }}>
-                📑 Патент
-              </Title>
+            <Form.Item
+              label="СНИЛС"
+              name="snils"
+              rules={[
+                { required: true, message: 'Введите СНИЛС' },
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const digits = value.replace(/[^\d]/g, '');
+                    if (digits.length === 11) return Promise.resolve();
+                    return Promise.reject(new Error('СНИЛС должен содержать 11 цифр'));
+                  },
+                },
+              ]}
+              getValueFromEvent={(e) => formatSnils(e.target.value)}
+            >
+              <Input placeholder="123-456-789 00" size="large" />
+            </Form.Item>
 
+            {requiresPatent && (
+              <Form.Item
+                label="КИГ (Карта иностранного гражданина)"
+                name="kig"
+                rules={[
+                  { required: true, message: 'Введите КИГ' },
+                  {
+                    pattern: /^[A-Z]{2}\s?\d{7}$/i,
+                    message: 'КИГ должен быть в формате: AA 1234567',
+                  },
+                ]}
+                getValueFromEvent={(e) => formatKig(e.target.value)}
+              >
+                <Input placeholder="AA 1234567" size="large" maxLength={10} />
+              </Form.Item>
+            )}
+
+            <Form.Item
+              label="Паспорт (серия и номер)"
+              name="passportNumber"
+              rules={[{ required: true, message: 'Введите серию и номер паспорта' }]}
+            >
+              <Input placeholder="1234 567890" size="large" />
+            </Form.Item>
+
+            <Form.Item
+              label="Дата выдачи паспорта"
+              name="passportDate"
+              rules={[{ required: true, message: 'Укажите дату выдачи' }]}
+            >
+              <DatePicker
+                placeholder="Выберите дату"
+                format={DATE_FORMAT}
+                size="large"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Кем выдан паспорт"
+              name="passportIssuer"
+              rules={[{ required: true, message: 'Укажите орган выдачи' }]}
+            >
+              <TextArea placeholder="Наименование органа выдачи" rows={3} size="large" />
+            </Form.Item>
+          </Panel>
+
+          {/* Блок 3: Патент (если требуется) */}
+          {requiresPatent && (
+            <Panel header={<Title level={5} style={{ margin: 0 }}>📑 Патент</Title>} key="patent">
               <Form.Item
                 label="Номер патента"
                 name="patentNumber"
@@ -358,32 +353,19 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               >
                 <Input placeholder="ПР1234567" size="large" maxLength={9} />
               </Form.Item>
-            </div>
-          </>
-        )}
+            </Panel>
+          )}
 
-        {/* Блок 4: Файлы (если редактирование) */}
-        {employee?.id && (
-          <>
-            <Divider />
-            <div style={{ marginBottom: 24 }}>
-              <Title level={5} style={{ marginBottom: 16 }}>
-                📎 Файлы
-              </Title>
+          {/* Блок 4: Файлы (если редактирование) */}
+          {employee?.id && (
+            <Panel header={<Title level={5} style={{ margin: 0 }}>📎 Файлы</Title>} key="files">
               <EmployeeFileUpload employeeId={employee.id} readonly={false} />
-            </div>
-          </>
-        )}
+            </Panel>
+          )}
 
-        {/* Блок 5: Статусы (если редактирование) */}
-        {employee?.id && canEditConstructionSite && (
-          <>
-            <Divider />
-            <div style={{ marginBottom: 24 }}>
-              <Title level={5} style={{ marginBottom: 16 }}>
-                ⚙️ Статусы
-              </Title>
-
+          {/* Блок 5: Статусы (если редактирование) */}
+          {employee?.id && canEditConstructionSite && (
+            <Panel header={<Title level={5} style={{ margin: 0 }}>⚙️ Статусы</Title>} key="statuses">
               <Form.Item name="isFired" valuePropName="checked">
                 <Checkbox>Уволен</Checkbox>
               </Form.Item>
@@ -391,9 +373,9 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               <Form.Item name="isInactive" valuePropName="checked">
                 <Checkbox>Неактивен (временно)</Checkbox>
               </Form.Item>
-            </div>
-          </>
-        )}
+            </Panel>
+          )}
+        </Collapse>
       </Form>
 
       {/* Нижняя панель с кнопками (фиксированная) */}
