@@ -217,7 +217,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         kig: normalizeKig(values.kig),
         patentNumber: normalizePatentNumber(values.patentNumber),
         // Статусы
-        statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : 'active'),
+        statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : null),
       };
 
       // Убираем временные поля
@@ -238,6 +238,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   // Сохранение черновика без валидации
   const handleSaveDraft = async () => {
     try {
+      console.log('📋 handleSaveDraft called with employee:', employee?.id);
       setLoading(true);
       const values = form.getFieldsValue();
 
@@ -253,15 +254,21 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         kig: values.kig ? normalizeKig(values.kig) : null,
         patentNumber: values.patentNumber ? normalizePatentNumber(values.patentNumber) : null,
         // Статусы
-        statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : 'active'),
-        isDraft: true, // Помечаем как черновик для фронтенда
+        statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : null),
       };
 
       // Убираем временные поля
       delete normalizedValues.isFired;
       delete normalizedValues.isInactive;
 
-      await onSuccess(normalizedValues);
+      // Отправляем на фронтенд флаг isDraft, который используется в обработчике
+      const dataToSend = {
+        ...normalizedValues,
+        isDraft: true, // Флаг для фронтенда
+      };
+
+      console.log('📤 Sending to onSuccess:', { hasEmployeeId: !!employee?.id, isDraft: true });
+      await onSuccess(dataToSend);
       setLoading(false);
     } catch (error) {
       setLoading(false);

@@ -16,6 +16,8 @@ const DATE_FORMAT = 'DD.MM.YYYY';
  * Все поля в один столбец, блоки вместо вкладок
  */
 const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
+  console.log('👁️ MobileEmployeeForm received employee prop:', employee?.id);
+  
   const {
     form,
     loading,
@@ -39,33 +41,43 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     formatBlankNumber,
   } = useEmployeeForm(employee, true, onSuccess);
 
-  // Состояние для открытых панелей (по умолчанию все открыты)
+  // Состояние для открытых панелей (по умолчанию все открыны)
   const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'files', 'statuses']);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [employeeIdOnLoad, setEmployeeIdOnLoad] = useState(null); // Отслеживаем id сотрудника при загрузке
 
   // Инициализируем данные формы после загрузки справочников
   useEffect(() => {
     if (citizenships.length && positions.length) {
       if (employee) {
-        const formData = initializeEmployeeData();
-        if (formData) {
-          form.setFieldsValue(formData);
-          
-          // Проверяем гражданство
-          if (employee.citizenshipId) {
-            handleCitizenshipChange(employee.citizenshipId);
+        console.log('📌 MobileEmployeeForm: employee changed to:', employee.id);
+        // Инициализируем форму только если это первая загрузка сотрудника
+        if (!isInitialized) {
+          console.log('✏️ Initializing form for first time with employee:', employee.id);
+          const formData = initializeEmployeeData();
+          if (formData) {
+            form.setFieldsValue(formData);
+            
+            // Проверяем гражданство
+            if (employee.citizenshipId) {
+              handleCitizenshipChange(employee.citizenshipId);
+            }
           }
+          setEmployeeIdOnLoad(employee.id);
+          setIsInitialized(true);
+        } else {
+          // Если employee уже был инициализирован и вернулся тот же сотрудник
+          // НЕ перезаписываем форму, чтобы сохранить пользовательские данные
+          console.log('✏️ Form already initialized, NOT reinitializing');
         }
-        setIsInitialized(true);
       } else if (!isInitialized) {
         // Только при первой загрузке (создание нового сотрудника) очищаем форму
+        console.log('🆕 First load: new employee, resetting form');
         form.resetFields();
         setIsInitialized(true);
       }
-      // Если isInitialized === true и employee === null, значит мы только что сохранили черновик
-      // В этом случае НЕ очищаем форму, чтобы сохранить введенные данные
     }
-  }, [employee, citizenships.length, positions.length]);
+  }, [employee?.id, citizenships.length, positions.length, isInitialized]);
 
   // Проверяем права доступа
   const canEditConstructionSite = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';

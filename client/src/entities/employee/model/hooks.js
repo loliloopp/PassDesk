@@ -52,17 +52,26 @@ export const useEmployeeActions = (onSuccess) => {
   const createEmployee = async (values) => {
     setLoading(true);
     try {
-      const response = await employeeApi.create(values);
+      // Удаляем флаг isDraft перед отправкой на сервер
+      const isDraft = values.isDraft;
+      const valuesToSend = { ...values };
+      delete valuesToSend.isDraft;
+
+      const response = await employeeApi.create(valuesToSend);
       
       // Показываем сообщение в зависимости от того, черновик это или полная карточка
-      if (values.isDraft) {
+      if (isDraft) {
         message.success('Черновик сохранен');
       } else {
         message.success('Сотрудник создан');
       }
       
-      onSuccess?.(response.data.data);
-      return response.data.data;
+      // employeeApi.create уже возвращает response.data, которая имеет структуру:
+      // {success: true, message: "...", data: {id, firstName, ...}}
+      // Поэтому нужно взять response.data (это данные сотрудника)
+      const createdEmployee = response.data;
+      onSuccess?.(createdEmployee);
+      return createdEmployee;
     } catch (error) {
       console.error('Error creating employee:', error);
       
@@ -107,18 +116,26 @@ export const useEmployeeActions = (onSuccess) => {
   const updateEmployee = async (id, values) => {
     setLoading(true);
     try {
-      await employeeApi.update(id, values);
+      // Удаляем флаг isDraft перед отправкой на сервер
+      const isDraft = values.isDraft;
+      const valuesToSend = { ...values };
+      delete valuesToSend.isDraft;
+
+      const response = await employeeApi.update(id, valuesToSend);
       
       // Показываем сообщение в зависимости от того, черновик это или полная карточка
-      if (values.isDraft) {
+      if (isDraft) {
         message.success('Черновик обновлен');
       } else {
         message.success('Сотрудник обновлен');
       }
       
-      const response = await employeeApi.getById(id);
-      onSuccess?.(response.data.data);
-      return response.data.data;
+      // employeeApi.update уже возвращает response.data, которая имеет структуру:
+      // {success: true, message: "...", data: {id, firstName, ...}}
+      // Поэтому нужно взять response.data (это данные сотрудника)
+      const updatedEmployee = response.data;
+      onSuccess?.(updatedEmployee);
+      return updatedEmployee;
     } catch (error) {
       console.error('Error updating employee:', error);
       

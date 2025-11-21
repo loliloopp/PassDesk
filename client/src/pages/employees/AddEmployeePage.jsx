@@ -25,6 +25,9 @@ const AddEmployeePage = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Логирование для отладки
+  console.log('🔄 AddEmployeePage rendered with editingEmployee.id:', editingEmployee?.id);
+
   const { createEmployee, updateEmployee } = useEmployeeActions(() => {
     // Не нужно refetch, так как мы уходим со страницы
   });
@@ -51,8 +54,16 @@ const AddEmployeePage = () => {
 
   const handleFormSuccess = async (values) => {
     try {
+      // Логирование для отладки
+      console.log('🔍 handleFormSuccess called', {
+        editingEmployeeId: editingEmployee?.id,
+        isDraft: values.isDraft,
+        editingEmployee: editingEmployee
+      });
+
       if (editingEmployee) {
         // Обновление существующего сотрудника
+        console.log('📝 Updating employee with ID:', editingEmployee.id);
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
         // message.success уже показан в хуке updateEmployee
@@ -66,7 +77,9 @@ const AddEmployeePage = () => {
         }
       } else {
         // Создание нового сотрудника
+        console.log('✅ Creating new employee');
         const newEmployee = await createEmployee(values);
+        console.log('✅ New employee created:', { id: newEmployee?.id, data: newEmployee });
         setEditingEmployee(newEmployee);
         // message.success уже показан в хуке createEmployee
         
