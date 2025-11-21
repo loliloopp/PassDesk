@@ -140,12 +140,10 @@ const EmployeesPage = () => {
         // Обновление существующего сотрудника
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
-        message.info('Теперь вы можете продолжить заполнение данных сотрудника');
       } else {
         // Создание нового сотрудника
         const newEmployee = await createEmployee(values);
         setEditingEmployee(newEmployee);
-        message.info('Теперь вы можете продолжить заполнение данных сотрудника');
       }
       refetchEmployees();
     } catch (error) {
