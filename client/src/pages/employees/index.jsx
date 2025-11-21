@@ -160,17 +160,8 @@ const EmployeesPage = () => {
           Сотрудники
         </Title>
 
-        {/* На мобильных показываем только кнопку добавить */}
-        {isMobile ? (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-            size="large"
-          >
-            Добавить
-          </Button>
-        ) : (
+        {/* На десктопе показываем поиск и действия */}
+        {!isMobile && (
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
             <EmployeeActions
