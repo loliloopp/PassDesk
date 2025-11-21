@@ -35,24 +35,15 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
       const [citizenshipsRes, sitesRes, positionsRes, settingsRes] = await Promise.all([
         citizenshipService.getAll(),
         constructionSiteService.getAll(),
-        positionService.getAll(),
+        positionService.getAll({ limit: 1000 }), // Загружаем все должности
         settingsService.getPublicSettings(),
       ]);
-
-      console.log('✅ Справочники успешно загружены');
 
       // Извлекаем данные с учетом структуры API
       const citizenshipsData = citizenshipsRes.data?.data?.citizenships || [];
       const sitesData = sitesRes.data?.data?.constructionSites || [];
       const positionsData = positionsRes.data?.data?.positions || [];
       const settingsData = settingsRes.data || {};
-
-      console.log('📊 Данные:', {
-        citizenships: citizenshipsData.length,
-        sites: sitesData.length,
-        positions: positionsData.length,
-        defaultCounterpartyId: settingsData.defaultCounterpartyId
-      });
 
       setCitizenships(citizenshipsData);
       setConstructionSites(sitesData);
@@ -69,18 +60,15 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   };
 
   // Проверка гражданства
-  const checkCitizenship = async (citizenshipId) => {
+  const checkCitizenship = (citizenshipId) => {
     if (!citizenshipId) {
       setSelectedCitizenship(null);
       return;
     }
 
-    try {
-      const response = await citizenshipService.getById(citizenshipId);
-      setSelectedCitizenship(response.data);
-    } catch (error) {
-      console.error('Error checking citizenship:', error);
-    }
+    // Находим гражданство из уже загруженного списка
+    const citizenship = citizenships.find(c => c.id === citizenshipId);
+    setSelectedCitizenship(citizenship || null);
   };
 
   // Маски форматирования (можно вынести в отдельный файл)

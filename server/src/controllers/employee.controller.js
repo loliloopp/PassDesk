@@ -406,6 +406,19 @@ export const updateEmployee = async (req, res, next) => {
       });
     }
 
+    // Проверка прав доступа для обычных пользователей (не admin)
+    if (req.user.role !== 'admin') {
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      
+      // Для контрагента по умолчанию - только свои созданные сотрудники
+      if (req.user.counterpartyId === defaultCounterpartyId) {
+        if (employee.createdBy !== req.user.id) {
+          throw new AppError('Недостаточно прав. Вы можете редактировать только созданных вами сотрудников.', 403);
+        }
+      }
+      // Для остальных контрагентов - все сотрудники доступны для редактирования
+    }
+
     await employee.update(updates);
     
     // Если был передан constructionSiteId, обновляем маппинг
@@ -517,6 +530,19 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
       });
     }
     
+    // Проверка прав доступа для обычных пользователей (не admin)
+    if (req.user.role !== 'admin') {
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      
+      // Для контрагента по умолчанию - только свои созданные сотрудники
+      if (req.user.counterpartyId === defaultCounterpartyId) {
+        if (employee.createdBy !== req.user.id) {
+          throw new AppError('Недостаточно прав. Вы можете редактировать только созданных вами сотрудников.', 403);
+        }
+      }
+      // Для остальных контрагентов - все сотрудники доступны для редактирования
+    }
+    
     // Получаем существующие маппинги сотрудника для текущего контрагента
     const existingMappings = await EmployeeCounterpartyMapping.findAll({
       where: {
@@ -580,6 +606,19 @@ export const updateEmployeeDepartment = async (req, res, next) => {
         success: false,
         message: 'Сотрудник не найден'
       });
+    }
+    
+    // Проверка прав доступа для обычных пользователей (не admin)
+    if (req.user.role !== 'admin') {
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      
+      // Для контрагента по умолчанию - только свои созданные сотрудники
+      if (req.user.counterpartyId === defaultCounterpartyId) {
+        if (employee.createdBy !== req.user.id) {
+          throw new AppError('Недостаточно прав. Вы можете редактировать только созданных вами сотрудников.', 403);
+        }
+      }
+      // Для остальных контрагентов - все сотрудники доступны для редактирования
     }
     
     // Получаем первый маппинг сотрудника для текущего контрагента

@@ -8,7 +8,6 @@ import EmployeeDocumentUpload from './EmployeeDocumentUpload';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
-const { Panel } = Collapse;
 const DATE_FORMAT = 'DD.MM.YYYY';
 
 /**
@@ -64,28 +63,13 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   // Проверяем права доступа
   const canEditConstructionSite = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
 
-  return (
-    <div style={{ paddingBottom: 80 }}>
-      <Form
-        form={form}
-        layout="vertical"
-        autoComplete="off"
-        requiredMark={(label, { required }) => (
-          <>
-            {label}
-            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
-          </>
-        )}
-      >
-        <Collapse
-          activeKey={activeKeys}
-          onChange={setActiveKeys}
-          expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
-          expandIconPosition="start"
-          ghost
-        >
-          {/* Блок 1: Личная информация */}
-          <Panel header={<Title level={5} style={{ margin: 0 }}>📋 Личная информация</Title>} key="personal">
+  // Формируем items для Collapse
+  const collapseItems = [
+    {
+      key: 'personal',
+      label: <Title level={5} style={{ margin: 0 }}>📋 Личная информация</Title>,
+      children: (
+        <>
             <Form.Item
               label="Фамилия"
               name="lastName"
@@ -115,6 +99,12 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 placeholder="Выберите должность" 
                 size="large" 
                 showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
+                virtual={false}
+                listHeight={400}
                 loading={loadingReferences}
                 disabled={loadingReferences || positions.length === 0}
               >
@@ -135,6 +125,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 placeholder="Выберите гражданство"
                 size="large"
                 showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
+                virtual={false}
                 onChange={handleCitizenshipChange}
                 loading={loadingReferences}
                 disabled={loadingReferences || citizenships.length === 0}
@@ -187,32 +182,17 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               <Input placeholder="+7 (___) ___-__-__" size="large" />
             </Form.Item>
 
-            {canEditConstructionSite && (
-              <Form.Item label="Объект" name="constructionSiteId">
-                <Select 
-                  placeholder="Выберите объект" 
-                  size="large" 
-                  showSearch 
-                  allowClear
-                  loading={loadingReferences}
-                  disabled={loadingReferences || constructionSites.length === 0}
-                >
-                  {constructionSites.map((site) => (
-                    <Option key={site.id} value={site.id}>
-                      {site.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            )}
-
             <Form.Item label="Примечание" name="note">
               <TextArea rows={2} placeholder="Дополнительная информация" size="large" />
             </Form.Item>
-          </Panel>
-
-          {/* Блок 2: Документы */}
-          <Panel header={<Title level={5} style={{ margin: 0 }}>📄 Документы</Title>} key="documents">
+        </>
+      ),
+    },
+    {
+      key: 'documents',
+      label: <Title level={5} style={{ margin: 0 }}>📄 Документы</Title>,
+      children: (
+        <>
             <Form.Item
               label="ИНН"
               name="inn"
@@ -256,15 +236,15 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 label="КИГ (Карта иностранного гражданина)"
                 name="kig"
                 rules={[
-                  { required: true, message: 'Введите КИГ' },
+                  { required: true, message: 'Введите КИГ, символы на латинице' },
                   {
                     pattern: /^[A-Z]{2}\s?\d{7}$/i,
-                    message: 'КИГ должен быть в формате: AA 1234567',
+                    message: 'КИГ должен быть в формате: AF 1234567',
                   },
                 ]}
                 getValueFromEvent={(e) => formatKig(e.target.value)}
               >
-                <Input placeholder="AA 1234567" size="large" maxLength={10} />
+                <Input placeholder="AF 1234567" size="large" maxLength={10} />
               </Form.Item>
             )}
 
@@ -296,11 +276,18 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             >
               <TextArea placeholder="Наименование органа выдачи" rows={3} size="large" />
             </Form.Item>
-          </Panel>
+        </>
+      ),
+    },
+  ];
 
-          {/* Блок 3: Патент (если требуется) */}
-          {requiresPatent && (
-            <Panel header={<Title level={5} style={{ margin: 0 }}>📑 Патент</Title>} key="patent">
+  // Блок 3: Патент (если требуется)
+  if (requiresPatent) {
+    collapseItems.push({
+      key: 'patent',
+      label: <Title level={5} style={{ margin: 0 }}>📑 Патент</Title>,
+      children: (
+        <>
               <Form.Item
                 label="Номер патента"
                 name="patentNumber"
@@ -347,11 +334,17 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               >
                 <Input placeholder="ПР1234567" size="large" maxLength={9} />
               </Form.Item>
-            </Panel>
-          )}
+        </>
+      ),
+    });
+  }
 
-          {/* Блок 4: Фото документов */}
-          <Panel header={<Title level={5} style={{ margin: 0 }}>📸 Фото документов</Title>} key="photos">
+  // Блок 4: Фото документов
+  collapseItems.push({
+    key: 'photos',
+    label: <Title level={5} style={{ margin: 0 }}>📸 Фото документов</Title>,
+    children: (
+      <>
             {!employee?.id ? (
               <div style={{ 
                 padding: 16, 
@@ -423,28 +416,59 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 )}
               </>
             )}
-          </Panel>
+      </>
+    ),
+  });
 
-          {/* Блок 5: Файлы (если редактирование) */}
-          {employee?.id && (
-            <Panel header={<Title level={5} style={{ margin: 0 }}>📎 Файлы</Title>} key="files">
-              <EmployeeFileUpload employeeId={employee.id} readonly={false} />
-            </Panel>
-          )}
+  // Блок 5: Файлы (если редактирование)
+  if (employee?.id) {
+    collapseItems.push({
+      key: 'files',
+      label: <Title level={5} style={{ margin: 0 }}>📎 Файлы</Title>,
+      children: <EmployeeFileUpload employeeId={employee.id} readonly={false} />,
+    });
+  }
 
-          {/* Блок 6: Статусы (если редактирование) */}
-          {employee?.id && canEditConstructionSite && (
-            <Panel header={<Title level={5} style={{ margin: 0 }}>⚙️ Статусы</Title>} key="statuses">
-              <Form.Item name="isFired" valuePropName="checked">
-                <Checkbox>Уволен</Checkbox>
-              </Form.Item>
+  // Блок 6: Статусы (если редактирование)
+  if (employee?.id && canEditConstructionSite) {
+    collapseItems.push({
+      key: 'statuses',
+      label: <Title level={5} style={{ margin: 0 }}>⚙️ Статусы</Title>,
+      children: (
+        <>
+          <Form.Item name="isFired" valuePropName="checked">
+            <Checkbox>Уволен</Checkbox>
+          </Form.Item>
 
-              <Form.Item name="isInactive" valuePropName="checked">
-                <Checkbox>Неактивен (временно)</Checkbox>
-              </Form.Item>
-            </Panel>
-          )}
-        </Collapse>
+          <Form.Item name="isInactive" valuePropName="checked">
+            <Checkbox>Неактивен (временно)</Checkbox>
+          </Form.Item>
+        </>
+      ),
+    });
+  }
+
+  return (
+    <div style={{ paddingBottom: 80 }}>
+      <Form
+        form={form}
+        layout="vertical"
+        autoComplete="off"
+        requiredMark={(label, { required }) => (
+          <>
+            {label}
+            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+          </>
+        )}
+      >
+        <Collapse
+          activeKey={activeKeys}
+          onChange={setActiveKeys}
+          expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+          expandIconPosition="start"
+          ghost
+          items={collapseItems}
+        />
       </Form>
 
       {/* Нижняя панель с кнопками (фиксированная) */}

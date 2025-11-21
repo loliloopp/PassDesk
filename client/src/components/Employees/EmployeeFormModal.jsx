@@ -802,6 +802,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     filterOption={(input, option) =>
                       option.children.toLowerCase().includes(input.toLowerCase())
                     }
+                    virtual={false}
+                    listHeight={400}
                     autoComplete="off"
                     popupMatchSelectWidth={false}
                     classNames={{ popup: { root: 'dropdown-wide' } }}
@@ -829,6 +831,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     allowClear
                     showSearch
                     optionFilterProp="children"
+                    virtual={false}
                     onChange={handleCitizenshipChange}
                     autoComplete="off"
                   >
@@ -990,17 +993,17 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     name="kig" 
                     label="КИГ"
                     rules={[
-                      { required: true, message: 'Введите КИГ' },
+                      { required: true, message: 'Введите КИГ, символы на латинице' },
                       {
                         pattern: /^[A-Z]{2}\s\d{7}$/,
-                        message: 'КИГ должен быть в формате АА 1234567 (латинские буквы)'
+                        message: 'КИГ должен быть в формате: AF 1234567'
                       }
                     ]}
                     normalize={(value) => {
                       return formatKig(value);
                     }}
                   >
-                    <Input maxLength={10} placeholder="АА 1234567" autoComplete="off" />
+                    <Input maxLength={10} placeholder="AF 1234567" autoComplete="off" />
                   </Form.Item>
                 </Col>
               )}
