@@ -128,13 +128,18 @@ const MobileEmployeeList = ({
                     {employee.lastName} {employee.firstName}
                   </Text>
 
-                  {/* Телефон */}
-                  {employee.phone && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#666', marginTop: 2 }}>
-                      <PhoneOutlined style={{ fontSize: 10, flexShrink: 0 }} />
-                      <span>{formatPhone(employee.phone)}</span>
-                    </div>
-                  )}
+                  {/* Телефон и статус */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, gap: 8 }}>
+                    {employee.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#666' }}>
+                        <PhoneOutlined style={{ fontSize: 10, flexShrink: 0 }} />
+                        <span>{formatPhone(employee.phone)}</span>
+                      </div>
+                    )}
+                    {employee.statusCard === 'draft' && (
+                      <Tag color="default" style={{ fontSize: 10, margin: 0 }}>Черновик</Tag>
+                    )}
+                  </div>
                 </div>
               </div>
 
