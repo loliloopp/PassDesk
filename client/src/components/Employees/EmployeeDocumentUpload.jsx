@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Upload, Button, Image, App, Space, Popconfirm, Tooltip, Spin } from 'antd';
 import { UploadOutlined, DeleteOutlined, EyeOutlined, FileImageOutlined, CameraOutlined } from '@ant-design/icons';
 import { employeeService } from '@/services/employeeService';
-import DocumentCamera from './DocumentCamera';
+import { DocumentScannerModal as DocumentCamera } from '@/features/document-scanner';
 
 /**
  * Компонент для загрузки типизированных документов сотрудника

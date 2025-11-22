@@ -1,0 +1,2 @@
+export { DocumentScannerModal } from './DocumentScannerModal';
+
