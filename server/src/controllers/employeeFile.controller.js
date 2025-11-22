@@ -235,6 +235,7 @@ export const getEmployeeFiles = async (req, res, next) => {
         'fileSize',
         'filePath',
         'publicUrl',
+        'documentType',
         'createdAt'
       ]
     });
