@@ -134,6 +134,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       }
 
       try {
+          // Конвертируем нормализованные координаты обратно в пиксели
           const corners = [];
           for (let i = 0; i < 4; i++) {
               corners.push({ 
@@ -142,14 +143,34 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
               });
           }
 
-          const sum = corners.map(p => p.x + p.y);
-          const diff = corners.map(p => p.y - p.x);
-          
-          const tl = corners[sum.indexOf(Math.min(...sum))];
-          const br = corners[sum.indexOf(Math.max(...sum))];
-          const tr = corners[diff.indexOf(Math.min(...diff))];
-          const bl = corners[diff.indexOf(Math.max(...diff))];
-          
+          // Надежная сортировка углов (TL, TR, BR, BL)
+          // 1. Находим центр масс
+          const center = corners.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+          center.x /= 4;
+          center.y /= 4;
+
+          // 2. Сортируем точки: верхние (y < cy) и нижние (y > cy)
+          const topPoints = corners.filter(p => p.y < center.y).sort((a, b) => a.x - b.x);
+          const bottomPoints = corners.filter(p => p.y >= center.y).sort((a, b) => a.x - b.x);
+
+          // Fallback для сложных случаев (сильный наклон) - сортировка по квадрантам
+          let tl, tr, br, bl;
+
+          if (topPoints.length === 2 && bottomPoints.length === 2) {
+              tl = topPoints[0];
+              tr = topPoints[1];
+              bl = bottomPoints[0];
+              br = bottomPoints[1];
+          } else {
+              // Используем старый метод суммы/разности как fallback
+              const sum = corners.map(p => p.x + p.y);
+              const diff = corners.map(p => p.y - p.x);
+              tl = corners[sum.indexOf(Math.min(...sum))];
+              br = corners[sum.indexOf(Math.max(...sum))];
+              tr = corners[diff.indexOf(Math.min(...diff))];
+              bl = corners[diff.indexOf(Math.max(...diff))];
+          }
+
           const widthA = Math.sqrt(Math.pow(br.x - bl.x, 2) + Math.pow(br.y - bl.y, 2));
           const widthB = Math.sqrt(Math.pow(tr.x - tl.x, 2) + Math.pow(tr.y - tl.y, 2));
           const maxWidth = Math.max(widthA, widthB);
