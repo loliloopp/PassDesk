@@ -134,7 +134,6 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       }
 
       try {
-          // Конвертируем нормализованные координаты обратно в пиксели
           const corners = [];
           for (let i = 0; i < 4; i++) {
               corners.push({ 
@@ -143,17 +142,14 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
               });
           }
 
-          // Надежная сортировка углов (TL, TR, BR, BL)
-          // 1. Находим центр масс
+          // Надежная сортировка углов
           const center = corners.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
           center.x /= 4;
           center.y /= 4;
 
-          // 2. Сортируем точки: верхние (y < cy) и нижние (y > cy)
           const topPoints = corners.filter(p => p.y < center.y).sort((a, b) => a.x - b.x);
           const bottomPoints = corners.filter(p => p.y >= center.y).sort((a, b) => a.x - b.x);
 
-          // Fallback для сложных случаев (сильный наклон) - сортировка по квадрантам
           let tl, tr, br, bl;
 
           if (topPoints.length === 2 && bottomPoints.length === 2) {
@@ -162,7 +158,6 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
               bl = bottomPoints[0];
               br = bottomPoints[1];
           } else {
-              // Используем старый метод суммы/разности как fallback
               const sum = corners.map(p => p.x + p.y);
               const diff = corners.map(p => p.y - p.x);
               tl = corners[sum.indexOf(Math.min(...sum))];
@@ -226,14 +221,21 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         const edged = new cv.Mat();
         
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        cv.GaussianBlur(gray, blur, new cv.Size(7, 7), 0, 0, cv.BORDER_DEFAULT);
-        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+        // Уменьшаем размытие для сохранения деталей (5x5)
+        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+        
+        // Усиливаем морфологию (5x5) для лучшего закрытия разрывов
+        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
         cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
-        kernel.delete();
-
+        
+        // Экстремально низкие пороги Canny для Low Contrast
         cv.Canny(blur, edged, 30, 100);
-        const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+        
+        // Увеличенная дилатация для толстых линий
+        const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
         cv.dilate(edged, edged, dilateKernel);
+        
+        kernel.delete();
         dilateKernel.delete();
         
         const contours = new cv.MatVector();
@@ -357,12 +359,12 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       const edged = new cv.Mat();
       
       cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-      cv.GaussianBlur(gray, blur, new cv.Size(7, 7), 0, 0, cv.BORDER_DEFAULT);
-      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+      cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
       cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
       
       cv.Canny(blur, edged, 30, 100);
-      const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+      const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
       cv.dilate(edged, edged, dilateKernel);
       
       const contours = new cv.MatVector();
