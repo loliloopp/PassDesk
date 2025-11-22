@@ -11,6 +11,7 @@ import { EmployeeSearchFilter } from '@/features/employee-search';
 import { EmployeeActions } from '@/features/employee-actions';
 import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
 import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
+import EmployeeViewDrawer from '@/components/Employees/EmployeeViewDrawer';
 import EmployeeFilesModal from '@/components/Employees/EmployeeFilesModal';
 import ExportToExcelModal from '@/components/Employees/ExportToExcelModal';
 import SecurityModal from '@/components/Employees/SecurityModal';
@@ -110,8 +111,15 @@ const EmployeesPage = () => {
   };
 
   const handleView = (employee) => {
-    setViewingEmployee(employee);
-    setIsViewModalOpen(true);
+    if (isMobile) {
+      // На мобильных открываем боковую панель
+      setViewingEmployee(employee);
+      setIsViewModalOpen(true);
+    } else {
+      // На десктопе открываем модальное окно
+      setViewingEmployee(employee);
+      setIsViewModalOpen(true);
+    }
   };
 
   const handleViewFiles = (employee) => {
@@ -153,7 +161,7 @@ const EmployeesPage = () => {
   };
 
   return (
-    <div>
+    <div style={{ overflowX: 'hidden' }}>
       {/* Заголовок с поиском и действиями */}
       <div
         style={{
@@ -234,7 +242,7 @@ const EmployeesPage = () => {
         />
       )}
 
-      {/* Модальные окна - только для десктопа */}
+      {/* Модальные окна - для десктопа */}
       {!isMobile && (
         <>
           <EmployeeFormModal
@@ -258,6 +266,24 @@ const EmployeesPage = () => {
             }}
           />
         </>
+      )}
+
+      {/* Боковая панель просмотра - только для мобильных */}
+      {isMobile && (
+        <EmployeeViewDrawer
+          visible={isViewModalOpen}
+          employee={viewingEmployee}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setViewingEmployee(null);
+          }}
+          onEdit={() => {
+            setIsViewModalOpen(false);
+            setEditingEmployee(viewingEmployee);
+            navigate(`/employees/edit/${viewingEmployee.id}`);
+            setViewingEmployee(null);
+          }}
+        />
       )}
 
       <EmployeeFilesModal

@@ -46,12 +46,6 @@ const MobileEmployeeList = ({
   const getMenuItems = (employee) => {
     const items = [
       {
-        key: 'view',
-        label: 'Просмотр',
-        icon: <EyeOutlined />,
-        onClick: () => onView(employee),
-      },
-      {
         key: 'edit',
         label: 'Редактировать',
         icon: <EditOutlined />,
@@ -97,7 +91,7 @@ const MobileEmployeeList = ({
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowX: 'hidden' }}>
         {employees.map((employee) => (
           <Card
             key={employee.id}
