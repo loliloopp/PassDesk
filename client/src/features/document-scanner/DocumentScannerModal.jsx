@@ -225,7 +225,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
         
         // Усиливаем морфологию (5x5) для лучшего закрытия разрывов
-        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
         cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
         
         // Экстремально низкие пороги Canny для Low Contrast
@@ -240,7 +240,8 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         
         const contours = new cv.MatVector();
         const hierarchy = new cv.Mat();
-        cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+        // Используем RETR_EXTERNAL для игнорирования внутренних контуров (сгибов, текста)
+        cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
         
         let maxArea = 0;
         let bestContour = null;
@@ -253,7 +254,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
           
           const peri = cv.arcLength(contour, true);
           const approx = new cv.Mat();
-          cv.approxPolyDP(contour, approx, 0.03 * peri, true);
+          cv.approxPolyDP(contour, approx, 0.04 * peri, true);
           
           if (area > maxArea && approx.rows >= 4 && approx.rows <= 6 && cv.isContourConvex(approx)) {
              if (approx.rows === 4) {
@@ -262,7 +263,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
                  bestContour = approx;
              } else {
                  const roughApprox = new cv.Mat();
-                 cv.approxPolyDP(contour, roughApprox, 0.05 * peri, true);
+                 cv.approxPolyDP(contour, roughApprox, 0.06 * peri, true);
                  if (roughApprox.rows === 4) {
                      maxArea = area;
                      if (bestContour) bestContour.delete();
@@ -293,7 +294,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
             }
         }
 
-        const isVeryStable = stableCounterRef.current > 8; 
+        const isVeryStable = stableCounterRef.current > 6; 
         setIsStable(isVeryStable);
 
         if (autoCapture && isVeryStable && !processing && !capturedImage) {
@@ -360,16 +361,16 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       
       cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
       cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
       cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
       
-      cv.Canny(blur, edged, 30, 100);
-      const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-      cv.dilate(edged, edged, dilateKernel);
+        cv.Canny(blur, edged, 20, 60);
+        const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
+        cv.dilate(edged, edged, dilateKernel);
       
       const contours = new cv.MatVector();
       const hierarchy = new cv.Mat();
-      cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+      cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
       
       let maxArea = 0;
       let docContour = null;
