@@ -22,6 +22,9 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
   const [autoCapture, setAutoCapture] = useState(false);
   const [isStable, setIsStable] = useState(false);
   
+  // Константы для анализа видеопотока
+  const ANALYSIS_WIDTH = 480;
+
   useEffect(() => {
     if (visible && !window.cv) {
       setLoading(true);
@@ -74,7 +77,15 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       if (lastContourRef.current) {
           const data32S = lastContourRef.current.data32S;
           if (data32S) {
-             savedContourData = Array.from(data32S);
+             // Нормализуем координаты (0..1) относительно ширины/высоты анализа
+             // Высота превью рассчитывалась как videoHeight * (ANALYSIS_WIDTH / videoWidth)
+             const previewHeight = Math.floor(videoHeight * (ANALYSIS_WIDTH / videoWidth));
+             
+             savedContourData = [];
+             for(let i = 0; i < data32S.length; i += 2) {
+                 savedContourData.push(data32S[i] / ANALYSIS_WIDTH); // x нормализованный
+                 savedContourData.push(data32S[i+1] / previewHeight); // y нормализованный
+             }
           }
       }
 
@@ -89,7 +100,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       img.src = imageSrc;
       img.onload = () => {
         try {
-            const resultDataUrl = cropDocumentWithContour(img, savedContourData, videoWidth, videoHeight);
+            const resultDataUrl = cropDocumentWithNormalizedContour(img, savedContourData, videoWidth, videoHeight);
             setProcessedImage(resultDataUrl);
             setProcessing(false);
         } catch (e) {
@@ -112,27 +123,22 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
     }
   }, [webcamRef]); 
 
-  const cropDocumentWithContour = (imgElement, contourData, originalWidth, originalHeight) => {
+  // Новая функция обрезки через нормализованные координаты
+  const cropDocumentWithNormalizedContour = (imgElement, normalizedContour, originalWidth, originalHeight) => {
       const cv = window.cv;
       const src = cv.imread(imgElement);
       
-      if (!contourData || contourData.length !== 8) {
+      if (!normalizedContour || normalizedContour.length !== 8) {
           src.delete();
           throw new Error("Нет сохраненного контура");
       }
 
       try {
-          // Используем ширину анализа 480px (обновлено в detectDocument)
-          const analysisWidth = 480;
-          const scaleX = originalWidth / analysisWidth;
-          const previewHeight = Math.floor(originalHeight * (analysisWidth / originalWidth));
-          const scaleY = originalHeight / previewHeight;
-
           const corners = [];
           for (let i = 0; i < 4; i++) {
               corners.push({ 
-                  x: contourData[i * 2] * scaleX, 
-                  y: contourData[i * 2 + 1] * scaleY 
+                  x: normalizedContour[i * 2] * originalWidth, 
+                  y: normalizedContour[i * 2 + 1] * originalHeight 
               });
           }
 
@@ -184,8 +190,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         if (video.readyState !== 4) return;
 
         const cv = window.cv;
-        // Увеличиваем разрешение анализа для лучшей точности
-        const width = 480; 
+        const width = ANALYSIS_WIDTH; 
         const height = Math.floor(video.videoHeight * (width / video.videoWidth));
         
         const tempCanvas = document.createElement('canvas');
@@ -199,20 +204,13 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         const blur = new cv.Mat();
         const edged = new cv.Mat();
         
-        // Улучшенная предобработка
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        // Усиленное размытие для удаления шума бумаги
         cv.GaussianBlur(gray, blur, new cv.Size(7, 7), 0, 0, cv.BORDER_DEFAULT);
-        
-        // Морфология для закрытия разрывов в контурах
         const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
         cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
         kernel.delete();
 
-        // Более мягкие пороги Canny для захвата слабых границ
-        cv.Canny(blur, edged, 30, 100); // Было 75, 200
-        
-        // Дополнительная дилатация краев после Canny для соединения линий
+        cv.Canny(blur, edged, 30, 100);
         const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
         cv.dilate(edged, edged, dilateKernel);
         dilateKernel.delete();
@@ -228,28 +226,18 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
           const contour = contours.get(i);
           const area = cv.contourArea(contour);
           
-          // Минимальная площадь документа (1/20 от кадра)
           if (area < (width * height) / 20) continue; 
           
           const peri = cv.arcLength(contour, true);
           const approx = new cv.Mat();
-          // Менее строгая аппроксимация (0.02 -> 0.03)
           cv.approxPolyDP(contour, approx, 0.03 * peri, true);
           
-          // Ищем не только 4 угла, но и 5-6 (скругленные углы часто дают лишние вершины)
-          // Главное - выпуклость и площадь
           if (area > maxArea && approx.rows >= 4 && approx.rows <= 6 && cv.isContourConvex(approx)) {
-             
-             // Если углов > 4, берем boundingBox или convexHull и упрощаем до 4? 
-             // Проще искать самый большой похожий на прямоугольник
-             
-             // Если углов ровно 4 - идеально
              if (approx.rows === 4) {
                  maxArea = area;
                  if (bestContour) bestContour.delete();
                  bestContour = approx;
              } else {
-                 // Если 5-6 углов, попробуем упростить еще сильнее
                  const roughApprox = new cv.Mat();
                  cv.approxPolyDP(contour, roughApprox, 0.05 * peri, true);
                  if (roughApprox.rows === 4) {
@@ -282,7 +270,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
             }
         }
 
-        const isVeryStable = stableCounterRef.current > 8; // Чуть дольше держим для надежности
+        const isVeryStable = stableCounterRef.current > 8; 
         setIsStable(isVeryStable);
 
         if (autoCapture && isVeryStable && !processing && !capturedImage) {
@@ -349,11 +337,10 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       
       cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
       cv.GaussianBlur(gray, blur, new cv.Size(7, 7), 0, 0, cv.BORDER_DEFAULT);
-      // Применяем те же улучшения и для финального кропа
       const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
       cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
       
-      cv.Canny(blur, edged, 30, 100); // Мягкие пороги
+      cv.Canny(blur, edged, 30, 100);
       const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
       cv.dilate(edged, edged, dilateKernel);
       
@@ -368,7 +355,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         const contour = contours.get(i);
         const area = cv.contourArea(contour);
         
-        if (area < 50000) continue; // Больше порог для 4K
+        if (area < 50000) continue;
         
         const peri = cv.arcLength(contour, true);
         const approx = new cv.Mat();
@@ -379,7 +366,6 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
           if (docContour) docContour.delete();
           docContour = approx;
         } else {
-            // Попытка упростить 5-6 угольник до 4
             const roughApprox = new cv.Mat();
             cv.approxPolyDP(contour, roughApprox, 0.05 * peri, true);
             if (roughApprox.rows === 4 && area > maxArea) {
