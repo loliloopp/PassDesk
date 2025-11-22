@@ -221,61 +221,128 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         const edged = new cv.Mat();
         
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        // Уменьшаем размытие для сохранения деталей (5x5)
-        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
+        // 1. Размываем сильнее (7x7), чтобы скрыть мягкие тени (складки) и шум текста
+        cv.GaussianBlur(gray, blur, new cv.Size(7, 7), 0, 0, cv.BORDER_DEFAULT);
         
-        // Усиливаем морфологию (5x5) для лучшего закрытия разрывов
-        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
-        cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
+        // 2. Canny 20-80: Чуть строже, чтобы игнорировать складки, но видеть края листа
+        cv.Canny(blur, edged, 20, 80);
         
-        // Экстремально низкие пороги Canny для Low Contrast
-        cv.Canny(blur, edged, 30, 100);
-        
-        // Увеличенная дилатация для толстых линий
-        const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+        // 3. Сначала закрываем разрывы (5x5) - лечим блики на карточках
+        const closeKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+        cv.morphologyEx(edged, edged, cv.MORPH_CLOSE, closeKernel);
+
+        // 4. Дилатация (3x3) - немного расширяем
+        const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
         cv.dilate(edged, edged, dilateKernel);
         
-        kernel.delete();
         dilateKernel.delete();
+        closeKernel.delete();
         
         const contours = new cv.MatVector();
         const hierarchy = new cv.Mat();
-        // Используем RETR_EXTERNAL для игнорирования внутренних контуров (сгибов, текста)
-        cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+        // ВАЖНО: Используем RETR_LIST, чтобы видеть документы, лежащие ВНУТРИ контура стола.
+        // RETR_EXTERNAL видел только стол и игнорировал документ.
+        cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
         
-        let maxArea = 0;
+        let maxScore = 0;
         let bestContour = null;
+        
+        const centerX = width / 2;
+        const centerY = height / 2;
         
         for (let i = 0; i < contours.size(); ++i) {
           const contour = contours.get(i);
           const area = cv.contourArea(contour);
           
-          if (area < (width * height) / 20) continue; 
+          // 1. Фильтр площади: Разрешаем от 1% экрана (мелкие карточки)
+          if (area < (width * height) / 100 || area > (width * height) * 0.99) continue; 
           
+          const areaRatio = area / (width * height);
+          
+          // 2. Фильтр границ: Увеличиваем отступ до 20px
+          const rect = cv.boundingRect(contour);
+          const margin = 20;
+          let bordersTouched = 0;
+          if (rect.x <= margin) bordersTouched++;
+          if (rect.y <= margin) bordersTouched++;
+          if ((rect.x + rect.width) >= (width - margin)) bordersTouched++;
+          if ((rect.y + rect.height) >= (height - margin)) bordersTouched++;
+
+          // Штрафы
+          let borderTouchPenalty = 1.0;
+          if (bordersTouched >= 3) borderTouchPenalty = 0.02; // Почти бан
+          else if (bordersTouched === 2) borderTouchPenalty = 0.1; // Сильный штраф
+          else if (bordersTouched === 1) borderTouchPenalty = 0.5; // Умеренный штраф
+          
+          // Штраф за слишком большую площадь (скорее всего это стол или фон)
+          let areaPenalty = 1.0;
+          if (areaRatio > 0.65 && bordersTouched > 0) {
+             areaPenalty = 0.2;
+          }
+          if (areaRatio > 0.85) {
+              areaPenalty = 0.1;
+          }
+
           const peri = cv.arcLength(contour, true);
           const approx = new cv.Mat();
-          cv.approxPolyDP(contour, approx, 0.04 * peri, true);
+          // Ослабляем аппроксимацию до 0.05 (было 0.03) чтобы прощать неровности (складки)
+          cv.approxPolyDP(contour, approx, 0.05 * peri, true);
           
-          if (area > maxArea && approx.rows >= 4 && approx.rows <= 6 && cv.isContourConvex(approx)) {
-             if (approx.rows === 4) {
-                 maxArea = area;
+          if (approx.rows >= 4 && approx.rows <= 12) {
+             
+             let M = cv.moments(contour);
+             let cX = M.m10 / M.m00;
+             let cY = M.m01 / M.m00;
+             
+             const dist = Math.sqrt(Math.pow(cX - centerX, 2) + Math.pow(cY - centerY, 2));
+             const maxDist = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2)) / 2;
+             
+             // Радикально усиливаем вес центра (x5)
+             // Это заставит алгоритм игнорировать тени по бокам и фокусироваться на том,
+             // что находится в перекрестии прицела.
+             const centralityFactor = 1 + Math.pow((1 - dist / maxDist), 3) * 5;
+             
+             let rotatedRect = cv.minAreaRect(contour);
+             let ratio = rotatedRect.size.width / rotatedRect.size.height;
+             if (ratio < 1) ratio = 1 / ratio;
+
+             let aspectScore = 1;
+             if (ratio > 3.5) {
+                 aspectScore = 0.2;
+             }
+
+             // Используем корень из площади, чтобы уменьшить преимущество огромных объектов (фона) перед маленькими (карточками)
+             const score = Math.sqrt(areaRatio) * centralityFactor * aspectScore * borderTouchPenalty * areaPenalty;
+
+             if (score > maxScore) {
+                 maxScore = score;
                  if (bestContour) bestContour.delete();
-                 bestContour = approx;
-             } else {
-                 const roughApprox = new cv.Mat();
-                 cv.approxPolyDP(contour, roughApprox, 0.06 * peri, true);
-                 if (roughApprox.rows === 4) {
-                     maxArea = area;
-                     if (bestContour) bestContour.delete();
-                     bestContour = roughApprox;
+                 
+                 if (approx.rows > 4) {
+                     const points = [];
+                     for(let j=0; j<approx.rows; j++) {
+                        points.push({x: approx.data32S[j*2], y: approx.data32S[j*2+1]});
+                     }
+                     
+                     const sum = points.map(p => p.x + p.y);
+                     const diff = points.map(p => p.y - p.x);
+                     
+                     const tl = points[sum.indexOf(Math.min(...sum))];
+                     const br = points[sum.indexOf(Math.max(...sum))];
+                     const tr = points[diff.indexOf(Math.min(...diff))];
+                     const bl = points[diff.indexOf(Math.max(...diff))];
+                     
+                     const fourPointContour = cv.matFromArray(4, 1, cv.CV_32SC2, [
+                         tl.x, tl.y, tr.x, tr.y, br.x, br.y, bl.x, bl.y
+                     ]);
+                     
+                     bestContour = fourPointContour;
                  } else {
-                     roughApprox.delete();
-                     approx.delete();
+                     bestContour = approx.clone();
                  }
              }
-          } else {
-             approx.delete();
           }
+          approx.delete();
         }
 
         let contourToDraw = null;
@@ -360,40 +427,85 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       const edged = new cv.Mat();
       
       cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-      cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0, 0, cv.BORDER_DEFAULT);
-      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(9, 9));
-      cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, kernel);
+      // Те же настройки для финалльной обработки: Blur 7x7, Canny 20-80
+      cv.GaussianBlur(gray, blur, new cv.Size(7, 7), 0, 0, cv.BORDER_DEFAULT);
       
-        cv.Canny(blur, edged, 20, 60);
-        const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(7, 7));
-        cv.dilate(edged, edged, dilateKernel);
+      const closeKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+      cv.morphologyEx(blur, blur, cv.MORPH_CLOSE, closeKernel);
+      
+      cv.Canny(blur, edged, 20, 80);
+      
+      const dilateKernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+      cv.dilate(edged, edged, dilateKernel);
       
       const contours = new cv.MatVector();
       const hierarchy = new cv.Mat();
-      cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      cv.findContours(edged, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
       
-      let maxArea = 0;
+      let maxScore = 0;
       let docContour = null;
+      
+      const width = src.cols;
+      const height = src.rows;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const maxDist = Math.sqrt(Math.pow(width, 2) + Math.pow(height, 2)) / 2;
       
       for (let i = 0; i < contours.size(); ++i) {
         const contour = contours.get(i);
         const area = cv.contourArea(contour);
         
-        if (area < 50000) continue;
+        // Снижаем порог площади для финальной обработки тоже (0.5% от 4К ~ 40000px)
+        if (area < 20000) continue;
         
         const peri = cv.arcLength(contour, true);
         const approx = new cv.Mat();
-        cv.approxPolyDP(contour, approx, 0.03 * peri, true);
+        cv.approxPolyDP(contour, approx, 0.05 * peri, true);
         
-        if (approx.rows === 4 && area > maxArea) {
-          maxArea = area;
+        // Расчет рейтинга контура (Центр + Площадь)
+        let M = cv.moments(contour);
+        let cX = M.m10 / M.m00;
+        let cY = M.m01 / M.m00;
+        const dist = Math.sqrt(Math.pow(cX - centerX, 2) + Math.pow(cY - centerY, 2));
+        const centralityFactor = 1 + Math.pow((1 - dist / maxDist), 3) * 5;
+        
+        const areaRatio = area / (width * height);
+        
+        // Проверка границ для финального кропа
+        const rect = cv.boundingRect(contour);
+        // Увеличиваем маржин до 30px или 5% ширины
+        const margin = Math.max(30, width * 0.05); 
+        let bordersTouched = 0;
+        if (rect.x <= margin) bordersTouched++;
+        if (rect.y <= margin) bordersTouched++;
+        if ((rect.x + rect.width) >= (width - margin)) bordersTouched++;
+        if ((rect.y + rect.height) >= (height - margin)) bordersTouched++;
+        
+        let borderTouchPenalty = 1.0;
+        // Если касается 2+ сторон - это точно фон/стол. Убиваем рейтинг.
+        if (bordersTouched >= 2) borderTouchPenalty = 0.05;
+        else if (bordersTouched === 1) borderTouchPenalty = 0.5;
+
+        let areaPenalty = 1.0;
+        // Если больше 75% - это стол. Убиваем.
+        if (areaRatio > 0.75) areaPenalty = 0.05;
+        // Если больше 60% и касается хотя бы 1 края - тоже убиваем.
+        else if (areaRatio > 0.60 && bordersTouched > 0) areaPenalty = 0.1;
+        
+        // Возвращаем линейную зависимость от Area (без корня), но с жесткими лимитами
+        // Это даст приоритет нормальному листу (40%) перед визиткой (5%),
+        // НО "стол" (80%) умрет из-за areaPenalty.
+        const score = areaRatio * centralityFactor * areaPenalty * borderTouchPenalty;
+        
+        if (approx.rows === 4 && score > maxScore) {
+          maxScore = score;
           if (docContour) docContour.delete();
           docContour = approx;
         } else {
             const roughApprox = new cv.Mat();
-            cv.approxPolyDP(contour, roughApprox, 0.05 * peri, true);
-            if (roughApprox.rows === 4 && area > maxArea) {
-                 maxArea = area;
+            cv.approxPolyDP(contour, roughApprox, 0.06 * peri, true);
+            if (roughApprox.rows === 4 && score > maxScore) {
+                 maxScore = score;
                  if (docContour) docContour.delete();
                  docContour = roughApprox;
             } else {
