@@ -24,6 +24,15 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
   
   // Константы для анализа видеопотока
   const ANALYSIS_WIDTH = 480;
+  
+  // Константы для рамки приоритета
+  const FRAME_PERCENTAGE = 0.6; // Рамка займет 60% экрана
+  const OUTER_MARGIN_PERCENTAGE = (1 - FRAME_PERCENTAGE) / 2; // 20% с каждой стороны
+  const MAX_OUTSIDE_PERCENTAGE = 0.15; // Максимум 15% документа может быть за пределами рамки
+  
+  // Весовые коэффициенты
+  const PRIORITY_INNER = 10; // х10 внутри рамки
+  const PRIORITY_EDGE = 20; // х20 на краях рамки
 
   useEffect(() => {
     if (visible && !window.cv) {
@@ -63,6 +72,57 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       setIsStable(false);
     }
   }, [visible]);
+
+  // Функция для определения весового коэффициента контура на основе его расположения
+  const calculateFramePenalty = useCallback((contour, width, height) => {
+    const rect = window.cv.boundingRect(contour);
+    
+    // Определяем границы рамки приоритета
+    const frameLeft = width * OUTER_MARGIN_PERCENTAGE;
+    const frameRight = width * (1 - OUTER_MARGIN_PERCENTAGE);
+    const frameTop = height * OUTER_MARGIN_PERCENTAGE;
+    const frameBottom = height * (1 - OUTER_MARGIN_PERCENTAGE);
+    
+    // Считаем пиксели внутри и снаружи рамки
+    const rectLeft = Math.max(rect.x, 0);
+    const rectRight = Math.min(rect.x + rect.width, width);
+    const rectTop = Math.max(rect.y, 0);
+    const rectBottom = Math.min(rect.y + rect.height, height);
+    
+    // Пересечение с рамкой
+    const overlapLeft = Math.max(frameLeft, rectLeft);
+    const overlapRight = Math.min(frameRight, rectRight);
+    const overlapTop = Math.max(frameTop, rectTop);
+    const overlapBottom = Math.min(frameBottom, rectBottom);
+    
+    const insideArea = Math.max(0, overlapRight - overlapLeft) * Math.max(0, overlapBottom - overlapTop);
+    const totalArea = rect.width * rect.height;
+    const outsidePercentage = totalArea > 0 ? (totalArea - insideArea) / totalArea : 0;
+    
+    // Если более 15% документа вне рамки - сильный штраф
+    if (outsidePercentage > MAX_OUTSIDE_PERCENTAGE) {
+      return 0.05; // Практически полный штраф
+    }
+    
+    // Проверяем, находится ли контур в краях рамки или внутри
+    const edgeMargin = (frameRight - frameLeft) * 0.15; // 15% ширины рамки как граница края
+    
+    // Считаем сколько контура в краях (20% по сторонам)
+    const edgeLeftPart = Math.max(0, frameLeft - rectLeft);
+    const edgeRightPart = Math.max(0, rectRight - frameRight);
+    const edgeTopPart = Math.max(0, frameTop - rectTop);
+    const edgeBottomPart = Math.max(0, rectBottom - frameBottom);
+    
+    const edgePixels = edgeLeftPart + edgeRightPart + edgeTopPart + edgeBottomPart;
+    const edgePercentage = edgePixels / Math.max(rect.width + rect.height, 1);
+    
+    // Смешанный коэффициент: если много в краях - усиливаем приоритет х20, иначе х10
+    if (edgePercentage > 0.3) {
+      return 1.0 + (PRIORITY_EDGE - 1) * edgePercentage; // х20 за края
+    } else {
+      return 1.0 + (PRIORITY_INNER - 1) * (1 - outsidePercentage); // х10 внутри
+    }
+  }, []);
 
   const takePhoto = useCallback(async () => {
     if (!webcamRef.current) return;
@@ -311,8 +371,11 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
                  aspectScore = 0.2;
              }
 
+             // Применяем весовой коэффициент рамки приоритета
+             const framePriority = calculateFramePenalty(contour, width, height);
+
              // Используем корень из площади, чтобы уменьшить преимущество огромных объектов (фона) перед маленькими (карточками)
-             const score = Math.sqrt(areaRatio) * centralityFactor * aspectScore * borderTouchPenalty * areaPenalty;
+             const score = Math.sqrt(areaRatio) * centralityFactor * aspectScore * borderTouchPenalty * areaPenalty * framePriority;
 
              if (score > maxScore) {
                  maxScore = score;
@@ -375,6 +438,30 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
             const ctxOverlay = overlayCanvas.getContext('2d');
             ctxOverlay.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
+            // Рисуем затемнение за пределами рамки приоритета
+            const frameLeft = overlayCanvas.width * OUTER_MARGIN_PERCENTAGE;
+            const frameTop = overlayCanvas.height * OUTER_MARGIN_PERCENTAGE;
+            const frameWidth = overlayCanvas.width * FRAME_PERCENTAGE;
+            const frameHeight = overlayCanvas.height * FRAME_PERCENTAGE;
+            
+            // Затемняем края (20% с каждой стороны)
+            ctxOverlay.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            // Левый край
+            ctxOverlay.fillRect(0, 0, frameLeft, overlayCanvas.height);
+            // Правый край
+            ctxOverlay.fillRect(frameLeft + frameWidth, 0, frameLeft, overlayCanvas.height);
+            // Верхний край
+            ctxOverlay.fillRect(0, 0, overlayCanvas.width, frameTop);
+            // Нижний край
+            ctxOverlay.fillRect(0, frameTop + frameHeight, overlayCanvas.width, frameTop);
+            
+            // Рисуем рамку приоритета
+            ctxOverlay.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctxOverlay.lineWidth = 2;
+            ctxOverlay.setLineDash([5, 5]); // Штрихованная линия
+            ctxOverlay.strokeRect(frameLeft, frameTop, frameWidth, frameHeight);
+            ctxOverlay.setLineDash([]); // Убираем штриховку
+
             if (contourToDraw) {
                 const scaleX = overlayCanvas.width / width;
                 const scaleY = overlayCanvas.height / height;
@@ -416,7 +503,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
              lastContourRef.current = null;
         }
     };
-  }, [cvReady, capturedImage, autoCapture, processing, takePhoto]);
+  }, [cvReady, capturedImage, autoCapture, processing, takePhoto, calculateFramePenalty]);
 
   const findAndCropDocument = (imgElement) => {
     try {
@@ -492,10 +579,13 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
         // Если больше 60% и касается хотя бы 1 края - тоже убиваем.
         else if (areaRatio > 0.60 && bordersTouched > 0) areaPenalty = 0.1;
         
+        // Применяем весовой коэффициент рамки приоритета
+        const framePriority = calculateFramePenalty(contour, width, height);
+        
         // Возвращаем линейную зависимость от Area (без корня), но с жесткими лимитами
         // Это даст приоритет нормальному листу (40%) перед визиткой (5%),
         // НО "стол" (80%) умрет из-за areaPenalty.
-        const score = areaRatio * centralityFactor * areaPenalty * borderTouchPenalty;
+        const score = areaRatio * centralityFactor * areaPenalty * borderTouchPenalty * framePriority;
         
         if (approx.rows === 4 && score > maxScore) {
           maxScore = score;
