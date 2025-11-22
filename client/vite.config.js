@@ -21,10 +21,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: '0.0.0.0', // Слушать на всех сетевых интерфейсах
+    host: '192.168.1.9', // Слушать на конкретном IP адресе
+    https: true, // Включить HTTPS с самоподписанным сертификатом (basicSsl плагин)
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // Проксируем на локальный бэкенд
+        target: 'http://192.168.1.9:5000', // Проксируем на бэкенд по IP адресу
         changeOrigin: true,
         secure: false,
       },
