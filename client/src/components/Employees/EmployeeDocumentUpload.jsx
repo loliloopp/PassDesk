@@ -31,6 +31,9 @@ const EmployeeDocumentUpload = ({
   
   // Ссылка на скрытый инпут для системной камеры (резервный вариант)
   const nativeCameraInputRef = useRef(null);
+  
+  // Ссылка на скрытый инпут для выбора файлов
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (employeeId) {
@@ -115,6 +118,32 @@ const EmployeeDocumentUpload = ({
     }
     // Очищаем инпут, чтобы можно было снять то же самое фото снова
     e.target.value = '';
+  };
+
+  // Обработка выбора файлов из файлового менеджера
+  const handleFileSelect = async (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      // Если multiple не разрешен, загружаем только первый файл
+      const filesToUpload = multiple ? Array.from(files) : [files[0]];
+      
+      for (const file of filesToUpload) {
+        await uploadFile(file);
+      }
+    }
+    // Очищаем инпут для следующей загрузки
+    e.target.value = '';
+  };
+
+  // Открыть файловый менеджер
+  const handleOpenFileManager = () => {
+    console.log('📁 Открытие файлового менеджера...');
+    console.log('fileInputRef.current:', fileInputRef.current);
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    } else {
+      console.error('❌ fileInputRef.current не инициализирован!');
+    }
   };
 
   // Умный запуск камеры
@@ -241,41 +270,51 @@ const EmployeeDocumentUpload = ({
 
           {/* Кнопки загрузки */}
           {!readonly && (!multiple && files.length < 1 || multiple) && (
-            <Space direction="vertical" style={{ width: '100%' }}>
-              {/* Кнопка фотографирования */}
-              <Button 
-                icon={<CameraOutlined />}
-                type="primary"
-                size="large"
-                block
-                onClick={handleStartCamera}
-                disabled={uploading}
-              >
-                Фотографировать документ
-              </Button>
-              
-              {/* Скрытый инпут для системной камеры (Fallback) */}
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                style={{ display: 'none' }}
-                ref={nativeCameraInputRef}
-                onChange={handleNativeCameraCapture}
-              />
+            <>
+              <Space style={{ width: '100%' }}>
+                {/* Кнопка фотографирования */}
+                <Button 
+                  icon={<CameraOutlined />}
+                  type="primary"
+                  size="middle"
+                  onClick={handleStartCamera}
+                  disabled={uploading}
+                >
+                  Фото
+                </Button>
+                
+                {/* Скрытый инпут для системной камеры (Fallback) */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  ref={nativeCameraInputRef}
+                  onChange={handleNativeCameraCapture}
+                />
 
-              {/* Кнопка загрузки файла */}
-              <Upload {...uploadProps}>
+                {/* Кнопка загрузки файла */}
                 <Button 
                   icon={<UploadOutlined />} 
                   loading={uploading}
-                  size="large"
-                  block
+                  size="middle"
+                  onClick={handleOpenFileManager}
+                  disabled={uploading}
                 >
-                  {uploading ? 'Загрузка...' : 'Загрузить файл'}
+                  {uploading ? 'Загрузка...' : 'Файлы'}
                 </Button>
-              </Upload>
-            </Space>
+
+                {/* Скрытый инпут для выбора файлов */}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,application/pdf"
+                  multiple={multiple}
+                  style={{ display: 'none' }}
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                />
+              </Space>
+            </>
           )}
 
           <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 4 }}>
