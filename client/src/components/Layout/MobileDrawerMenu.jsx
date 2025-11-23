@@ -1,8 +1,6 @@
 import { Drawer, Menu } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  TeamOutlined,
-  UserAddOutlined,
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
@@ -18,19 +16,6 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const { logout } = useAuthStore();
 
   const menuItems = [
-    {
-      key: '/employees',
-      icon: <TeamOutlined />,
-      label: 'Список сотрудников',
-    },
-    {
-      key: '/employees/add',
-      icon: <UserAddOutlined />,
-      label: 'Добавить сотрудника',
-    },
-    {
-      type: 'divider',
-    },
     {
       key: '/profile',
       icon: <UserOutlined />,
