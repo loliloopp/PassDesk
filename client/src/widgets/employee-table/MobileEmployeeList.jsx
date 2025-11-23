@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Avatar, Typography, Tag, Space, Dropdown, Spin, Empty, Popconfirm, App } from 'antd';
+import { Card, Avatar, Typography, Tag, Space, Dropdown, Spin, Empty, Modal } from 'antd';
 import {
   UserOutlined,
   PhoneOutlined,
@@ -28,7 +28,6 @@ const MobileEmployeeList = ({
   canExport,
   canDeleteEmployee
 }) => {
-  const [deletingId, setDeletingId] = useState(null);
 
   if (loading) {
     return (
@@ -64,12 +63,12 @@ const MobileEmployeeList = ({
       items.push({
         type: 'divider',
       });
-      items.push({
+      items.push(      {
         key: 'delete',
         label: 'Удалить',
         icon: <DeleteOutlined />,
         danger: true,
-        onClick: () => setDeletingId(employee.id),
+        onClick: () => showDeleteConfirm(employee),
       });
     }
 
@@ -86,8 +85,23 @@ const MobileEmployeeList = ({
     }
   };
 
-  // Находим сотрудника, который удаляется
-  const employeeToDelete = employees.find(emp => emp.id === deletingId);
+  // Показываем модальное окно подтверждения удаления
+  const showDeleteConfirm = (employee) => {
+    Modal.confirm({
+      title: 'Удалить сотрудника?',
+      content: `${employee.lastName} ${employee.firstName} будет удален. Это действие нельзя отменить.`,
+      okText: 'Удалить',
+      okType: 'danger',
+      cancelText: 'Отмена',
+      onOk() {
+        return onDelete(employee.id);
+      },
+      onCancel() {
+        setDeletingId(null);
+      },
+    });
+  };
+
 
   return (
     <div style={{ 
@@ -106,9 +120,7 @@ const MobileEmployeeList = ({
         <Card
           key={employee.id}
           size="small"
-          onClick={() => onView(employee)}
           style={{ 
-            cursor: 'pointer',
             borderRadius: 4,
           }}
           styles={{
@@ -116,8 +128,11 @@ const MobileEmployeeList = ({
           }}
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {/* Левая часть - основная информация */}
-              <div style={{ flex: 1, display: 'flex', gap: 6, minWidth: 0 }}>
+              {/* Левая часть - основная информация (кликабельна) */}
+              <div 
+                onClick={() => onView(employee)}
+                style={{ flex: 1, display: 'flex', gap: 6, minWidth: 0, cursor: 'pointer' }}
+              >
                 {/* Аватар */}
                 <Avatar 
                   size={32} 
@@ -147,7 +162,7 @@ const MobileEmployeeList = ({
                 </div>
               </div>
 
-              {/* Правая часть - меню действий */}
+              {/* Правая часть - меню действий (НЕ кликабельна) */}
               <Dropdown 
                 menu={{ items: getMenuItems(employee) }} 
                 trigger={['click']}
@@ -168,19 +183,6 @@ const MobileEmployeeList = ({
           </Card>
         ))}
 
-      {/* Модальное окно подтверждения удаления */}
-      {employeeToDelete && (
-        <Popconfirm
-          title="Удалить сотрудника?"
-          description={`${employeeToDelete.lastName} ${employeeToDelete.firstName} будет удален. Это действие нельзя отменить.`}
-          open={!!deletingId}
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeletingId(null)}
-          okText="Удалить"
-          okType="danger"
-          cancelText="Отмена"
-        />
-      )}
     </div>
   );
 };
