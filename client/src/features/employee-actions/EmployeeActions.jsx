@@ -2,27 +2,25 @@ import { Button, Space } from 'antd';
 import { PlusOutlined, FileExcelOutlined, LockOutlined } from '@ant-design/icons';
 
 /**
- * Feature: Действия над сотрудниками (добавление, экспорт, блокировка)
+ * Feature: Действия над сотрудниками (добавление, заявка, блокировка)
  */
 export const EmployeeActions = ({
   onAdd,
-  onExport,
+  onRequest,
   onSecurity,
   canExport,
 }) => {
   return (
     <Space size="middle">
-      {canExport && (
-        <Button type="default" icon={<FileExcelOutlined />} onClick={onExport}>
-          Импорт в Excel
-        </Button>
-      )}
+      <Button type="primary" icon={<FileExcelOutlined />} onClick={onRequest}>
+        Заявка
+      </Button>
       {canExport && (
         <Button type="default" icon={<LockOutlined />} onClick={onSecurity}>
           Блокировка и ТБ
         </Button>
       )}
-      <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+      <Button type="default" icon={<PlusOutlined />} onClick={onAdd}>
         Добавить сотрудника
       </Button>
     </Space>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Typography, App, Grid, Button } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees, useEmployeeActions, filterEmployees, getUniqueFilterValues } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
@@ -13,6 +13,7 @@ import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
 import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
 import EmployeeViewDrawer from '@/components/Employees/EmployeeViewDrawer';
 import EmployeeFilesModal from '@/components/Employees/EmployeeFilesModal';
+import ApplicationRequestModal from '@/components/Employees/ApplicationRequestModal';
 import ExportToExcelModal from '@/components/Employees/ExportToExcelModal';
 import SecurityModal from '@/components/Employees/SecurityModal';
 
@@ -34,6 +35,7 @@ const EmployeesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
@@ -137,6 +139,16 @@ const EmployeesPage = () => {
     refetchEmployees();
   };
 
+  const handleRequest = () => {
+    if (isMobile) {
+      // На мобильных переходим на отдельную страницу
+      navigate('/employees/request');
+    } else {
+      // На десктопе открываем модальное окно
+      setIsRequestModalOpen(true);
+    }
+  };
+
   const handleDelete = async (id) => {
     await deleteEmployee(id);
     refetchEmployees();
@@ -198,7 +210,7 @@ const EmployeesPage = () => {
             <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
             <EmployeeActions
               onAdd={handleAdd}
-              onExport={() => setIsExportModalOpen(true)}
+              onRequest={handleRequest}
               onSecurity={() => setIsSecurityModalOpen(true)}
               canExport={canExport}
             />
@@ -208,17 +220,28 @@ const EmployeesPage = () => {
 
       {/* Поиск на мобильных - отдельной строкой */}
       {isMobile && (
-        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px' }}>
           <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-            block
-            size="large"
-          >
-            Добавить
-          </Button>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+              size="large"
+              style={{ flex: 1 }}
+            >
+              Добавить
+            </Button>
+            <Button
+              type="primary"
+              icon={<FileExcelOutlined />}
+              onClick={handleRequest}
+              size="large"
+              style={{ flex: 1, background: '#52c41a', borderColor: '#52c41a' }}
+            >
+              Заявка
+            </Button>
+          </div>
         </div>
       )}
 
@@ -304,6 +327,15 @@ const EmployeesPage = () => {
         }
         onClose={handleCloseFilesModal}
         onFilesUpdated={handleFilesUpdated}
+      />
+
+      <ApplicationRequestModal
+        visible={isRequestModalOpen}
+        onCancel={() => {
+          setIsRequestModalOpen(false);
+          refetchEmployees();
+        }}
+        employees={employees}
       />
 
       <ExportToExcelModal
