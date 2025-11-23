@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppError } from '../middleware/errorHandler.js';
-import { User, Employee, Setting, UserEmployeeMapping, Counterparty, EmployeeCounterpartyMapping } from '../models/index.js';
+import { User, Setting, Counterparty } from '../models/index.js';
 import sequelize from '../config/database.js';
 import { isPasswordAllowed, getForbiddenPasswordMessage } from '../utils/forbiddenPasswords.js';
 
@@ -135,29 +135,6 @@ export const register = async (req, res, next) => {
       isActive: false // Пользователь неактивен до активации администратором
     }, { transaction });
 
-    // Создаем запись сотрудника
-    const employee = await Employee.create({
-      firstName,
-      lastName,
-      middleName: middleName || null,
-      email,
-      isActive: true,
-      createdBy: user.id
-    }, { transaction });
-
-    // Создаем связь сотрудник-контрагент
-    await EmployeeCounterpartyMapping.create({
-      employeeId: employee.id,
-      counterpartyId
-    }, { transaction });
-
-    // Создаем связь пользователь-сотрудник
-    await UserEmployeeMapping.create({
-      userId: user.id,
-      employeeId: employee.id,
-      counterpartyId: isDefaultCounterparty ? null : counterpartyId
-    }, { transaction });
-
     // Коммитим транзакцию
     await transaction.commit();
 
@@ -178,12 +155,6 @@ export const register = async (req, res, next) => {
           counterpartyId: user.counterpartyId,
           identificationNumber: user.identificationNumber,
           isActive: user.isActive,
-        },
-        employee: {
-          id: employee.id,
-          firstName: employee.firstName,
-          lastName: employee.lastName,
-          middleName: employee.middleName
         },
         token,
         refreshToken,

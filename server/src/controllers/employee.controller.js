@@ -929,58 +929,12 @@ export const getMyProfile = async (req, res, next) => {
       ]
     });
 
-    // Если mapping не найден, создаем пустой профиль сотрудника
+    // Если маппинга нет, профиль сотрудника не был создан
     if (!mapping) {
-      console.log(`Creating employee profile for user ${userId}`);
-      
-      const user = await User.findByPk(userId);
-      if (!user) {
-        throw new AppError('Пользователь не найден', 404);
-      }
-
-      // Создаем запись сотрудника с минимальными данными
-      const employee = await Employee.create({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        middleName: null,
-        position: '',
-        email: user.email,
-        counterpartyId: user.counterpartyId,
-        isActive: true,
-        createdBy: userId
-      });
-
-      // Создаем связь
-      mapping = await UserEmployeeMapping.create({
-        userId: user.id,
-        employeeId: employee.id
-      });
-
-      // Перезагружаем с отношениями
-      mapping = await UserEmployeeMapping.findOne({
-        where: { userId },
-        include: [
-          {
-            model: Employee,
-            as: 'employee',
-            include: [
-              {
-                model: Counterparty,
-                as: 'counterparty',
-                attributes: ['id', 'name', 'type']
-              },
-              {
-                model: Citizenship,
-                as: 'citizenship',
-                attributes: ['id', 'name', 'code']
-              }
-            ]
-          }
-        ]
-      });
+      throw new AppError('Профиль сотрудника не создан. Создайте сотрудника через форму добавления.', 404);
     }
 
-    if (!mapping || !mapping.employee) {
+    if (!mapping.employee) {
       throw new AppError('Профиль сотрудника не найден', 404);
     }
 
