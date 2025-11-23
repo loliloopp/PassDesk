@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Input, App, Button, Modal, Form, Select } from 'antd';
-import { SearchOutlined, LogoutOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { Input, App, Modal, Form, Select } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { counterpartyService } from '@/services/counterpartyService';
 import MobileCounterpartiesList from '@/components/Admin/MobileCounterpartiesList';
 
@@ -17,7 +16,6 @@ const typeMap = {
 
 const MobileCounterpartiesPage = () => {
   const { message } = App.useApp();
-  const navigate = useNavigate();
   const [counterparties, setCounterparties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -86,7 +84,7 @@ const MobileCounterpartiesPage = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Поиск и кнопка Выход */}
+      {/* Поиск */}
       <div style={{ padding: '12px 16px 8px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
         <Input
           placeholder="Поиск по названию или ИНН..."
@@ -96,14 +94,6 @@ const MobileCounterpartiesPage = () => {
           size="large"
           style={{ borderRadius: 4, flex: 1 }}
         />
-        <Button
-          type="default"
-          icon={<LogoutOutlined />}
-          onClick={() => navigate('/admin')}
-          style={{ flexShrink: 0 }}
-        >
-          Назад
-        </Button>
       </div>
 
       {/* Список контрагентов */}
