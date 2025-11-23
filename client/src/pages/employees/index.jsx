@@ -132,6 +132,11 @@ const EmployeesPage = () => {
     setFilesEmployee(null);
   };
 
+  const handleFilesUpdated = () => {
+    // Обновляем таблицу при изменении файлов
+    refetchEmployees();
+  };
+
   const handleDelete = async (id) => {
     await deleteEmployee(id);
     refetchEmployees();
@@ -295,6 +300,7 @@ const EmployeesPage = () => {
             : ''
         }
         onClose={handleCloseFilesModal}
+        onFilesUpdated={handleFilesUpdated}
       />
 
       <ExportToExcelModal

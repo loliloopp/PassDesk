@@ -12,7 +12,7 @@ import {
 import { FileViewer } from '../../shared/ui/FileViewer';
 import { applicationService } from '../../services/applicationService';
 
-const ApplicationFileUpload = ({ applicationId, readonly = false }) => {
+const ApplicationFileUpload = ({ applicationId, readonly = false, onFilesChange }) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -30,7 +30,13 @@ const ApplicationFileUpload = ({ applicationId, readonly = false }) => {
     setLoading(true);
     try {
       const response = await applicationService.getFiles(applicationId);
-      setFiles(response.data.data || []);
+      const filesList = response.data.data || [];
+      setFiles(filesList);
+      
+      // Уведомляем родителя об изменении количества файлов
+      if (onFilesChange) {
+        onFilesChange(filesList.length);
+      }
     } catch (error) {
       console.error('Error loading files:', error);
       message.error('Ошибка загрузки списка файлов');

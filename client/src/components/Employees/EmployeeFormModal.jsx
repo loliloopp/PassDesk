@@ -217,6 +217,14 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const { user } = useAuthStore();
 
+  // Обработчик для обновления при изменении файлов
+  const handleFilesChange = (filesCount) => {
+    // Вызываем onSuccess для обновления таблицы
+    if (onSuccess) {
+      onSuccess();
+    }
+  };
+
   // Определяем, требуется ли патент для выбранного гражданства
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
 
@@ -1145,7 +1153,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       items.push({
         key: '4',
         label: 'Файлы',
-        children: <EmployeeFileUpload employeeId={employee.id} readonly={false} />,
+        children: <EmployeeFileUpload employeeId={employee.id} readonly={false} onFilesChange={handleFilesChange} />,
       });
     }
 

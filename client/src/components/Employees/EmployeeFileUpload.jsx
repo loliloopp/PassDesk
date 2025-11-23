@@ -28,7 +28,7 @@ const DOCUMENT_TYPES = [
   { value: 'other', label: 'Другое' }
 ];
 
-const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
+const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange }) => {
   const { message } = App.useApp();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,13 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
     setLoading(true);
     try {
       const response = await employeeService.getFiles(employeeId);
-      setFiles(response.data || []);
+      const filesList = response.data || [];
+      setFiles(filesList);
+      
+      // Уведомляем родителя об изменении количества файлов
+      if (onFilesChange) {
+        onFilesChange(filesList.length);
+      }
     } catch (error) {
       console.error('Error loading files:', error);
       message.error('Ошибка загрузки списка файлов');

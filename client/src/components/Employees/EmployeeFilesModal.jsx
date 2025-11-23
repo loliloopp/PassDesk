@@ -12,7 +12,7 @@ import {
 import { FileViewer } from '../../shared/ui/FileViewer';
 import { employeeService } from '../../services/employeeService';
 
-const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
+const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFilesUpdated }) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
@@ -25,15 +25,42 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
     }
   }, [visible, employeeId]);
 
-  const fetchFiles = async () => {
-    setLoading(true);
+  // Периодическая проверка обновления файлов каждые 2 секунды
+  useEffect(() => {
+    if (!visible) return;
+
+    const interval = setInterval(() => {
+      fetchFiles(true); // silent обновление без спинера
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [visible, employeeId]);
+
+  const fetchFiles = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     try {
       const response = await employeeService.getFiles(employeeId);
-      setFiles(response.data || []);
+      const newFiles = response.data || [];
+      
+      // Проверяем, изменилось ли количество файлов
+      if (files.length !== newFiles.length) {
+        setFiles(newFiles);
+        // Вызываем callback для обновления таблицы
+        if (onFilesUpdated) {
+          onFilesUpdated(newFiles.length);
+        }
+      } else if (!silent) {
+        // Обновляем даже если количество не изменилось, но в явном виде (не silent)
+        setFiles(newFiles);
+      }
     } catch (error) {
       console.error('Error loading files:', error);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
