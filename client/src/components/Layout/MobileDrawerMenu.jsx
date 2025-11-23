@@ -17,30 +17,26 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const location = useLocation();
   const { logout, user } = useAuthStore();
 
-  const menuItems = [
-    // Пункты только для админов
-    ...(user?.role === 'admin' ? [
-      {
-        key: '/employees',
-        icon: <TeamOutlined />,
-        label: 'Сотрудники',
-      },
-      {
-        key: '/admin',
-        icon: <SettingOutlined />,
-        label: 'Администирование',
-      },
-      {
-        type: 'divider',
-      },
-    ] : []),
+  // Верхняя часть меню (для админов)
+  const topMenuItems = user?.role === 'admin' ? [
+    {
+      key: '/employees',
+      icon: <TeamOutlined />,
+      label: 'Сотрудники',
+    },
+    {
+      key: '/admin',
+      icon: <SettingOutlined />,
+      label: 'Администирование',
+    },
+  ] : [];
+
+  // Нижняя часть меню (профиль и выход)
+  const bottomMenuItems = [
     {
       key: '/profile',
       icon: <UserOutlined />,
       label: 'Профиль',
-    },
-    {
-      type: 'divider',
     },
     {
       key: 'logout',
@@ -68,7 +64,7 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
       open={visible}
       width={280}
       styles={{
-        body: { padding: 0 },
+        body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%' },
         header: {
           borderBottom: '1px solid #f0f0f0',
           fontSize: 20,
@@ -77,12 +73,27 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
         },
       }}
     >
+      {/* Верхняя часть меню */}
+      {topMenuItems.length > 0 && (
+        <Menu
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={topMenuItems}
+          onClick={handleMenuClick}
+          style={{ border: 'none', flex: 0 }}
+        />
+      )}
+
+      {/* Отступ для заполнения пространства */}
+      <div style={{ flex: 1 }} />
+
+      {/* Нижняя часть меню */}
       <Menu
         mode="inline"
         selectedKeys={[location.pathname]}
-        items={menuItems}
+        items={bottomMenuItems}
         onClick={handleMenuClick}
-        style={{ border: 'none' }}
+        style={{ border: 'none', borderTop: '1px solid #f0f0f0', flex: 0 }}
       />
     </Drawer>
   );
