@@ -11,6 +11,7 @@ import {
   FileWordOutlined,
   DownloadOutlined
 } from '@ant-design/icons';
+import { FileViewer } from '../../shared/ui/FileViewer';
 import { employeeService } from '../../services/employeeService';
 
 const { Option } = Select;
@@ -33,10 +34,10 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState([]);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewFile, setPreviewFile] = useState(null);
   const [documentTypeModalVisible, setDocumentTypeModalVisible] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewingFile, setViewingFile] = useState(null);
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -134,31 +135,36 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
   };
 
   const handleView = async (file) => {
-    // Для изображений показываем превью в модальном окне
-    if (file.mimeType.startsWith('image/')) {
-      try {
-        const response = await employeeService.getFileViewLink(employeeId, file.id);
-        if (response.data.viewUrl) {
-          setPreviewFile({
-            url: response.data.viewUrl,
-            name: file.originalName
-          });
-          setPreviewVisible(true);
-        }
-      } catch (error) {
-        console.error('Error getting view link:', error);
-        message.error('Ошибка получения ссылки для просмотра');
+    // Открываем файл во встроенном просмотрщике с увеличением
+    try {
+      const response = await employeeService.getFileViewLink(employeeId, file.id);
+      if (response.data.viewUrl) {
+        setViewingFile({
+          url: response.data.viewUrl,
+          name: file.originalName,
+          mimeType: file.mimeType,
+          fileId: file.id
+        });
+        setViewerVisible(true);
       }
-    } else {
-      // Для других файлов открываем в новой вкладке
+    } catch (error) {
+      console.error('Error getting view link:', error);
+      message.error('Ошибка получения ссылки для просмотра');
+    }
+  };
+
+  // Скачивание файла из просмотрщика
+  const handleDownloadFromViewer = async () => {
+    if (viewingFile) {
       try {
-        const response = await employeeService.getFileViewLink(employeeId, file.id);
-        if (response.data.viewUrl) {
-          window.open(response.data.viewUrl, '_blank');
+        const response = await employeeService.getFileDownloadLink(employeeId, viewingFile.fileId);
+        if (response.data.downloadUrl) {
+          window.open(response.data.downloadUrl, '_blank');
+          message.success('Скачивание начато');
         }
       } catch (error) {
-        console.error('Error getting view link:', error);
-        message.error('Ошибка получения ссылки для просмотра');
+        console.error('Error getting download link:', error);
+        message.error('Ошибка получения ссылки для скачивания');
       }
     }
   };
@@ -358,46 +364,15 @@ const EmployeeFileUpload = ({ employeeId, readonly = false }) => {
         </Form>
       </Modal>
 
-      {/* Модальное окно для предпросмотра изображений */}
-      <Modal
-        open={previewVisible}
-        title={previewFile?.name}
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
-        width={800}
-        centered
-      >
-        {previewFile && (
-          <div style={{ textAlign: 'center' }}>
-            <img
-              src={previewFile.url}
-              alt={previewFile.name}
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '70vh',
-                objectFit: 'contain'
-              }}
-              onError={(e) => {
-                console.error('Error loading image:', previewFile.url);
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'block';
-              }}
-            />
-            <div style={{ display: 'none', padding: '40px', textAlign: 'center' }}>
-              <FileImageOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />
-              <p style={{ marginTop: 16, color: '#8c8c8c' }}>
-                Не удалось загрузить изображение
-              </p>
-              <Button 
-                type="primary" 
-                onClick={() => window.open(previewFile.url, '_blank')}
-              >
-                Открыть в новой вкладке
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Встроенный просмотрщик файлов с увеличением */}
+      <FileViewer
+        visible={viewerVisible}
+        fileUrl={viewingFile?.url}
+        fileName={viewingFile?.name}
+        mimeType={viewingFile?.mimeType}
+        onClose={() => setViewerVisible(false)}
+        onDownload={handleDownloadFromViewer}
+      />
     </Space>
   );
 };

@@ -9,13 +9,14 @@ import {
   FileExcelOutlined,
   FileWordOutlined,
 } from '@ant-design/icons';
+import { FileViewer } from '../../shared/ui/FileViewer';
 import { employeeService } from '../../services/employeeService';
 
 const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewFile, setPreviewFile] = useState(null);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewingFile, setViewingFile] = useState(null);
 
   // Загрузка файлов при открытии модального окна
   useEffect(() => {
@@ -78,30 +79,34 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
   };
 
   const handlePreview = async (file) => {
-    // Для изображений показываем превью в модальном окне
-    if (file.mimeType.startsWith('image/')) {
+    // Открываем файл во встроенном просмотрщике с увеличением
+    try {
+      const response = await employeeService.getFileViewLink(employeeId, file.id);
+      if (response.data.viewUrl) {
+        setViewingFile({
+          url: response.data.viewUrl,
+          name: file.fileName,
+          mimeType: file.mimeType,
+          fileId: file.id
+        });
+        setViewerVisible(true);
+      }
+    } catch (error) {
+      console.error('Error getting view link:', error);
+    }
+  };
+
+  // Скачивание файла из просмотрщика
+  const handleDownloadFromViewer = async () => {
+    if (viewingFile) {
       try {
-        console.log('Requesting view link for file:', file.id, file.fileName);
-        const response = await employeeService.getFileViewLink(employeeId, file.id);
-        console.log('Received view link response:', response);
-        
-        if (response.data.viewUrl) {
-          console.log('Opening preview with URL:', response.data.viewUrl);
-          setPreviewFile({
-            url: response.data.viewUrl,
-            name: file.fileName
-          });
-          setPreviewVisible(true);
-        } else {
-          console.error('No viewUrl in response');
+        const response = await employeeService.getFileDownloadLink(employeeId, viewingFile.fileId);
+        if (response.data.downloadUrl) {
+          window.open(response.data.downloadUrl, '_blank');
         }
       } catch (error) {
-        console.error('Error getting preview:', error);
-        console.error('Error response:', error.response?.data);
+        console.error('Error getting download link:', error);
       }
-    } else {
-      // Для других файлов открываем в новой вкладке
-      handleView(file);
     }
   };
 
@@ -157,46 +162,15 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose }) => {
         </Spin>
       </Modal>
 
-      {/* Модальное окно для предпросмотра изображений */}
-      <Modal
-        open={previewVisible}
-        title={previewFile?.name}
-        footer={null}
-        onCancel={() => setPreviewVisible(false)}
-        width={800}
-        centered
-      >
-        {previewFile && (
-          <div style={{ textAlign: 'center' }}>
-            <img
-              src={previewFile.url}
-              alt={previewFile.name}
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '70vh',
-                objectFit: 'contain'
-              }}
-              onError={(e) => {
-                console.error('Error loading image:', previewFile.url);
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'block';
-              }}
-            />
-            <div style={{ display: 'none', padding: '40px', textAlign: 'center' }}>
-              <FileImageOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />
-              <p style={{ marginTop: 16, color: '#8c8c8c' }}>
-                Не удалось загрузить изображение
-              </p>
-              <Button 
-                type="primary" 
-                onClick={() => window.open(previewFile.url, '_blank')}
-              >
-                Открыть в новой вкладке
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Встроенный просмотрщик файлов с увеличением */}
+      <FileViewer
+        visible={viewerVisible}
+        fileUrl={viewingFile?.url}
+        fileName={viewingFile?.name}
+        mimeType={viewingFile?.mimeType}
+        onClose={() => setViewerVisible(false)}
+        onDownload={handleDownloadFromViewer}
+      />
     </>
   );
 };
