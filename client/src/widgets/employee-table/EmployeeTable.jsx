@@ -27,6 +27,15 @@ const tableStyles = `
     height: auto !important;
     padding: 4px 11px !important;
   }
+  
+  /* Фиксация заголовков таблицы при прокрутке контейнера */
+  .ant-table-thead > tr > th {
+    position: sticky !important;
+    top: 0 !important;
+    /* top: 0 - прилипают к верху контейнера с overflow: auto */
+    z-index: 10 !important;
+    background-color: #fafafa !important;
+  }
 `;
 
 /**
@@ -76,12 +85,9 @@ export const EmployeeTable = ({
           index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
         }
         scroll={{ 
-          x: 1300,
-          y: 'calc(100vh - 64px - 76px - 60px)'
-          // 64px - App Header
-          // 76px - Page Header (Сотрудники + padding + border) 
-          // 60px - Pagination
-          // Заголовки таблицы автоматически фиксируются при наличии scroll.y
+          x: 1300
+          // y не указываем - прокрутка управляется контейнером
+          // Заголовки таблицы sticky через CSS (position: sticky)
         }}
       />
     </>

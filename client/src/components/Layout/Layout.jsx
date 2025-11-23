@@ -12,17 +12,18 @@ const Layout = () => {
   const isMobile = !screens.md // md = 768px
 
   return (
-    <AntLayout style={{ minHeight: '100vh' }}>
+    <AntLayout style={{ height: '100vh', overflow: 'hidden' }}>
       {/* Desktop - показываем Sidebar */}
       {!isMobile && <Sidebar />}
       
-      <AntLayout>
+      <AntLayout style={{ overflow: 'hidden' }}>
         <Header />
         <Content style={{ 
-          margin: isMobile ? '16px 8px' : '24px 16px', 
-          padding: isMobile ? 16 : 24, 
-          background: '#fff', 
-          borderRadius: 8 
+          height: 'calc(100vh - 64px)', // 64px - высота Header
+          overflow: 'hidden', // БЕЗ скролла на уровне Content
+          background: '#f0f2f5', // Фон как у Ant Design
+          padding: 0, // БЕЗ padding
+          margin: 0 // БЕЗ margin
         }}>
           <Outlet />
         </Content>

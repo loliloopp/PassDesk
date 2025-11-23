@@ -167,10 +167,11 @@ const EmployeesPage = () => {
 
   return (
     <div style={{ 
-      height: isMobile ? 'auto' : 'calc(100vh - 64px)', 
+      height: '100%', // Занимает всю высоту Content
       display: isMobile ? 'block' : 'flex', 
       flexDirection: 'column',
-      overflow: 'hidden' // Запрещаем прокрутку на уровне страницы
+      overflow: 'hidden', // БЕЗ прокрутки на уровне страницы
+      backgroundColor: '#fff'
     }}>
       {/* Заголовок с поиском и действиями */}
       <div
@@ -183,7 +184,7 @@ const EmployeesPage = () => {
           backgroundColor: '#fff',
           padding: '16px',
           borderBottom: '1px solid #f0f0f0',
-          flexShrink: 0, // Не сжимается - всегда на месте
+          flexShrink: 0, // Не сжимается - всегда виден
         }}
       >
         <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
@@ -235,10 +236,8 @@ const EmployeesPage = () => {
       ) : (
         <div style={{ 
           flex: 1, 
-          minHeight: 0, // Важно для корректной работы flex
-          backgroundColor: '#fff',
-          display: 'flex',
-          flexDirection: 'column'
+          minHeight: 0,
+          overflow: 'auto' // ТОЛЬКО ЗДЕСЬ прокрутка
         }}>
           <EmployeeTable
             employees={filteredEmployees}
