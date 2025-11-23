@@ -159,10 +159,10 @@ const CounterpartiesPage = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <h1>Контрагенты</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ flexShrink: 0, padding: 24, paddingBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h1 style={{ margin: 0 }}>Контрагенты</h1>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             Добавить
           </Button>
@@ -188,7 +188,9 @@ const CounterpartiesPage = () => {
             <Select.Option value="general_contractor">Генподрядчик</Select.Option>
           </Select>
         </Space>
+      </div>
 
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 24px 24px 24px' }}>
         <Table
           columns={columns}
           dataSource={data}
@@ -199,7 +201,7 @@ const CounterpartiesPage = () => {
             onChange: (page) => setPagination(prev => ({ ...prev, current: page }))
           }}
         />
-      </Space>
+      </div>
 
       <Modal
         title={editingId ? 'Редактировать контрагента' : 'Добавить контрагента'}

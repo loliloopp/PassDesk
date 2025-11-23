@@ -304,15 +304,18 @@ const UsersPage = () => {
   })
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 24,
+          marginBottom: 16,
+          padding: '0 24px 0 24px',
+          paddingTop: 24,
           flexWrap: 'wrap',
           gap: 16,
+          flexShrink: 0,
         }}
       >
         <Title level={2} style={{ margin: 0 }}>
@@ -323,7 +326,7 @@ const UsersPage = () => {
         </Button>
       </div>
 
-      <Space style={{ marginBottom: 16, width: '100%' }} direction="vertical">
+      <Space style={{ marginBottom: 16, width: '100%', paddingLeft: 24, paddingRight: 24, flexShrink: 0 }} direction="vertical">
         <Input
           placeholder="Поиск по email или ФИО..."
           prefix={<SearchOutlined />}
@@ -334,17 +337,21 @@ const UsersPage = () => {
         />
       </Space>
 
-      <Table
-        columns={columns}
-        dataSource={filteredUsers}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `Всего: ${total}`,
-        }}
-      />
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
+        <Table
+          columns={columns}
+          dataSource={filteredUsers}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `Всего: ${total}`,
+          }}
+          scroll={{ x: 'max-content', y: 'calc(100vh - 400px)' }}
+          style={{ height: '100%' }}
+        />
+      </div>
 
       {/* Modal для создания/редактирования пользователя */}
       <Modal

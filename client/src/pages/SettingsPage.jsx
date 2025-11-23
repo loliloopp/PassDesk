@@ -89,13 +89,16 @@ const SettingsPage = () => {
   }
 
   return (
-    <div style={{ maxWidth: '800px' }}>
-      <Title level={4}>Регистрация новых пользователей</Title>
-      <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-        При регистрации новые пользователи автоматически будут привязаны к выбранному контрагенту
-      </Text>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden', padding: 24 }}>
+      <div style={{ flexShrink: 0 }}>
+        <Title level={4}>Регистрация новых пользователей</Title>
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+          При регистрации новые пользователи автоматически будут привязаны к выбранному контрагенту
+        </Text>
+      </div>
 
-      <Form form={form} layout="vertical" onFinish={handleSave}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', maxWidth: '800px' }}>
+        <Form form={form} layout="vertical" onFinish={handleSave}>
         <Form.Item
           name="defaultCounterpartyId"
           label="Контрагент по умолчанию"
@@ -131,7 +134,8 @@ const SettingsPage = () => {
             Сохранить настройки
           </Button>
         </Form.Item>
-      </Form>
+        </Form>
+      </div>
     </div>
   );
 };

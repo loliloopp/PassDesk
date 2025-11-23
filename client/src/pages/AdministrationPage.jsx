@@ -84,7 +84,7 @@ const AdministrationPage = () => {
       ];
 
   return (
-    <div style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <Card
         title={
           <Space>
@@ -94,21 +94,22 @@ const AdministrationPage = () => {
             </Title>
           </Space>
         }
-        style={{ margin: '-24px', minHeight: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column' }}
-        styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' } }}
+        style={{ margin: '-24px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 } }}
       >
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
           items={tabItems}
           size="large"
-          style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}
+          style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}
           styles={{ 
             tabpane: { 
               display: 'flex', 
               flexDirection: 'column', 
               flex: 1, 
-              overflow: 'hidden' 
+              overflow: 'auto',
+              minHeight: 0
             }
           }}
         />

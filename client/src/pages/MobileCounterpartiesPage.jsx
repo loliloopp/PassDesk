@@ -107,14 +107,12 @@ const MobileCounterpartiesPage = () => {
       </div>
 
       {/* Список контрагентов */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <MobileCounterpartiesList
-          counterparties={filteredCounterparties}
-          loading={loading}
-          onRefresh={fetchCounterparties}
-          onEdit={handleEdit}
-        />
-      </div>
+      <MobileCounterpartiesList
+        counterparties={filteredCounterparties}
+        loading={loading}
+        onRefresh={fetchCounterparties}
+        onEdit={handleEdit}
+      />
 
       {/* Modal для редактирования контрагента */}
       <Modal

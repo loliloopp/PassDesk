@@ -43,32 +43,31 @@ const MobileCounterpartiesList = ({
   }
 
   return (
-    <>
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: 4, 
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        flex: 1,
-        minHeight: 0,
-        height: '100%',
-        width: '100%',
-        padding: '0 16px 16px 16px'
-      }}>
-        {counterparties.map((counterparty) => (
-          <Card
-            key={counterparty.id}
-            size="small"
-            onClick={() => setSelectedCounterparty(counterparty)}
-            style={{ 
-              cursor: 'pointer',
-              borderRadius: 4,
-            }}
-            styles={{
-              body: { padding: '8px 12px' }
-            }}
-          >
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: 4, 
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      flex: 1,
+      minHeight: 0,
+      height: '100%',
+      width: '100%',
+      padding: '0 16px 16px 16px'
+    }}>
+      {counterparties.map((counterparty) => (
+        <Card
+          key={counterparty.id}
+          size="small"
+          onClick={() => setSelectedCounterparty(counterparty)}
+          style={{ 
+            cursor: 'pointer',
+            borderRadius: 4,
+          }}
+          styles={{
+            body: { padding: '8px 12px' }
+          }}
+        >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               {/* Левая часть - основная информация */}
               <div style={{ flex: 1, display: 'flex', gap: 8, minWidth: 0 }}>
@@ -118,7 +117,6 @@ const MobileCounterpartiesList = ({
             </div>
           </Card>
         ))}
-      </div>
 
       {/* Боковое окно просмотра контрагента */}
       {selectedCounterparty && (
@@ -136,7 +134,7 @@ const MobileCounterpartiesList = ({
           onRefresh={onRefresh}
         />
       )}
-    </>
+    </div>
   );
 
   // Функция копирования ссылки регистрации

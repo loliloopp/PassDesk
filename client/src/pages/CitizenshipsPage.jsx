@@ -210,8 +210,8 @@ const CitizenshipsPage = () => {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', padding: 24, paddingBottom: 0, flexShrink: 0 }}>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -221,18 +221,20 @@ const CitizenshipsPage = () => {
         </Button>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={citizenships}
-        rowKey="id"
-        loading={loading}
-        size="small"
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true,
-          showTotal: (total) => `Всего: ${total}`,
-        }}
-      />
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 24px 24px 24px' }}>
+        <Table
+          columns={columns}
+          dataSource={citizenships}
+          rowKey="id"
+          loading={loading}
+          size="small"
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: true,
+            showTotal: (total) => `Всего: ${total}`,
+          }}
+        />
+      </div>
 
       {/* Модальное окно для создания/редактирования гражданства */}
       <Modal
