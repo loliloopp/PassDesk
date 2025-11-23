@@ -1,5 +1,5 @@
 import { Input, Grid, Button, Dropdown } from 'antd';
-import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
+import { SearchOutlined, FilterOutlined, CheckOutlined } from '@ant-design/icons';
 
 const { useBreakpoint } = Grid;
 
@@ -20,19 +20,39 @@ export const EmployeeSearchFilter = ({
   const statusFilterItems = [
     {
       key: 'all',
-      label: 'Все статусы',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Все статусы</span>
+          {!statusFilter && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
     },
     {
       key: 'new',
-      label: 'Новые',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Новые</span>
+          {statusFilter === 'new' && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
     },
     {
       key: 'draft',
-      label: 'Черновик',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Черновик</span>
+          {statusFilter === 'draft' && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
     },
     {
       key: 'processed',
-      label: 'Отправленные',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Отправленные</span>
+          {statusFilter === 'processed' && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
     },
   ];
 

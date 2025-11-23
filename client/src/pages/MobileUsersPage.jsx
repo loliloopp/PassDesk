@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Input, App, Modal, Form, Select, Space, Button, Dropdown } from 'antd';
-import { SearchOutlined, LockOutlined, UserOutlined, LogoutOutlined, FilterOutlined } from '@ant-design/icons';
+import { SearchOutlined, LockOutlined, UserOutlined, LogoutOutlined, FilterOutlined, CheckOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '@/services/userService';
 import { counterpartyService } from '@/services/counterpartyService';
@@ -168,15 +168,30 @@ const MobileUsersPage = () => {
   const statusFilterItems = [
     {
       key: 'all',
-      label: 'Все',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Все</span>
+          {!statusFilter && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
     },
     {
       key: 'active',
-      label: 'Активные',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Активные</span>
+          {statusFilter === 'active' && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
     },
     {
       key: 'inactive',
-      label: 'Неактивные',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Неактивные</span>
+          {statusFilter === 'inactive' && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
     },
   ];
 
