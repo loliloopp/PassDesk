@@ -57,6 +57,8 @@ export const useEmployeeActions = (onSuccess) => {
       const valuesToSend = { ...values };
       delete valuesToSend.isDraft;
 
+      console.log('📤 Creating employee with values:', valuesToSend);
+
       const response = await employeeApi.create(valuesToSend);
       
       // Показываем сообщение в зависимости от того, черновик это или полная карточка

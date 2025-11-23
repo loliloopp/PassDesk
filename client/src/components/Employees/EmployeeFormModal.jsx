@@ -570,8 +570,14 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       });
 
       // Обрабатываем статусы
-      // status: сохраняем существующий статус сотрудника, не изменяем его
-      formattedValues.status = employee?.status || 'new';
+      // status: при сохранении черновика нового сотрудника → 'draft', иначе сохраняем существующий
+      if (employee) {
+        // Редактирование существующего - сохраняем его статус
+        formattedValues.status = employee.status;
+      } else {
+        // Создание нового сотрудника как черновик → 'draft'
+        formattedValues.status = 'draft';
+      }
       
       // statusActive: взаимоисключающие статусы
       if (values.isFired) {
@@ -650,8 +656,14 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       });
 
       // Обрабатываем статусы
-      // status: сохраняем существующий статус сотрудника, не изменяем его
-      formattedValues.status = employee?.status || 'new';
+      // status: при полном сохранении нового сотрудника → 'new', иначе сохраняем существующий
+      if (employee) {
+        // Редактирование существующего - сохраняем его статус
+        formattedValues.status = employee.status;
+      } else {
+        // Создание нового сотрудника со всеми полями → 'new'
+        formattedValues.status = 'new';
+      }
       
       // statusActive: взаимоисключающие статусы
       if (values.isFired) {

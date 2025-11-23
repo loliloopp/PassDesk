@@ -266,14 +266,14 @@ export const createEmployee = async (req, res, next) => {
     console.log('User ID:', req.user?.id);
     console.log('User Counterparty ID:', req.user?.counterpartyId);
     
-    // Удаляем counterpartyId, constructionSiteId и status из данных сотрудника
-    // status ВСЕГДА должен быть 'new' при создании
-    const { counterpartyId, constructionSiteId, status, statusActive, ...cleanEmployeeData } = req.body;
+    // Удаляем counterpartyId, constructionSiteId из данных сотрудника
+    // Используем переданный фронтендом status ('draft' или 'new')
+    const { counterpartyId, constructionSiteId, statusActive, status, ...cleanEmployeeData } = req.body;
     
     const employeeData = {
       ...cleanEmployeeData,
       createdBy: req.user.id,
-      status: 'new', // При создании сотрудника статус всегда "Новый"
+      status: status || 'new', // Используем переданный фронтендом status, по умолчанию 'new'
       statusActive: null // При создании statusActive всегда null
     };
     

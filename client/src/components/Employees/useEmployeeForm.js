@@ -224,6 +224,16 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
       delete normalizedValues.isFired;
       delete normalizedValues.isInactive;
 
+      // Устанавливаем статус: при полном сохранении нового сотрудника → 'new'
+      if (!employee) {
+        // Создание нового сотрудника со всеми полями → 'new'
+        normalizedValues.status = 'new';
+      } else {
+        // Редактирование существующего - сохраняем его статус
+        normalizedValues.status = employee.status;
+      }
+
+      normalizedValues.statusCard = 'completed';
       await onSuccess(normalizedValues);
       setLoading(false);
     } catch (error) {
@@ -259,6 +269,17 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
       // Убираем временные поля
       delete normalizedValues.isFired;
       delete normalizedValues.isInactive;
+
+      // Устанавливаем статус: при сохранении черновика нового сотрудника → 'draft'
+      if (!employee) {
+        // Создание нового сотрудника как черновик → 'draft'
+        normalizedValues.status = 'draft';
+      } else {
+        // Редактирование существующего - сохраняем его статус
+        normalizedValues.status = employee.status;
+      }
+
+      normalizedValues.statusCard = 'draft';
 
       // Отправляем на фронтенд флаг isDraft, который используется в обработчике
       const dataToSend = {
