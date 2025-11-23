@@ -286,7 +286,7 @@ const ProfilePage = () => {
             passwordForm.resetFields();
           }}
           footer={null}
-          destroyOnClose
+          destroyOnHidden
         >
           <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
             <Form.Item

@@ -16,8 +16,6 @@ const DATE_FORMAT = 'DD.MM.YYYY';
  * Все поля в один столбец, блоки вместо вкладок
  */
 const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
-  console.log('👁️ MobileEmployeeForm received employee prop:', employee?.id);
-  
   const {
     form,
     loading,
@@ -43,41 +41,29 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
   // Состояние для открытых панелей (по умолчанию все открыны)
   const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'files', 'statuses']);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [employeeIdOnLoad, setEmployeeIdOnLoad] = useState(null); // Отслеживаем id сотрудника при загрузке
 
-  // Инициализируем данные формы после загрузки справочников
+  // Инициализируем данные формы при изменении сотрудника или справочников
   useEffect(() => {
     if (citizenships.length && positions.length) {
-      if (employee) {
-        console.log('📌 MobileEmployeeForm: employee changed to:', employee.id);
-        // Инициализируем форму только если это первая загрузка сотрудника
-        if (!isInitialized) {
-          console.log('✏️ Initializing form for first time with employee:', employee.id);
-          const formData = initializeEmployeeData();
-          if (formData) {
-            form.setFieldsValue(formData);
-            
-            // Проверяем гражданство
-            if (employee.citizenshipId) {
-              handleCitizenshipChange(employee.citizenshipId);
-            }
+      // Если это новый сотрудник (id изменился)
+      if (employee?.id !== employeeIdOnLoad) {
+        const formData = initializeEmployeeData();
+        if (formData) {
+          form.setFieldsValue(formData);
+          
+          // Проверяем гражданство
+          if (employee?.citizenshipId) {
+            handleCitizenshipChange(employee.citizenshipId);
           }
-          setEmployeeIdOnLoad(employee.id);
-          setIsInitialized(true);
         } else {
-          // Если employee уже был инициализирован и вернулся тот же сотрудник
-          // НЕ перезаписываем форму, чтобы сохранить пользовательские данные
-          console.log('✏️ Form already initialized, NOT reinitializing');
+          // Новый сотрудник - очищаем форму
+          form.resetFields();
         }
-      } else if (!isInitialized) {
-        // Только при первой загрузке (создание нового сотрудника) очищаем форму
-        console.log('🆕 First load: new employee, resetting form');
-        form.resetFields();
-        setIsInitialized(true);
+        setEmployeeIdOnLoad(employee?.id);
       }
     }
-  }, [employee?.id, citizenships.length, positions.length, isInitialized]);
+  }, [employee?.id, citizenships.length, positions.length]);
 
   // Проверяем права доступа
   const canEditConstructionSite = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
@@ -485,27 +471,30 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   }
 
   return (
-    <div style={{ paddingBottom: 80 }}>
-      <Form
-        form={form}
-        layout="vertical"
-        autoComplete="off"
-        requiredMark={(label, { required }) => (
-          <>
-            {label}
-            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
-          </>
-        )}
-      >
-        <Collapse
-          activeKey={activeKeys}
-          onChange={setActiveKeys}
-          expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
-          expandIconPosition="start"
-          ghost
-          items={collapseItems}
-        />
-      </Form>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Скролируемая область с формой */}
+      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 100 }}>
+        <Form
+          form={form}
+          layout="vertical"
+          autoComplete="off"
+          requiredMark={(label, { required }) => (
+            <>
+              {label}
+              {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+            </>
+          )}
+        >
+          <Collapse
+            activeKey={activeKeys}
+            onChange={setActiveKeys}
+            expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+            expandIconPosition="start"
+            ghost
+            items={collapseItems}
+          />
+        </Form>
+      </div>
 
       {/* Нижняя панель с кнопками (фиксированная) */}
       <div

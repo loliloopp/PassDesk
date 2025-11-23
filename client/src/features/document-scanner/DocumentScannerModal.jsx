@@ -688,7 +688,7 @@ export const DocumentScannerModal = ({ visible, onCapture, onCancel }) => {
       width={800}
       centered
       styles={{ body: { padding: 0 } }}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ minHeight: 400, background: '#000', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
         

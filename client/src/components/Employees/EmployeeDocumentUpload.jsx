@@ -35,6 +35,7 @@ const EmployeeDocumentUpload = ({
   // Ссылка на скрытый инпут для выбора файлов
   const fileInputRef = useRef(null);
 
+  // Загружаем файлы только при изменении employeeId или documentType
   useEffect(() => {
     if (employeeId) {
       fetchFiles();
@@ -46,24 +47,13 @@ const EmployeeDocumentUpload = ({
     setLoading(true);
     try {
       const response = await employeeService.getFiles(employeeId);
-      console.log('📂 Все файлы с сервера:', response.data);
       
-      // Показываем первый файл полностью
-      if (response.data && response.data.length > 0) {
-        console.log('📂 Первый файл полностью:', JSON.stringify(response.data[0], null, 2));
-      }
-      
-      console.log('📂 Ищем файлы с documentType:', documentType);
-      
-      // Фильтруем файлы по типу документа (поддерживаем оба варианта именования)
+      // Фильтруем файлы по типу документа
       const filteredFiles = response.data?.filter(file => {
-        // Пробуем оба варианта: camelCase и snake_case
         const typeValue = file.documentType || file.document_type;
-        console.log(`  Файл ${file.fileName}: documentType="${file.documentType}", document_type="${file.document_type}", typeValue="${typeValue}"`);
         return typeValue === documentType;
       }) || [];
       
-      console.log('📂 Отфильтрованные файлы:', filteredFiles);
       setFiles(filteredFiles);
     } catch (error) {
       console.error('Error loading files:', error);
@@ -153,12 +143,8 @@ const EmployeeDocumentUpload = ({
 
   // Открыть файловый менеджер
   const handleOpenFileManager = () => {
-    console.log('📁 Открытие файлового менеджера...');
-    console.log('fileInputRef.current:', fileInputRef.current);
     if (fileInputRef.current) {
       fileInputRef.current.click();
-    } else {
-      console.error('❌ fileInputRef.current не инициализирован!');
     }
   };
 

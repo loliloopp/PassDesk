@@ -25,8 +25,6 @@ const AddEmployeePage = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Логирование для отладки
-  console.log('🔄 AddEmployeePage rendered with editingEmployee.id:', editingEmployee?.id);
 
   const { createEmployee, updateEmployee } = useEmployeeActions(() => {
     // Не нужно refetch, так как мы уходим со страницы
@@ -54,19 +52,10 @@ const AddEmployeePage = () => {
 
   const handleFormSuccess = async (values) => {
     try {
-      // Логирование для отладки
-      console.log('🔍 handleFormSuccess called', {
-        editingEmployeeId: editingEmployee?.id,
-        isDraft: values.isDraft,
-        editingEmployee: editingEmployee
-      });
-
       if (editingEmployee) {
         // Обновление существующего сотрудника
-        console.log('📝 Updating employee with ID:', editingEmployee.id);
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
-        // message.success уже показан в хуке updateEmployee
         
         // При сохранении черновика остаемся на странице
         if (!values.isDraft) {
@@ -77,11 +66,8 @@ const AddEmployeePage = () => {
         }
       } else {
         // Создание нового сотрудника
-        console.log('✅ Creating new employee');
         const newEmployee = await createEmployee(values);
-        console.log('✅ New employee created:', { id: newEmployee?.id, data: newEmployee });
         setEditingEmployee(newEmployee);
-        // message.success уже показан в хуке createEmployee
         
         // При сохранении черновика остаемся на странице
         if (!values.isDraft) {
@@ -106,24 +92,19 @@ const AddEmployeePage = () => {
   };
 
   return (
-    <div>
+    <div style={isMobile ? { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' } : {}}>
       {/* Шапка с кнопкой назад (только для десктопа) */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          marginBottom: 24,
+          marginBottom: isMobile ? 0 : 24,
           gap: 16,
           position: 'sticky',
-          top: isMobile ? 64 : 64, // Отступ от закрепленного Header
+          top: 0,
           background: '#fff',
           zIndex: 100,
-          padding: '16px 0',
-          marginTop: -24, // Компенсация отступа Content
-          marginLeft: -24,
-          marginRight: -24,
-          paddingLeft: 24,
-          paddingRight: 24,
+          padding: '16px 24',
           borderBottom: '1px solid #f0f0f0',
         }}
       >
@@ -142,20 +123,22 @@ const AddEmployeePage = () => {
       </div>
 
       {/* Форма - мобильная или десктопная */}
-      {isMobile ? (
-        <MobileEmployeeForm
-          employee={editingEmployee}
-          onSuccess={handleFormSuccess}
-          onCancel={handleCancel}
-        />
-      ) : (
-        <EmployeeFormModal
-          visible={true}
-          employee={editingEmployee}
-          onCancel={handleClose}
-          onSuccess={handleFormSuccess}
-        />
-      )}
+      <div style={isMobile ? { flex: 1, overflow: 'hidden' } : {}}>
+        {isMobile ? (
+          <MobileEmployeeForm
+            employee={editingEmployee}
+            onSuccess={handleFormSuccess}
+            onCancel={handleCancel}
+          />
+        ) : (
+          <EmployeeFormModal
+            visible={true}
+            employee={editingEmployee}
+            onCancel={handleClose}
+            onSuccess={handleFormSuccess}
+          />
+        )}
+      </div>
     </div>
   );
 };

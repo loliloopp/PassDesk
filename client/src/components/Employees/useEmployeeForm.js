@@ -238,7 +238,6 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   // Сохранение черновика без валидации
   const handleSaveDraft = async () => {
     try {
-      console.log('📋 handleSaveDraft called with employee:', employee?.id);
       setLoading(true);
       const values = form.getFieldsValue();
 
@@ -267,7 +266,6 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         isDraft: true, // Флаг для фронтенда
       };
 
-      console.log('📤 Sending to onSuccess:', { hasEmployeeId: !!employee?.id, isDraft: true });
       await onSuccess(dataToSend);
       setLoading(false);
     } catch (error) {

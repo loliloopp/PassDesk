@@ -25,12 +25,9 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
   const fetchConstructionSites = async () => {
     try {
       const response = await constructionSiteService.getAll();
-      console.log('🏗️ Construction sites response:', response);
       const sites = response.data.data.constructionSites || [];
-      console.log('🏗️ Construction sites:', sites);
       setConstructionSites(sites);
     } catch (error) {
-      console.error('Error fetching construction sites:', error);
       message.error('Ошибка загрузки объектов');
     }
   };
@@ -46,17 +43,11 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
   const handleOk = async () => {
     try {
       setLoading(true);
-      console.log('📤 Sending to server:', {
-        employeeId: employee.id,
-        selectedSites
-      });
       // Отправляем выбранные объекты на сервер
       await employeeService.updateConstructionSites(employee.id, selectedSites);
       message.success('Объекты обновлены');
       onSuccess();
     } catch (error) {
-      console.error('Error updating construction sites:', error);
-      console.error('Error response:', error.response?.data);
       message.error('Ошибка при сохранении объектов');
     } finally {
       setLoading(false);
