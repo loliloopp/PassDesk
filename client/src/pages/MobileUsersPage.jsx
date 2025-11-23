@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Input, App, Modal, Form, Select, Space, Button, Popover, Checkbox } from 'antd';
+import { Input, App, Modal, Form, Select, Space, Button, Dropdown } from 'antd';
 import { SearchOutlined, LockOutlined, UserOutlined, LogoutOutlined, FilterOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '@/services/userService';
@@ -24,7 +24,7 @@ const MobileUsersPage = () => {
   const [passwordForm] = Form.useForm();
   const [editingUser, setEditingUser] = useState(null);
   const { user: currentUser } = useAuthStore();
-  const [statusFilter, setStatusFilter] = useState([]); // [] - нет фильтра, ['active'] - только активные, ['inactive'] - только неактивные
+  const [statusFilter, setStatusFilter] = useState(null); // null - нет фильтра, 'active' - только активные, 'inactive' - только неактивные
 
   // Роли
   const roleLabels = {
@@ -74,11 +74,11 @@ const MobileUsersPage = () => {
 
     // Фильтрация по статусу
     let statusMatch = true;
-    if (statusFilter.length > 0) {
+    if (statusFilter) {
       const isActive = user.isActive;
       statusMatch = 
-        (statusFilter.includes('active') && isActive) ||
-        (statusFilter.includes('inactive') && !isActive);
+        (statusFilter === 'active' && isActive) ||
+        (statusFilter === 'inactive' && !isActive);
     }
 
     return searchMatch && statusMatch;
@@ -164,19 +164,25 @@ const MobileUsersPage = () => {
     passwordForm.resetFields();
   };
 
-  // Содержимое Popover фильтра
-  const filterContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Статус</div>
-      <Checkbox.Group
-        value={statusFilter}
-        onChange={setStatusFilter}
-      >
-        <Checkbox value="active">Активен</Checkbox>
-        <Checkbox value="inactive">Неактивен</Checkbox>
-      </Checkbox.Group>
-    </div>
-  );
+  // Опции фильтра по статусу
+  const statusFilterItems = [
+    {
+      key: 'all',
+      label: 'Все',
+    },
+    {
+      key: 'active',
+      label: 'Активные',
+    },
+    {
+      key: 'inactive',
+      label: 'Неактивные',
+    },
+  ];
+
+  const handleStatusFilterChange = ({ key }) => {
+    setStatusFilter(key === 'all' ? null : key);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -187,21 +193,20 @@ const MobileUsersPage = () => {
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          size="large"
-          style={{ borderRadius: 4, flex: 1 }}
+          style={{ borderRadius: 4, flex: 1, height: 40 }}
         />
-        <Popover
-          content={filterContent}
-          trigger="click"
+        <Dropdown
+          menu={{ items: statusFilterItems, onClick: handleStatusFilterChange }}
           placement="bottomRight"
         >
           <Button
-            type={statusFilter.length > 0 ? 'primary' : 'default'}
+            type={statusFilter ? 'primary' : 'default'}
             icon={<FilterOutlined />}
-            size="large"
-            style={{ flexShrink: 0 }}
-          />
-        </Popover>
+            style={{ height: 40 }}
+          >
+            {!statusFilter ? '▼' : ''}
+          </Button>
+        </Dropdown>
       </div>
 
       {/* Список пользователей */}
