@@ -269,13 +269,11 @@ const EmployeeDocumentUpload = ({
                         okText="Удалить"
                         cancelText="Отмена"
                       >
-                        <Tooltip title="Удалить">
-                          <Button
-                            icon={<DeleteOutlined />}
-                            size="small"
-                            danger
-                          />
-                        </Tooltip>
+                        <Button
+                          icon={<DeleteOutlined />}
+                          size="small"
+                          danger
+                        />
                       </Popconfirm>
                     )}
                   </Space>

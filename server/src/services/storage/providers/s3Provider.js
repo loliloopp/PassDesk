@@ -1,0 +1,153 @@
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+const DEFAULT_BASE_PATH = '';
+const DEFAULT_DOWNLOAD_TTL = 3600;
+
+const normalizeRelativePath = (value = '') =>
+  value.replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+
+const sanitizeKey = (value = '') => {
+  if (!value) {
+    return '';
+  }
+
+  return value.replace(/^\/+/, '').replace(/\/{2,}/g, '/');
+};
+
+export const createS3Provider = (config = {}) => {
+  if (!config.accessKeyId || !config.secretAccessKey) {
+    throw new Error(`Отсутствуют ключи доступа для провайдера ${config.providerName || 'S3'}`);
+  }
+
+  if (!config.bucketName) {
+    throw new Error(`Не указано имя бакета для провайдера ${config.providerName || 'S3'}`);
+  }
+
+  if (!config.region) {
+    throw new Error(`Не указан регион для провайдера ${config.providerName || 'S3'}`);
+  }
+
+  if (!config.endpoint) {
+    throw new Error(`Не указан endpoint для провайдера ${config.providerName || 'S3'}`);
+  }
+
+  const basePath = config.basePath
+    ? normalizeRelativePath(config.basePath)
+    : DEFAULT_BASE_PATH;
+
+  const client = new S3Client({
+    region: config.region,
+    endpoint: config.endpoint,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+    tls: true,
+  });
+
+  const resolvePath = (relativePath = '') => {
+    const normalized = normalizeRelativePath(relativePath);
+    if (!basePath) {
+      return sanitizeKey(normalized);
+    }
+    return sanitizeKey([basePath, normalized].filter(Boolean).join('/'));
+  };
+
+  const normalizePath = (pathValue = '') => {
+    if (!pathValue) {
+      return basePath;
+    }
+
+    const key = sanitizeKey(pathValue);
+
+    if (!basePath) {
+      return key;
+    }
+
+    if (key === basePath || key.startsWith(`${basePath}/`)) {
+      return key;
+    }
+
+    return resolvePath(key);
+  };
+
+  const uploadFile = async ({ fileBuffer, mimeType, originalName, filePath }) => {
+    const objectKey = normalizePath(filePath);
+
+    const putParams = {
+      Bucket: config.bucketName,
+      Key: objectKey,
+      Body: fileBuffer,
+      ContentType: mimeType,
+    };
+
+    if (config.kmsKeyId) {
+      putParams.ServerSideEncryption = 'aws:kms';
+      putParams.SSEKMSKeyId = config.kmsKeyId;
+    }
+
+    const putCommand = new PutObjectCommand(putParams);
+
+    await client.send(putCommand);
+
+    const fileKey = basePath && objectKey.startsWith(`${basePath}/`)
+      ? objectKey.slice(basePath.length + 1)
+      : objectKey;
+
+    return {
+      filePath: objectKey,
+      fileKey,
+      originalName,
+    };
+  };
+
+  const deleteFile = async (filePath) => {
+    const objectKey = normalizePath(filePath);
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket: config.bucketName,
+      Key: objectKey,
+    });
+    await client.send(deleteCommand);
+  };
+
+  const getDownloadUrl = async (filePath, options = {}) => {
+    const objectKey = normalizePath(filePath);
+    const getCommand = new GetObjectCommand({
+      Bucket: config.bucketName,
+      Key: objectKey,
+    });
+
+    const url = await getSignedUrl(client, getCommand, {
+      expiresIn: options.expiresIn || DEFAULT_DOWNLOAD_TTL,
+    });
+
+    return {
+      url,
+      expiresIn: options.expiresIn || DEFAULT_DOWNLOAD_TTL,
+    };
+  };
+
+  const getPublicUrl = async (filePath, options = {}) => {
+    // Для S3 (Cloud.ru / Yandex) публикуем через подписанную ссылку
+    return getDownloadUrl(filePath, {
+      expiresIn: options.expiresIn || DEFAULT_DOWNLOAD_TTL,
+    });
+  };
+
+  return {
+    type: 's3',
+    name: config.providerName || 's3',
+    basePath,
+    bucketName: config.bucketName,
+    resolvePath,
+    normalizePath,
+    uploadFile,
+    deleteFile,
+    getDownloadUrl,
+    getPublicUrl,
+  };
+};
+
+

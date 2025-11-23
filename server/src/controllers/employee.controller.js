@@ -1,7 +1,7 @@
 import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position, Setting } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
-import yandexDiskClient, { basePath } from '../config/storage.js';
+import storageProvider from '../config/storage.js';
 import { buildEmployeeFilePath } from '../utils/transliterate.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -787,25 +787,19 @@ export const deleteEmployee = async (req, res, next) => {
 
     console.log(`Found ${files.length} files to delete`);
 
-    // 3. Удаляем каждый файл с Яндекс.Диска
+    // 3. Удаляем каждый файл из хранилища
     for (const file of files) {
       try {
-        console.log(`Deleting file from Yandex.Disk: ${file.filePath}`);
-        await yandexDiskClient.delete('/resources', {
-          params: {
-            path: file.filePath,
-            permanently: true
-          }
-        });
+        console.log(`Deleting file from storage: ${file.filePath}`);
+        await storageProvider.deleteFile(file.filePath);
         console.log(`✓ File deleted: ${file.filePath}`);
       } catch (error) {
-        console.error(`✗ Error deleting file from Yandex.Disk: ${file.filePath}`);
+        console.error(`✗ Error deleting file from storage: ${file.filePath}`);
         console.error('Error details:', {
           message: error.message,
-          status: error.response?.status,
-          data: error.response?.data
+          stack: error.stack
         });
-        // Продолжаем удаление, даже если файл уже отсутствует на диске
+        // Продолжаем удаление, даже если файл уже отсутствует
       }
     }
 
@@ -819,28 +813,22 @@ export const deleteEmployee = async (req, res, next) => {
     });
     console.log(`Deleted ${deletedCount} file records from DB`);
 
-    // 5. Удаляем папку сотрудника с Яндекс.Диска
+    // 5. Удаляем папку сотрудника в хранилище
     if (employee.counterparty) {
       const employeeFullName = `${employee.lastName} ${employee.firstName} ${employee.middleName || ''}`.trim();
-      const employeeFolderPath = buildEmployeeFilePath(employee.counterparty.name, employeeFullName);
-      const fullPath = `${basePath}${employeeFolderPath}`;
+      const employeeFolderPath = buildEmployeeFilePath(employee.counterparty.name, employeeFullName).replace(/^\/+/, '');
+      const fullPath = storageProvider.resolvePath(employeeFolderPath);
 
       console.log(`Deleting employee folder: ${fullPath}`);
       
       try {
-        await yandexDiskClient.delete('/resources', {
-          params: {
-            path: fullPath,
-            permanently: true
-          }
-        });
+        await storageProvider.deleteFile(fullPath);
         console.log(`✓ Employee folder deleted: ${fullPath}`);
       } catch (error) {
-        console.error(`✗ Error deleting employee folder from Yandex.Disk: ${fullPath}`);
+        console.error(`✗ Error deleting employee folder from storage: ${fullPath}`);
         console.error('Error details:', {
           message: error.message,
-          status: error.response?.status,
-          data: error.response?.data
+          stack: error.stack
         });
         // Продолжаем, даже если папка уже отсутствует
       }

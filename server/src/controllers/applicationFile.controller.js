@@ -1,8 +1,7 @@
 import { File, Application, Counterparty } from '../models/index.js';
-import yandexDiskClient, { basePath } from '../config/storage.js';
+import storageProvider from '../config/storage.js';
 import { transliterate, sanitizeFileName } from '../utils/transliterate.js';
 import { AppError } from '../middleware/errorHandler.js';
-import axios from 'axios';
 
 /**
  * Построение пути для файлов заявки
@@ -67,27 +66,8 @@ export const uploadApplicationFiles = async (req, res, next) => {
     const relativePath = buildApplicationFilePath(
       application.counterparty.name,
       application.applicationNumber
-    );
-    const fullPath = `${basePath}${relativePath}`;
-    
-    // Создаем папки рекурсивно если не существуют
-    const pathParts = fullPath.split('/').filter(Boolean);
-    let currentPath = '';
-    
-    for (const part of pathParts) {
-      currentPath += '/' + part;
-      try {
-        await yandexDiskClient.put('/resources', undefined, {
-          params: { path: currentPath }
-        });
-      } catch (error) {
-        // 409 = папка уже существует, это нормально
-        if (error.response?.status !== 409) {
-          console.error('Error creating folder:', currentPath, error.response?.data);
-          throw new AppError(`Ошибка создания папки ${currentPath} на Яндекс.Диске`, 500);
-        }
-      }
-    }
+    ).replace(/^\/+/, '');
+    const fullPath = storageProvider.resolvePath(relativePath);
     
     const uploadedFiles = [];
     const errors = [];
@@ -100,35 +80,16 @@ export const uploadApplicationFiles = async (req, res, next) => {
         const timestamp = Date.now();
         const safeFileName = sanitizeFileName(file.originalname);
         const fileName = `${timestamp}_${safeFileName}`;
-        const filePath = `${fullPath}/${fileName}`;
+        const filePath = storageProvider.resolvePath(`${relativePath}/${fileName}`);
         
-        // Получаем URL для загрузки от Яндекс.Диска
-        const uploadUrlResponse = await yandexDiskClient.get('/resources/upload', {
-          params: {
-            path: filePath,
-            overwrite: false
-          }
+        await storageProvider.uploadFile({
+          fileBuffer: file.buffer,
+          mimeType: file.mimetype,
+          originalName: file.originalname,
+          filePath,
         });
         
-        const uploadUrl = uploadUrlResponse.data.href;
-        
-        // Загружаем файл по полученному URL
-        await axios.put(uploadUrl, file.buffer, {
-          headers: {
-            'Content-Type': file.mimetype
-          }
-        });
-        
-        console.log(`✅ File uploaded to Yandex.Disk: ${filePath}`);
-        
-        // Получаем информацию о загруженном файле
-        const fileInfoResponse = await yandexDiskClient.get('/resources', {
-          params: {
-            path: filePath
-          }
-        });
-        
-        const fileInfo = fileInfoResponse.data;
+        console.log(`✅ File uploaded to storage: ${filePath}`);
         
         // Сохраняем информацию о файле в БД
         const fileRecord = await File.create({
@@ -138,8 +99,8 @@ export const uploadApplicationFiles = async (req, res, next) => {
           mimeType: file.mimetype,
           fileSize: file.size,
           filePath: filePath,
-          publicUrl: fileInfo.public_url || null,
-          resourceId: fileInfo.resource_id || null,
+          publicUrl: null,
+          resourceId: null,
           entityType: 'application',
           entityId: applicationId,
           uploadedBy: req.user.id,
@@ -260,17 +221,12 @@ export const deleteApplicationFile = async (req, res, next) => {
       throw new AppError('Файл не найден', 404);
     }
     
-    // Удаляем файл с Яндекс.Диска
+    // Удаляем файл из хранилища
     try {
-      await yandexDiskClient.delete('/resources', {
-        params: {
-          path: file.filePath,
-          permanently: true
-        }
-      });
+      await storageProvider.deleteFile(file.filePath);
     } catch (error) {
-      console.error('Error deleting file from Yandex.Disk:', error);
-      // Продолжаем даже если не удалось удалить с Яндекс.Диска
+      console.error('Error deleting file from storage:', error);
+      // Продолжаем даже если не удалось удалить из хранилища
     }
     
     // Физически удаляем запись из БД
@@ -318,17 +274,12 @@ export const getApplicationFileDownloadLink = async (req, res, next) => {
       throw new AppError('Файл не найден', 404);
     }
     
-    // Получаем ссылку для скачивания от Яндекс.Диска
-    const downloadResponse = await yandexDiskClient.get('/resources/download', {
-      params: {
-        path: file.filePath
-      }
-    });
+    const downloadData = await storageProvider.getDownloadUrl(file.filePath, { expiresIn: 3600 });
     
     res.json({
       success: true,
       data: {
-        downloadUrl: downloadResponse.data.href,
+        downloadUrl: downloadData.url,
         fileName: file.originalName
       }
     });
@@ -370,16 +321,12 @@ export const getApplicationFileViewLink = async (req, res, next) => {
       throw new AppError('Файл не найден', 404);
     }
     
-    // Для изображений и PDF получаем прямую ссылку для скачивания
-    // (она работает лучше для встраивания)
-    const downloadResponse = await yandexDiskClient.get('/resources/download', {
-      params: { path: file.filePath }
-    });
+    const viewData = await storageProvider.getPublicUrl(file.filePath, { expiresIn: 86400 });
     
     res.json({
       success: true,
       data: {
-        viewUrl: downloadResponse.data.href,
+        viewUrl: viewData.url,
         fileName: file.originalName,
         mimeType: file.mimeType
       }

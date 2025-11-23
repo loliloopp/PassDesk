@@ -1,10 +1,8 @@
-import yandexDiskClient, { basePath } from '../config/storage.js';
+import storageProvider from '../config/storage.js';
 import { AppError } from '../middleware/errorHandler.js';
-import path from 'path';
-import axios from 'axios';
 
 /**
- * Загрузка файла на Яндекс.Диск
+ * Загрузка файла в Object Storage
  */
 export const uploadFile = async (req, res, next) => {
   try {
@@ -14,32 +12,14 @@ export const uploadFile = async (req, res, next) => {
 
     const file = req.file;
     const timestamp = Date.now();
-    const fileExtension = path.extname(file.originalname);
     const fileName = `${timestamp}_${file.originalname}`;
-    const filePath = `${basePath}/${fileName}`;
+    const filePath = storageProvider.resolvePath(fileName);
 
-    // Шаг 1: Получить URL для загрузки
-    const uploadUrlResponse = await yandexDiskClient.get('/resources/upload', {
-      params: {
-        path: filePath,
-        overwrite: false
-      }
-    });
-
-    const uploadUrl = uploadUrlResponse.data.href;
-
-    // Шаг 2: Загрузить файл по полученному URL
-    await axios.put(uploadUrl, file.buffer, {
-      headers: {
-        'Content-Type': file.mimetype
-      }
-    });
-
-    // Шаг 3: Получить информацию о загруженном файле
-    const fileInfoResponse = await yandexDiskClient.get('/resources', {
-      params: {
-        path: filePath
-      }
+    await storageProvider.uploadFile({
+      fileBuffer: file.buffer,
+      mimeType: file.mimetype,
+      originalName: file.originalname,
+      filePath,
     });
 
     res.status(201).json({
@@ -50,16 +30,11 @@ export const uploadFile = async (req, res, next) => {
         fileName: file.originalname,
         fileSize: file.size,
         mimeType: file.mimetype,
-        path: filePath,
-        resourceId: fileInfoResponse.data.resource_id
+        path: filePath
       }
     });
   } catch (error) {
-    if (error.response?.status === 409) {
-      next(new AppError('File already exists', 409));
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 
@@ -74,25 +49,14 @@ export const uploadMultipleFiles = async (req, res, next) => {
 
     const uploadPromises = req.files.map(async (file) => {
       const timestamp = Date.now();
-      const fileExtension = path.extname(file.originalname);
       const fileName = `${timestamp}_${file.originalname}`;
-      const filePath = `${basePath}/${fileName}`;
+      const filePath = storageProvider.resolvePath(fileName);
 
-      // Получить URL для загрузки
-      const uploadUrlResponse = await yandexDiskClient.get('/resources/upload', {
-        params: {
-          path: filePath,
-          overwrite: false
-        }
-      });
-
-      const uploadUrl = uploadUrlResponse.data.href;
-
-      // Загрузить файл
-      await axios.put(uploadUrl, file.buffer, {
-        headers: {
-          'Content-Type': file.mimetype
-        }
+      await storageProvider.uploadFile({
+        fileBuffer: file.buffer,
+        mimeType: file.mimetype,
+        originalName: file.originalname,
+        filePath,
       });
 
       return {
@@ -140,26 +104,17 @@ export const getFileById = async (req, res, next) => {
       throw new AppError('Файл не найден', 404);
     }
     
-    // Получить ссылку для скачивания
-    const downloadResponse = await yandexDiskClient.get('/resources/download', {
-      params: {
-        path: file.filePath
-      }
-    });
+    const downloadData = await storageProvider.getDownloadUrl(file.filePath, { expiresIn: 3600 });
 
     res.json({
       success: true,
       data: {
-        url: downloadResponse.data.href,
+        url: downloadData.url,
         fileName: file.originalName || file.fileName
       }
     });
   } catch (error) {
-    if (error.response?.status === 404) {
-      next(new AppError('Файл не найден на Яндекс.Диске', 404));
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 
@@ -169,28 +124,18 @@ export const getFileById = async (req, res, next) => {
 export const getFile = async (req, res, next) => {
   try {
     const { fileKey } = req.params;
-    const filePath = `${basePath}/${fileKey}`;
-
-    // Получить ссылку для скачивания
-    const downloadResponse = await yandexDiskClient.get('/resources/download', {
-      params: {
-        path: filePath
-      }
-    });
+    const filePath = storageProvider.resolvePath(fileKey);
+    const downloadData = await storageProvider.getDownloadUrl(filePath, { expiresIn: 3600 });
 
     res.json({
       success: true,
       data: {
-        url: downloadResponse.data.href,
+        url: downloadData.url,
         fileName: fileKey
       }
     });
   } catch (error) {
-    if (error.response?.status === 404) {
-      next(new AppError('File not found', 404));
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 
@@ -200,35 +145,18 @@ export const getFile = async (req, res, next) => {
 export const getPublicLink = async (req, res, next) => {
   try {
     const { fileKey } = req.params;
-    const filePath = `${basePath}/${fileKey}`;
-
-    // Опубликовать файл и получить публичную ссылку
-    const publishResponse = await yandexDiskClient.put('/resources/publish', null, {
-      params: {
-        path: filePath
-      }
-    });
-
-    // Получить информацию о файле с публичной ссылкой
-    const fileInfoResponse = await yandexDiskClient.get('/resources', {
-      params: {
-        path: filePath
-      }
-    });
+    const filePath = storageProvider.resolvePath(fileKey);
+    const publicLink = await storageProvider.getPublicUrl(filePath, { expiresIn: 86400 });
 
     res.json({
       success: true,
       data: {
-        publicUrl: fileInfoResponse.data.public_url,
+        publicUrl: publicLink.url,
         fileName: fileKey
       }
     });
   } catch (error) {
-    if (error.response?.status === 404) {
-      next(new AppError('File not found', 404));
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 
@@ -238,26 +166,15 @@ export const getPublicLink = async (req, res, next) => {
 export const deleteFile = async (req, res, next) => {
   try {
     const { fileKey } = req.params;
-    const filePath = `${basePath}/${fileKey}`;
-
-    // Удалить файл (permanent=true для окончательного удаления, без корзины)
-    await yandexDiskClient.delete('/resources', {
-      params: {
-        path: filePath,
-        permanently: true
-      }
-    });
+    const filePath = storageProvider.resolvePath(fileKey);
+    await storageProvider.deleteFile(filePath);
 
     res.json({
       success: true,
       message: 'File deleted successfully'
     });
   } catch (error) {
-    if (error.response?.status === 404) {
-      next(new AppError('File not found', 404));
-    } else {
-      next(error);
-    }
+    next(error);
   }
 };
 

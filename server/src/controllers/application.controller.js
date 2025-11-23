@@ -1,5 +1,6 @@
 import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, Position, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
+import storageProvider from '../config/storage.js';
 import { generateApplicationDocument } from '../services/documentService.js';
 
 // Функция генерации номера заявки
@@ -593,27 +594,19 @@ export const deleteApplication = async (req, res) => {
     
     console.log(`Found ${files.length} files to delete`);
     
-    // Импортируем yandexDiskClient
-    const { default: yandexDiskClient } = await import('../config/storage.js');
-    
-    // Удаляем каждый файл с Яндекс.Диска
+    // Удаляем каждый файл из хранилища
     for (const file of files) {
       try {
-        console.log(`Deleting file from Yandex.Disk: ${file.filePath}`);
-        await yandexDiskClient.delete('/resources', {
-          params: {
-            path: file.filePath,
-            permanently: true
-          }
-        });
+        console.log(`Deleting file from storage: ${file.filePath}`);
+        await storageProvider.deleteFile(file.filePath);
         console.log(`✓ File deleted: ${file.filePath}`);
       } catch (error) {
-        console.error(`✗ Error deleting file from Yandex.Disk: ${file.filePath}`);
+        console.error(`✗ Error deleting file from storage: ${file.filePath}`);
         console.error('Error details:', {
           message: error.message,
-          status: error.response?.status
+          stack: error.stack
         });
-        // Продолжаем удаление, даже если файл уже отсутствует на диске
+        // Продолжаем удаление, даже если файл уже отсутствует
       }
     }
     
