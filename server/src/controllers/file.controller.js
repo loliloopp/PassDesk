@@ -104,7 +104,10 @@ export const getFileById = async (req, res, next) => {
       throw new AppError('Файл не найден', 404);
     }
     
-    const downloadData = await storageProvider.getDownloadUrl(file.filePath, { expiresIn: 3600 });
+    const downloadData = await storageProvider.getDownloadUrl(file.filePath, { 
+      expiresIn: 3600,
+      fileName: file.originalName || file.fileName // Передаём имя файла для заголовка Content-Disposition
+    });
 
     res.json({
       success: true,
@@ -125,7 +128,10 @@ export const getFile = async (req, res, next) => {
   try {
     const { fileKey } = req.params;
     const filePath = storageProvider.resolvePath(fileKey);
-    const downloadData = await storageProvider.getDownloadUrl(filePath, { expiresIn: 3600 });
+    const downloadData = await storageProvider.getDownloadUrl(filePath, { 
+      expiresIn: 3600,
+      fileName: fileKey // Передаём имя файла для заголовка Content-Disposition
+    });
 
     res.json({
       success: true,

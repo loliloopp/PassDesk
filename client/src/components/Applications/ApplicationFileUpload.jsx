@@ -86,6 +86,7 @@ const ApplicationFileUpload = ({ applicationId, readonly = false, onFilesChange 
     try {
       const response = await applicationService.getFileDownloadLink(applicationId, file.id);
       if (response.data.data.downloadUrl) {
+        // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
         window.open(response.data.data.downloadUrl, '_blank');
       }
     } catch (error) {
@@ -119,6 +120,7 @@ const ApplicationFileUpload = ({ applicationId, readonly = false, onFilesChange 
       try {
         const response = await applicationService.getFileDownloadLink(applicationId, viewingFile.fileId);
         if (response.data.data.downloadUrl) {
+          // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
           window.open(response.data.data.downloadUrl, '_blank');
           message.success('Скачивание начато');
         }

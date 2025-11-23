@@ -114,10 +114,21 @@ export const createS3Provider = (config = {}) => {
 
   const getDownloadUrl = async (filePath, options = {}) => {
     const objectKey = normalizePath(filePath);
-    const getCommand = new GetObjectCommand({
+    
+    // Строим параметры команды GetObject
+    const getCommandParams = {
       Bucket: config.bucketName,
       Key: objectKey,
-    });
+    };
+
+    // Если передано имя файла, добавляем заголовок Content-Disposition для скачивания
+    if (options.fileName) {
+      // Экранируем имя файла для заголовка Content-Disposition
+      const encodedFileName = encodeURIComponent(options.fileName).replace(/'/g, "%27");
+      getCommandParams.ResponseContentDisposition = `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
+    }
+
+    const getCommand = new GetObjectCommand(getCommandParams);
 
     const url = await getSignedUrl(client, getCommand, {
       expiresIn: options.expiresIn || DEFAULT_DOWNLOAD_TTL,

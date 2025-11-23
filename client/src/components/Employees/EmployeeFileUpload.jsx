@@ -133,6 +133,7 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange }) => 
     try {
       const response = await employeeService.getFileDownloadLink(employeeId, file.id);
       if (response.data.downloadUrl) {
+        // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
         window.open(response.data.downloadUrl, '_blank');
       }
     } catch (error) {
@@ -166,6 +167,7 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange }) => 
       try {
         const response = await employeeService.getFileDownloadLink(employeeId, viewingFile.fileId);
         if (response.data.downloadUrl) {
+          // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
           window.open(response.data.downloadUrl, '_blank');
           message.success('Скачивание начато');
         }

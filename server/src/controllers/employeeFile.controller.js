@@ -284,7 +284,10 @@ export const getEmployeeFileDownloadLink = async (req, res, next) => {
       throw new AppError('Файл не найден', 404);
     }
     
-    const downloadData = await storageProvider.getDownloadUrl(file.filePath, { expiresIn: 3600 });
+    const downloadData = await storageProvider.getDownloadUrl(file.filePath, { 
+      expiresIn: 3600,
+      fileName: file.originalName // Передаём имя файла для заголовка Content-Disposition
+    });
     
     res.json({
       success: true,

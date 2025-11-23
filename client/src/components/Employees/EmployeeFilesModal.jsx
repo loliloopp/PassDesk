@@ -87,6 +87,7 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
     try {
       const response = await employeeService.getFileDownloadLink(employeeId, file.id);
       if (response.data.downloadUrl) {
+        // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
         window.open(response.data.downloadUrl, '_blank');
       }
     } catch (error) {
@@ -129,6 +130,7 @@ const EmployeeFilesModal = ({ visible, employeeId, employeeName, onClose, onFile
       try {
         const response = await employeeService.getFileDownloadLink(employeeId, viewingFile.fileId);
         if (response.data.downloadUrl) {
+          // S3 URL теперь имеет правильный заголовок Content-Disposition от бэкэнда
           window.open(response.data.downloadUrl, '_blank');
         }
       } catch (error) {
