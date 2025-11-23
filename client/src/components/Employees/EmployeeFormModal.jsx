@@ -218,11 +218,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const { user } = useAuthStore();
 
   // Обработчик для обновления при изменении файлов
+  // filesCount - количество файлов (используется только для информации)
   const handleFilesChange = (filesCount) => {
-    // Вызываем onSuccess для обновления таблицы
-    if (onSuccess) {
-      onSuccess();
-    }
+    // При изменении файлов просто уведомляем родителя о необходимости обновления
+    // Не вызываем onSuccess, так как файлы не меняют данные самого сотрудника
+    // Обновление таблицы происходит в родительском компоненте автоматически
   };
 
   // Определяем, требуется ли патент для выбранного гражданства
@@ -326,7 +326,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       
       try {
         // Загружаем справочники параллельно (без блокировки UI)
-        const loadReferencesPromise = Promise.all([
+        // Загружаем их напрямую, не через state
+        const [, , , ] = await Promise.all([
           fetchCitizenships(),
           fetchConstructionSites(),
           fetchPositions(),
@@ -359,14 +360,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           // Теперь асинхронно проверяем гражданство
           setCheckingCitizenship(true);
           
-          // Ждем загрузки справочников
-          await loadReferencesPromise;
+          // Небольшая задержка для обновления состояния citizenships  
+          await new Promise(resolve => setTimeout(resolve, 100));
           
-          // Небольшая задержка для обновления состояния citizenships
-          await new Promise(resolve => setTimeout(resolve, 50));
-          
-          // Определяем гражданство после загрузки справочника
-          if (employee.citizenshipId) {
+          // Определяем гражданство после загрузки справочника (используем обновленный state)
+          if (employee.citizenshipId && citizenships.length > 0) {
             const citizenship = citizenships.find(c => c.id === employee.citizenshipId);
             
             if (citizenship) {
@@ -384,8 +382,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           setDataLoaded(true);
         } else {
           // Для нового сотрудника просто загружаем справочники
-          await loadReferencesPromise;
-          
           form.resetFields();
           setActiveTab('1');
           setTabsValidation({ '1': false, '2': false, '3': false });
@@ -1223,6 +1219,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       maskClosable={false}
       width={1200}
       footer={footer}
+      styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
     >
       {formContent}
     </Modal>

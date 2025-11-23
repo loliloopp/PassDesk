@@ -53,7 +53,8 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange }) => 
       const filesList = response.data || [];
       setFiles(filesList);
       
-      // Уведомляем родителя об изменении количества файлов
+      // Уведомляем родителя об изменении файлов (только для информации, без обновления сотрудника)
+      // onFilesChange используется только для обновления отображения количества файлов в таблице
       if (onFilesChange) {
         onFilesChange(filesList.length);
       }

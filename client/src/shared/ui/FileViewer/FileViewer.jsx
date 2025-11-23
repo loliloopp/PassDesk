@@ -198,10 +198,12 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
         maxWidth: '90vw',
         maxHeight: '90vh'
       }}
-      bodyStyle={{
-        padding: 16,
-        height: 'calc(90vh - 110px)',
-        overflow: 'auto'
+      styles={{
+        body: {
+          padding: 16,
+          height: 'calc(90vh - 110px)',
+          overflow: 'auto'
+        }
       }}
       footer={null}
       centered={true}
