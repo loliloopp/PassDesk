@@ -166,23 +166,24 @@ const EmployeesPage = () => {
   };
 
   return (
-    <div style={{ overflowX: 'hidden' }}>
+    <div style={{ 
+      height: isMobile ? 'auto' : 'calc(100vh - 64px)', 
+      display: isMobile ? 'block' : 'flex', 
+      flexDirection: 'column',
+      overflow: 'hidden' // Запрещаем прокрутку на уровне страницы
+    }}>
       {/* Заголовок с поиском и действиями */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
           flexWrap: 'wrap',
           gap: 16,
-          // Закрепление заголовка страницы для desktop версии
-          position: isMobile ? 'relative' : 'sticky',
-          top: isMobile ? 0 : 64, // 64px - высота header
-          zIndex: 999,
           backgroundColor: '#fff',
-          paddingTop: 8,
-          paddingBottom: 8,
+          padding: '16px',
+          borderBottom: '1px solid #f0f0f0',
+          flexShrink: 0, // Не сжимается - всегда на месте
         }}
       >
         <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
@@ -232,19 +233,27 @@ const EmployeesPage = () => {
           canDeleteEmployee={canDeleteEmployee}
         />
       ) : (
-        <EmployeeTable
-          employees={filteredEmployees}
-          departments={departments}
-          loading={loading}
-          onEdit={handleEdit}
-          onView={handleView}
-          onDelete={handleDelete}
-          onViewFiles={handleViewFiles}
-          onDepartmentChange={handleDepartmentChange}
-          canExport={canExport}
-          canDeleteEmployee={canDeleteEmployee}
-          uniqueFilters={uniqueFilters}
-        />
+        <div style={{ 
+          flex: 1, 
+          minHeight: 0, // Важно для корректной работы flex
+          backgroundColor: '#fff',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <EmployeeTable
+            employees={filteredEmployees}
+            departments={departments}
+            loading={loading}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onViewFiles={handleViewFiles}
+            onDepartmentChange={handleDepartmentChange}
+            canExport={canExport}
+            canDeleteEmployee={canDeleteEmployee}
+            uniqueFilters={uniqueFilters}
+          />
+        </div>
       )}
 
       {/* Модальные окна - для десктопа */}
