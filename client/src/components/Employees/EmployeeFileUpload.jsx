@@ -27,7 +27,7 @@ const DOCUMENT_TYPES = [
   { value: 'other', label: 'Другое' }
 ];
 
-const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange }) => {
+const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange, hideUploadButton = false }) => {
   const { message } = App.useApp();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -245,7 +245,7 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange }) => 
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size="large">
-      {!readonly && (
+      {!readonly && !hideUploadButton && (
         <Space direction="vertical" style={{ width: '100%' }}>
           <Upload {...uploadProps}>
             <Button icon={<UploadOutlined />} disabled={uploading}>

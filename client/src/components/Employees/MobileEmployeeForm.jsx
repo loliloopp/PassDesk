@@ -1,8 +1,7 @@
-import { Form, Input, Select, DatePicker, Button, Space, Divider, Typography, Checkbox, Spin, Collapse } from 'antd';
+import { Form, Input, Select, DatePicker, Button, Space, Typography, Checkbox, Spin, Collapse } from 'antd';
 import { SaveOutlined, CaretRightOutlined, FileOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
-import EmployeeFileUpload from './EmployeeFileUpload';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
 import dayjs from 'dayjs';
 
@@ -40,7 +39,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   } = useEmployeeForm(employee, true, onSuccess);
 
   // Состояние для открытых панелей (по умолчанию все открыны)
-  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'files', 'statuses']);
+  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'statuses']);
   const [employeeIdOnLoad, setEmployeeIdOnLoad] = useState(null); // Отслеживаем id сотрудника при загрузке
 
   // Инициализируем данные формы при изменении сотрудника или справочников
@@ -361,7 +360,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     });
   }
 
-  // Блок 4: Фото документов
+  // Блок 4: Фото документов (объединен с файлами на мобильной версии)
   collapseItems.push({
     key: 'photos',
     label: <Title level={5} style={{ margin: 0 }}>📸 Фото документов</Title>,
@@ -450,15 +449,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
       </>
     ),
   });
-
-  // Блок 5: Файлы (если редактирование)
-  if (employee?.id) {
-    collapseItems.push({
-      key: 'files',
-      label: <Title level={5} style={{ margin: 0 }}>📎 Файлы</Title>,
-      children: <EmployeeFileUpload employeeId={employee.id} readonly={false} />,
-    });
-  }
 
   // Блок 6: Статусы (если редактирование)
   if (employee?.id && canEditConstructionSite) {
