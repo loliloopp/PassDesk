@@ -185,6 +185,7 @@ const EmployeesPage = () => {
           padding: '16px',
           borderBottom: '1px solid #f0f0f0',
           flexShrink: 0, // Не сжимается - всегда виден
+          marginBottom: 0 // БЕЗ отступа снизу
         }}
       >
         <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
@@ -234,25 +235,19 @@ const EmployeesPage = () => {
           canDeleteEmployee={canDeleteEmployee}
         />
       ) : (
-        <div style={{ 
-          flex: 1, 
-          minHeight: 0,
-          overflow: 'auto' // ТОЛЬКО ЗДЕСЬ прокрутка
-        }}>
-          <EmployeeTable
-            employees={filteredEmployees}
-            departments={departments}
-            loading={loading}
-            onEdit={handleEdit}
-            onView={handleView}
-            onDelete={handleDelete}
-            onViewFiles={handleViewFiles}
-            onDepartmentChange={handleDepartmentChange}
-            canExport={canExport}
-            canDeleteEmployee={canDeleteEmployee}
-            uniqueFilters={uniqueFilters}
-          />
-        </div>
+        <EmployeeTable
+          employees={filteredEmployees}
+          departments={departments}
+          loading={loading}
+          onEdit={handleEdit}
+          onView={handleView}
+          onDelete={handleDelete}
+          onViewFiles={handleViewFiles}
+          onDepartmentChange={handleDepartmentChange}
+          canExport={canExport}
+          canDeleteEmployee={canDeleteEmployee}
+          uniqueFilters={uniqueFilters}
+        />
       )}
 
       {/* Модальные окна - для десктопа */}
