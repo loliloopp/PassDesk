@@ -176,16 +176,14 @@ const MobileUsersPage = () => {
       </div>
 
       {/* Список пользователей */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <MobileUsersList
-          users={filteredUsers}
-          counterparties={counterparties}
-          loading={loading}
-          currentUser={currentUser}
-          onStatusToggle={handleToggleStatus}
-          onEdit={handleEdit}
-        />
-      </div>
+      <MobileUsersList
+        users={filteredUsers}
+        counterparties={counterparties}
+        loading={loading}
+        currentUser={currentUser}
+        onStatusToggle={handleToggleStatus}
+        onEdit={handleEdit}
+      />
 
       {/* Modal для редактирования пользователя */}
       <Modal

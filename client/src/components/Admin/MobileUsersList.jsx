@@ -49,32 +49,31 @@ const MobileUsersList = ({
   }
 
   return (
-    <>
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: 4, 
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        flex: 1,
-        minHeight: 0,
-        height: '100%',
-        width: '100%',
-        padding: '0 16px 16px 16px'
-      }}>
-        {users.map((user) => (
-          <Card
-            key={user.id}
-            size="small"
-            onClick={() => setSelectedUser(user)}
-            style={{ 
-              cursor: 'pointer',
-              borderRadius: 4,
-            }}
-            styles={{
-              body: { padding: '8px 12px' }
-            }}
-          >
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: 4, 
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      flex: 1,
+      minHeight: 0,
+      height: '100%',
+      width: '100%',
+      padding: '0 16px 16px 16px'
+    }}>
+      {users.map((user) => (
+        <Card
+          key={user.id}
+          size="small"
+          onClick={() => setSelectedUser(user)}
+          style={{ 
+            cursor: 'pointer',
+            borderRadius: 4,
+          }}
+          styles={{
+            body: { padding: '8px 12px' }
+          }}
+        >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               {/* Левая часть - основная информация */}
               <div style={{ flex: 1, display: 'flex', gap: 8, minWidth: 0 }}>
@@ -134,7 +133,6 @@ const MobileUsersList = ({
             </div>
           </Card>
         ))}
-      </div>
 
       {/* Боковое окно просмотра пользователя */}
       {selectedUser && (
@@ -148,7 +146,7 @@ const MobileUsersList = ({
           onEdit={onEdit}
         />
       )}
-    </>
+    </div>
   );
 };
 
