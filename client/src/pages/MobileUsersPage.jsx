@@ -155,8 +155,8 @@ const MobileUsersPage = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Поиск и кнопка Выход */}
-      <div style={{ padding: '12px 16px 8px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
+      {/* Поиск */}
+      <div style={{ padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, borderBottom: '1px solid #f0f0f0' }}>
         <Input
           placeholder="Поиск по email или ФИО..."
           prefix={<SearchOutlined />}
@@ -165,14 +165,6 @@ const MobileUsersPage = () => {
           size="large"
           style={{ borderRadius: 4, flex: 1 }}
         />
-        <Button
-          type="default"
-          icon={<LogoutOutlined />}
-          onClick={() => navigate('/employees')}
-          style={{ flexShrink: 0 }}
-        >
-          Выход
-        </Button>
       </div>
 
       {/* Список пользователей */}

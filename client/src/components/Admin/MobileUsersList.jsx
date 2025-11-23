@@ -62,18 +62,18 @@ const MobileUsersList = ({
       padding: '0 16px 16px 16px'
     }}>
       {users.map((user) => (
-        <Card
-          key={user.id}
-          size="small"
-          onClick={() => setSelectedUser(user)}
-          style={{ 
-            cursor: 'pointer',
-            borderRadius: 4,
-          }}
-          styles={{
-            body: { padding: '8px 12px' }
-          }}
-        >
+          <Card
+            key={user.id}
+            size="small"
+            onClick={() => setSelectedUser(user)}
+            style={{ 
+              cursor: 'pointer',
+              borderRadius: 4,
+            }}
+            styles={{
+              body: { padding: '8px 12px' }
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               {/* Левая часть - основная информация */}
               <div style={{ flex: 1, display: 'flex', gap: 8, minWidth: 0 }}>
@@ -132,7 +132,7 @@ const MobileUsersList = ({
               </div>
             </div>
           </Card>
-        ))}
+      ))}
 
       {/* Боковое окно просмотра пользователя */}
       {selectedUser && (
