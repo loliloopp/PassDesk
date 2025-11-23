@@ -31,7 +31,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     }
     
     // Валидация типа документа (опционально)
-    const validDocumentTypes = ['passport', 'patent_front', 'patent_back', 'biometric_consent', 'kig', 'bank_details', 'other'];
+    const validDocumentTypes = ['passport', 'patent_front', 'patent_back', 'consent', 'biometric_consent', 'kig', 'bank_details', 'other'];
     if (documentType && !validDocumentTypes.includes(documentType)) {
       throw new AppError(`Неверный тип документа. Допустимые значения: ${validDocumentTypes.join(', ')}`, 400);
     }

@@ -397,6 +397,15 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                   multiple={true}
                 />
 
+                {/* Согласие на обработку биометрических данных */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="biometric_consent"
+                  label="Согласие на обработку биометрических данных"
+                  readonly={false}
+                  multiple={true}
+                />
+
                 {/* Реквизиты счета */}
                 <EmployeeDocumentUpload
                   employeeId={employee.id}
