@@ -1,6 +1,6 @@
 import { File, Application, Counterparty } from '../models/index.js';
 import storageProvider from '../config/storage.js';
-import { transliterate, sanitizeFileName } from '../utils/transliterate.js';
+import { transliterate, sanitizeFileName, formatApplicationFileName } from '../utils/transliterate.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 /**
@@ -77,10 +77,23 @@ export const uploadApplicationFiles = async (req, res, next) => {
       try {
         console.log(`📁 Uploading file: ${file.originalname}, size: ${file.size} bytes`);
         
+        // Получаем расширение файла
+        const lastDotIndex = file.originalname.lastIndexOf('.');
+        const extension = lastDotIndex > 0 ? file.originalname.substring(lastDotIndex) : '';
+        
+        // Форматируем имя файла для заявки: заявка_номер_контрагент_дата.расширение
+        const formattedFileName = formatApplicationFileName(
+          application.applicationNumber,
+          application.counterparty.name,
+          application.createdAt,
+          extension
+        );
+        
         const timestamp = Date.now();
-        const safeFileName = sanitizeFileName(file.originalname);
-        const fileName = `${timestamp}_${safeFileName}`;
+        const fileName = `${timestamp}_${formattedFileName}`;
         const filePath = storageProvider.resolvePath(`${relativePath}/${fileName}`);
+        
+        console.log(`📝 Formatted filename: ${formattedFileName}`);
         
         await storageProvider.uploadFile({
           fileBuffer: file.buffer,
@@ -94,7 +107,7 @@ export const uploadApplicationFiles = async (req, res, next) => {
         // Сохраняем информацию о файле в БД
         const fileRecord = await File.create({
           fileKey: fileName,
-          fileName: safeFileName,
+          fileName: formattedFileName,
           originalName: file.originalname,
           mimeType: file.mimetype,
           fileSize: file.size,
@@ -103,6 +116,7 @@ export const uploadApplicationFiles = async (req, res, next) => {
           resourceId: null,
           entityType: 'application',
           entityId: applicationId,
+          employeeId: null, // Файлы заявки НЕ привязаны к конкретному сотруднику
           uploadedBy: req.user.id,
           documentType: 'application_scan' // Тип документа для сканов заявки
         });

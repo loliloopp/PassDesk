@@ -1,6 +1,6 @@
 import { File, Employee, Counterparty, EmployeeCounterpartyMapping } from '../models/index.js';
 import storageProvider from '../config/storage.js';
-import { buildEmployeeFilePath, sanitizeFileName } from '../utils/transliterate.js';
+import { buildEmployeeFilePath, sanitizeFileName, formatEmployeeFileName } from '../utils/transliterate.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 /**
@@ -31,7 +31,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     }
     
     // Валидация типа документа (опционально)
-    const validDocumentTypes = ['passport', 'patent_front', 'patent_back', 'biometric_consent', 'other'];
+    const validDocumentTypes = ['passport', 'patent_front', 'patent_back', 'biometric_consent', 'kig', 'bank_details', 'other'];
     if (documentType && !validDocumentTypes.includes(documentType)) {
       throw new AppError(`Неверный тип документа. Допустимые значения: ${validDocumentTypes.join(', ')}`, 400);
     }
@@ -105,11 +105,31 @@ export const uploadEmployeeFiles = async (req, res, next) => {
         console.log(`📦 Provider: ${storageProvider.name}`);
         console.log(`📍 Base folder: ${folderPath}`);
         
+        // Получаем расширение файла
+        const lastDotIndex = file.originalname.lastIndexOf('.');
+        const extension = lastDotIndex > 0 ? file.originalname.substring(lastDotIndex) : '';
+        
+        // Форматируем имя файла в соответствии с типом документа и ФИО
+        let formattedFileName;
+        if (documentType && documentType !== 'other') {
+          // Если указан тип документа, используем форматированное имя
+          formattedFileName = formatEmployeeFileName(
+            documentType,
+            employee.lastName,
+            employee.firstName,
+            employee.middleName,
+            extension
+          );
+        } else {
+          // Иначе используем оригинальное имя
+          formattedFileName = sanitizeFileName(file.originalname);
+        }
+        
         const timestamp = Date.now();
-        const safeFileName = sanitizeFileName(file.originalname);
-        const fileName = `${timestamp}_${safeFileName}`;
+        const fileName = `${timestamp}_${formattedFileName}`;
         const targetPath = storageProvider.resolvePath(`${relativeDirectory}/${fileName}`);
         
+        console.log(`📝 Formatted filename: ${formattedFileName}`);
         console.log(`🔑 File key: ${targetPath}`);
         
         await storageProvider.uploadFile({
@@ -125,7 +145,7 @@ export const uploadEmployeeFiles = async (req, res, next) => {
         // Сохраняем информацию о файле в БД
         const fileRecord = await File.create({
           fileKey: fileName,
-          fileName: safeFileName,
+          fileName: formattedFileName,
           originalName: file.originalname,
           mimeType: file.mimetype,
           fileSize: file.size,

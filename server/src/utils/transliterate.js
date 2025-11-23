@@ -106,4 +106,65 @@ export const sanitizeFileName = (fileName) => {
   return `${transliteratedName}${extension}`.toLowerCase();
 };
 
+/**
+ * Маппинг типов документов на русские названия
+ */
+const documentTypeNames = {
+  'passport': 'паспорт',
+  'biometric_consent': 'согласие',
+  'patent_front': 'патент1',
+  'patent_back': 'патент2',
+  'bank_details': 'реквизиты',
+  'kig': 'киг',
+  'application_scan': 'заявка'
+};
+
+/**
+ * Форматирование имени файла сотрудника
+ * @param {string} documentType - Тип документа (passport, biometric_consent и т.д.)
+ * @param {string} lastName - Фамилия
+ * @param {string} firstName - Имя
+ * @param {string} middleName - Отчество
+ * @param {string} extension - Расширение файла с точкой (например, .pdf)
+ * @returns {string} - Форматированное имя: документ_фамилия_имя_отчество.расширение
+ */
+export const formatEmployeeFileName = (documentType, lastName, firstName, middleName, extension) => {
+  // Получаем русское название документа
+  const docName = documentTypeNames[documentType] || documentType;
+  
+  // Преобразуем данные в нижний регистр для кириллицы
+  const lastNameLower = lastName ? lastName.toLowerCase() : '';
+  const firstNameLower = firstName ? firstName.toLowerCase() : '';
+  const middleNameLower = middleName ? middleName.toLowerCase() : '';
+  
+  // Собираем компоненты имени (пропускаем пустые)
+  const nameParts = [lastNameLower, firstNameLower, middleNameLower].filter(p => p);
+  const fullName = nameParts.join('_');
+  
+  // Собираем финальное имя
+  const finalName = fullName ? `${docName}_${fullName}` : docName;
+  
+  return `${finalName}${extension}`.toLowerCase();
+};
+
+/**
+ * Форматирование имени файла заявки
+ * @param {string} applicationNumber - Номер заявки
+ * @param {string} counterpartyName - Название контрагента
+ * @param {string} createdDate - Дата создания (YYYY-MM-DD)
+ * @param {string} extension - Расширение файла с точкой (например, .pdf)
+ * @returns {string} - Форматированное имя: заявка_номер_контрагент_дата.расширение
+ */
+export const formatApplicationFileName = (applicationNumber, counterpartyName, createdDate, extension) => {
+  // Форматируем контрагента (буквы в нижний регистр)
+  const counterpartyFormatted = counterpartyName ? counterpartyName.toLowerCase() : 'kontragent';
+  
+  // Форматируем дату (берем только дату без времени)
+  const dateFormatted = createdDate ? createdDate.split('T')[0] : new Date().toISOString().split('T')[0];
+  
+  const finalName = `заявка_${applicationNumber}_${counterpartyFormatted}_${dateFormatted}`;
+  
+  return `${finalName}${extension}`.toLowerCase();
+};
+
 
