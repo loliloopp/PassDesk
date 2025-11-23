@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Card, Tabs, Typography, Space, Grid } from 'antd';
-import { SettingOutlined, TeamOutlined, GlobalOutlined } from '@ant-design/icons';
+import { SettingOutlined, TeamOutlined, GlobalOutlined, ShopOutlined } from '@ant-design/icons';
 import UsersPage from './UsersPage';
 import MobileUsersPage from './MobileUsersPage';
 import SettingsPage from './SettingsPage';
 import CitizenshipsPage from './CitizenshipsPage';
+import CounterpartiesPage from './CounterpartiesPage';
+import MobileCounterpartiesPage from './MobileCounterpartiesPage';
 
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
@@ -14,7 +16,7 @@ const AdministrationPage = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
 
-  // На мобильных показываем только вкладку Пользователи
+  // На мобильных показываем только вкладки Пользователи и Контрагенты
   const tabItems = isMobile 
     ? [
         {
@@ -26,6 +28,16 @@ const AdministrationPage = () => {
             </span>
           ),
           children: <MobileUsersPage />
+        },
+        {
+          key: 'counterparties',
+          label: (
+            <span>
+              <ShopOutlined />
+              Контрагенты
+            </span>
+          ),
+          children: <MobileCounterpartiesPage />
         }
       ]
     : [
@@ -38,6 +50,16 @@ const AdministrationPage = () => {
             </span>
           ),
           children: <UsersPage />
+        },
+        {
+          key: 'counterparties',
+          label: (
+            <span>
+              <ShopOutlined />
+              Контрагенты
+            </span>
+          ),
+          children: <CounterpartiesPage />
         },
         {
           key: 'citizenships',
