@@ -192,12 +192,21 @@ export const FileViewer = ({ fileUrl, fileName, mimeType, visible, onClose, onDo
       title="Просмотр файла"
       open={visible}
       onCancel={handleClose}
-      width="90%"
-      style={{ maxWidth: 1200 }}
-      bodyStyle={{ padding: 16 }}
+      width="90vw"
+      height="90vh"
+      style={{
+        maxWidth: '90vw',
+        maxHeight: '90vh'
+      }}
+      bodyStyle={{
+        padding: 16,
+        height: 'calc(90vh - 110px)',
+        overflow: 'auto'
+      }}
       footer={null}
-      centered
+      centered={true}
       closable={false}
+      wrapClassName={styles.fullscreenModal}
     >
       {/* Тулбар */}
       {renderToolbar()}
