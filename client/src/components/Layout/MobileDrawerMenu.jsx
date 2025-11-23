@@ -4,6 +4,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   SettingOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
 
@@ -17,22 +18,27 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const { logout, user } = useAuthStore();
 
   const menuItems = [
-    {
-      key: '/profile',
-      icon: <UserOutlined />,
-      label: 'Профиль пользователя',
-    },
-    // Кнопка Администрирование только для админов
+    // Пункты только для админов
     ...(user?.role === 'admin' ? [
       {
-        type: 'divider',
+        key: '/employees',
+        icon: <TeamOutlined />,
+        label: 'Сотрудники',
       },
       {
         key: '/admin',
         icon: <SettingOutlined />,
-        label: 'Администрирование',
+        label: 'Администирование',
+      },
+      {
+        type: 'divider',
       },
     ] : []),
+    {
+      key: '/profile',
+      icon: <UserOutlined />,
+      label: 'Профиль',
+    },
     {
       type: 'divider',
     },

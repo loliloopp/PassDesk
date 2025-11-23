@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Layout as AntLayout, Badge, Avatar, Dropdown, Space, Typography, Grid, Tag, Tooltip, Button } from 'antd'
-import { BellOutlined, UserOutlined, DownOutlined, IdcardOutlined, MenuOutlined } from '@ant-design/icons'
+import { BellOutlined, UserOutlined, DownOutlined, IdcardOutlined, MenuOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import MobileDrawerMenu from './MobileDrawerMenu'
@@ -17,6 +17,28 @@ const Header = () => {
   const [drawerVisible, setDrawerVisible] = useState(false)
 
   const userMenuItems = [
+    // Пункты только для админов
+    ...(user?.role === 'admin' ? [
+      {
+        key: 'employees',
+        label: 'Сотрудники',
+        icon: <TeamOutlined />,
+        onClick: () => {
+          navigate('/employees')
+        }
+      },
+      {
+        key: 'admin',
+        label: 'Администирование',
+        icon: <SettingOutlined />,
+        onClick: () => {
+          navigate('/admin')
+        }
+      },
+      {
+        type: 'divider',
+      },
+    ] : []),
     {
       key: 'profile',
       label: 'Профиль',
@@ -30,7 +52,7 @@ const Header = () => {
     },
     {
       key: 'logout',
-      label: 'Выйти',
+      label: 'Выход',
       danger: true,
       onClick: () => {
         logout()
