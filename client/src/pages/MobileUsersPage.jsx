@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Input, App, Modal, Form, Select, Space, Button } from 'antd';
-import { SearchOutlined, LockOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Input, App, Modal, Form, Select, Space, Button, Popover, Checkbox } from 'antd';
+import { SearchOutlined, LockOutlined, UserOutlined, LogoutOutlined, FilterOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '@/services/userService';
 import { counterpartyService } from '@/services/counterpartyService';
@@ -24,6 +24,7 @@ const MobileUsersPage = () => {
   const [passwordForm] = Form.useForm();
   const [editingUser, setEditingUser] = useState(null);
   const { user: currentUser } = useAuthStore();
+  const [statusFilter, setStatusFilter] = useState([]); // [] - нет фильтра, ['active'] - только активные, ['inactive'] - только неактивные
 
   // Роли
   const roleLabels = {
@@ -66,11 +67,21 @@ const MobileUsersPage = () => {
   // Отфильтрованный список пользователей
   const filteredUsers = users.filter((user) => {
     const searchLower = searchText.toLowerCase();
-    return (
+    const searchMatch =
       user.email.toLowerCase().includes(searchLower) ||
       user.firstName.toLowerCase().includes(searchLower) ||
-      user.lastName.toLowerCase().includes(searchLower)
-    );
+      user.lastName.toLowerCase().includes(searchLower);
+
+    // Фильтрация по статусу
+    let statusMatch = true;
+    if (statusFilter.length > 0) {
+      const isActive = user.isActive;
+      statusMatch = 
+        (statusFilter.includes('active') && isActive) ||
+        (statusFilter.includes('inactive') && !isActive);
+    }
+
+    return searchMatch && statusMatch;
   });
 
   // Переключить статус пользователя
@@ -153,9 +164,23 @@ const MobileUsersPage = () => {
     passwordForm.resetFields();
   };
 
+  // Содержимое Popover фильтра
+  const filterContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Статус</div>
+      <Checkbox.Group
+        value={statusFilter}
+        onChange={setStatusFilter}
+      >
+        <Checkbox value="active">Активен</Checkbox>
+        <Checkbox value="inactive">Неактивен</Checkbox>
+      </Checkbox.Group>
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Поиск */}
+      {/* Поиск и фильтр */}
       <div style={{ padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, borderBottom: '1px solid #f0f0f0' }}>
         <Input
           placeholder="Поиск по email или ФИО..."
@@ -165,6 +190,18 @@ const MobileUsersPage = () => {
           size="large"
           style={{ borderRadius: 4, flex: 1 }}
         />
+        <Popover
+          content={filterContent}
+          trigger="click"
+          placement="bottomRight"
+        >
+          <Button
+            type={statusFilter.length > 0 ? 'primary' : 'default'}
+            icon={<FilterOutlined />}
+            size="large"
+            style={{ flexShrink: 0 }}
+          />
+        </Popover>
       </div>
 
       {/* Список пользователей */}

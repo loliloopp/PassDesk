@@ -13,6 +13,8 @@ import {
   App,
   Popconfirm,
   Switch,
+  Popover,
+  Checkbox,
 } from 'antd'
 import {
   PlusOutlined,
@@ -23,6 +25,7 @@ import {
   LockOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  FilterOutlined,
 } from '@ant-design/icons'
 import { userService } from '@/services/userService'
 import { counterpartyService } from '@/services/counterpartyService'
@@ -42,6 +45,7 @@ const UsersPage = () => {
   const [passwordForm] = Form.useForm()
   const [editingUser, setEditingUser] = useState(null)
   const { user: currentUser } = useAuthStore()
+  const [statusFilter, setStatusFilter] = useState([])
 
   useEffect(() => {
     fetchUsers()
@@ -296,11 +300,21 @@ const UsersPage = () => {
 
   const filteredUsers = users.filter((user) => {
     const searchLower = searchText.toLowerCase()
-    return (
+    const searchMatch =
       user.email.toLowerCase().includes(searchLower) ||
       user.firstName.toLowerCase().includes(searchLower) ||
       user.lastName.toLowerCase().includes(searchLower)
-    )
+
+    // Фильтрация по статусу
+    let statusMatch = true
+    if (statusFilter.length > 0) {
+      const isActive = user.isActive
+      statusMatch = 
+        (statusFilter.includes('active') && isActive) ||
+        (statusFilter.includes('inactive') && !isActive)
+    }
+
+    return searchMatch && statusMatch
   })
 
   return (
@@ -326,7 +340,8 @@ const UsersPage = () => {
         </Button>
       </div>
 
-      <Space style={{ marginBottom: 16, width: '100%', paddingLeft: 24, paddingRight: 24, flexShrink: 0 }} direction="vertical">
+      {/* Поиск и фильтр */}
+      <div style={{ marginBottom: 16, paddingLeft: 24, paddingRight: 24, flexShrink: 0, display: 'flex', gap: 12, alignItems: 'center' }}>
         <Input
           placeholder="Поиск по email или ФИО..."
           prefix={<SearchOutlined />}
@@ -335,7 +350,30 @@ const UsersPage = () => {
           size="large"
           style={{ maxWidth: 500 }}
         />
-      </Space>
+        <Popover
+          content={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 200 }}>
+              <div style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Статус</div>
+              <Checkbox.Group
+                value={statusFilter}
+                onChange={setStatusFilter}
+              >
+                <Checkbox value="active">Активен</Checkbox>
+                <Checkbox value="inactive">Неактивен</Checkbox>
+              </Checkbox.Group>
+            </div>
+          }
+          trigger="click"
+          placement="bottomLeft"
+        >
+          <Button
+            type={statusFilter.length > 0 ? 'primary' : 'default'}
+            icon={<FilterOutlined />}
+          >
+            Фильтр
+          </Button>
+        </Popover>
+      </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
         <Table
