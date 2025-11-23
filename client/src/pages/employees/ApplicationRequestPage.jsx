@@ -105,17 +105,29 @@ const ApplicationRequestPage = () => {
         .map(emp => ({ id: emp.id, status: 'processed' }));
       
       if (employeesToUpdate.length > 0) {
-        await Promise.all(
-          employeesToUpdate.map(({ id, status }) =>
-            employeeService.update(id, { status })
-          )
-        );
+        console.log('📋 Обновляем статусы для сотрудников:', employeesToUpdate);
+        try {
+          const updateResults = await Promise.all(
+            employeesToUpdate.map(({ id, status }) => {
+              console.log(`  Отправляем обновление для сотрудника ${id}: status = '${status}'`);
+              return employeeService.update(id, { status });
+            })
+          );
+          console.log('✅ Все статусы обновлены успешно:', updateResults);
+        } catch (updateError) {
+          console.error('❌ Ошибка при обновлении статусов:', updateError);
+          throw updateError;
+        }
+      } else {
+        console.log('⚠️ Нет сотрудников для обновления статусов');
       }
 
       message.success(`Файл успешно сохранен: ${fileName}`);
       
       // Обновляем данные и возвращаемся
+      console.log('Вызываем refetch...');
       await refetchEmployees();
+      console.log('Refetch завершен, возвращаемся на страницу сотрудников');
       navigate('/employees');
     } catch (error) {
       console.error('Create request error:', error);
