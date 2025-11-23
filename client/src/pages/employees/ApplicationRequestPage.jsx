@@ -129,7 +129,7 @@ const ApplicationRequestPage = () => {
 
   return (
     <div style={{ 
-      height: '100vh', 
+      height: '100%', 
       display: 'flex', 
       flexDirection: 'column',
       background: '#fff',
@@ -154,7 +154,7 @@ const ApplicationRequestPage = () => {
       </div>
 
       {/* Контент */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px', paddingBottom: '80px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '16px', paddingBottom: '100px' }}>
         <Spin spinning={isLoading}>
           {availableEmployees.length > 0 ? (
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -221,7 +221,8 @@ const ApplicationRequestPage = () => {
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 100
+        zIndex: 100,
+        maxWidth: '100vw'
       }}>
         <Button 
           onClick={() => navigate('/employees')}

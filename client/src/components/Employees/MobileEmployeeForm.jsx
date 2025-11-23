@@ -470,9 +470,9 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Скролируемая область с формой */}
-      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 100 }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingBottom: 120, paddingLeft: 16, paddingRight: 16, paddingTop: 16 }}>
         <Form
           form={form}
           layout="vertical"
@@ -506,6 +506,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
           background: '#fff',
           borderTop: '1px solid #f0f0f0',
           zIndex: 1000,
+          maxWidth: '100vw',
         }}
       >
         {/* Кнопка "Сохранить черновик" в отдельном ряду */}

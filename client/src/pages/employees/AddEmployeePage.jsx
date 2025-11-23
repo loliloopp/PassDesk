@@ -92,8 +92,8 @@ const AddEmployeePage = () => {
   };
 
   return (
-    <div style={isMobile ? { display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' } : {}}>
-      {/* Шапка с кнопкой назад (только для десктопа) */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Шапка с кнопкой назад */}
       <div
         style={{
           display: 'flex',
@@ -106,6 +106,7 @@ const AddEmployeePage = () => {
           zIndex: 100,
           padding: '16px 24',
           borderBottom: '1px solid #f0f0f0',
+          flexShrink: 0
         }}
       >
         {!isMobile && (
@@ -123,7 +124,7 @@ const AddEmployeePage = () => {
       </div>
 
       {/* Форма - мобильная или десктопная */}
-      <div style={isMobile ? { flex: 1, overflow: 'hidden' } : {}}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {isMobile ? (
           <MobileEmployeeForm
             employee={editingEmployee}
