@@ -387,4 +387,3 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange }) => 
 };
 
 export default EmployeeFileUpload;
-

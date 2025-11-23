@@ -6,7 +6,7 @@ import { constructionSiteService } from '../../services/constructionSiteService'
 import positionService from '../../services/positionService';
 import settingsService from '../../services/settingsService';
 import { useAuthStore } from '../../store/authStore';
-import EmployeeFileUpload from './EmployeeFileUpload';
+import EmployeeFileUpload from './EmployeeFileUpload.jsx';
 import dayjs from 'dayjs';
 
 const { TextArea } = Input;
