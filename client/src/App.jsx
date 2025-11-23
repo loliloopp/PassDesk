@@ -88,6 +88,10 @@ function App() {
               path="administration" 
               element={<ProtectedRoute allowedRoles={['admin']}><AdministrationPage /></ProtectedRoute>} 
             />
+            <Route 
+              path="admin" 
+              element={<ProtectedRoute allowedRoles={['admin']}><AdministrationPage /></ProtectedRoute>} 
+            />
             
             {/* Route for regular users (employee profile) */}
             <Route path="my-profile" element={<UserProfilePage />} />

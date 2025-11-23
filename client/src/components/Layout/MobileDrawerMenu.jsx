@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   UserOutlined,
   LogoutOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/authStore';
 
@@ -13,7 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 const MobileDrawerMenu = ({ visible, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
 
   const menuItems = [
     {
@@ -21,6 +22,17 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
       icon: <UserOutlined />,
       label: 'Профиль пользователя',
     },
+    // Кнопка Администрирование только для админов
+    ...(user?.role === 'admin' ? [
+      {
+        type: 'divider',
+      },
+      {
+        key: '/admin',
+        icon: <SettingOutlined />,
+        label: 'Администрирование',
+      },
+    ] : []),
     {
       type: 'divider',
     },
