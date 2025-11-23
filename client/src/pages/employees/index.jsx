@@ -180,7 +180,7 @@ const EmployeesPage = () => {
   return (
     <div style={{ 
       height: '100%', // Занимает всю высоту Content
-      display: isMobile ? 'block' : 'flex', 
+      display: 'flex', 
       flexDirection: 'column',
       overflow: 'hidden', // БЕЗ прокрутки на уровне страницы
       backgroundColor: '#fff'
@@ -220,7 +220,7 @@ const EmployeesPage = () => {
 
       {/* Поиск на мобильных - отдельной строкой */}
       {isMobile && (
-        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px' }}>
+        <div style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px 12px 16px', flexShrink: 0 }}>
           <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
@@ -258,19 +258,21 @@ const EmployeesPage = () => {
           canDeleteEmployee={canDeleteEmployee}
         />
       ) : (
-        <EmployeeTable
-          employees={filteredEmployees}
-          departments={departments}
-          loading={loading}
-          onEdit={handleEdit}
-          onView={handleView}
-          onDelete={handleDelete}
-          onViewFiles={handleViewFiles}
-          onDepartmentChange={handleDepartmentChange}
-          canExport={canExport}
-          canDeleteEmployee={canDeleteEmployee}
-          uniqueFilters={uniqueFilters}
-        />
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <EmployeeTable
+            employees={filteredEmployees}
+            departments={departments}
+            loading={loading}
+            onEdit={handleEdit}
+            onView={handleView}
+            onDelete={handleDelete}
+            onViewFiles={handleViewFiles}
+            onDepartmentChange={handleDepartmentChange}
+            canExport={canExport}
+            canDeleteEmployee={canDeleteEmployee}
+            uniqueFilters={uniqueFilters}
+          />
+        </div>
       )}
 
       {/* Модальные окна - для десктопа */}

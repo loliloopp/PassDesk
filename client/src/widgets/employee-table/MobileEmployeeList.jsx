@@ -90,21 +90,31 @@ const MobileEmployeeList = ({
   const employeeToDelete = employees.find(emp => emp.id === deletingId);
 
   return (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowX: 'hidden' }}>
-        {employees.map((employee) => (
-          <Card
-            key={employee.id}
-            size="small"
-            onClick={() => onView(employee)}
-            style={{ 
-              cursor: 'pointer',
-              borderRadius: 4,
-            }}
-            styles={{
-              body: { padding: '6px 8px' }
-            }}
-          >
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: 4, 
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      flex: 1,
+      minHeight: 0,
+      height: '100%',
+      width: '100%',
+      padding: '0 16px 16px 16px'
+    }}>
+      {employees.map((employee) => (
+        <Card
+          key={employee.id}
+          size="small"
+          onClick={() => onView(employee)}
+          style={{ 
+            cursor: 'pointer',
+            borderRadius: 4,
+          }}
+          styles={{
+            body: { padding: '6px 8px' }
+          }}
+        >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               {/* Левая часть - основная информация */}
               <div style={{ flex: 1, display: 'flex', gap: 6, minWidth: 0 }}>
@@ -157,7 +167,6 @@ const MobileEmployeeList = ({
             </div>
           </Card>
         ))}
-      </div>
 
       {/* Модальное окно подтверждения удаления */}
       {employeeToDelete && (
@@ -172,7 +181,7 @@ const MobileEmployeeList = ({
           cancelText="Отмена"
         />
       )}
-    </>
+    </div>
   );
 };
 
