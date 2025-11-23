@@ -32,6 +32,7 @@ const EmployeesPage = () => {
   const isMobile = !screens.md;
 
   const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -79,8 +80,8 @@ const EmployeesPage = () => {
 
   // Мемоизированная фильтрация
   const filteredEmployees = useMemo(
-    () => filterEmployees(employees, searchText),
-    [employees, searchText]
+    () => filterEmployees(employees, searchText, statusFilter),
+    [employees, searchText, statusFilter]
   );
 
   // Мемоизированные уникальные значения для фильтров
@@ -207,7 +208,12 @@ const EmployeesPage = () => {
         {/* На десктопе показываем поиск и действия */}
         {!isMobile && (
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
+            <EmployeeSearchFilter 
+              searchText={searchText} 
+              onSearchChange={setSearchText}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+            />
             <EmployeeActions
               onAdd={handleAdd}
               onRequest={handleRequest}
@@ -221,7 +227,12 @@ const EmployeesPage = () => {
       {/* Поиск на мобильных - отдельной строкой */}
       {isMobile && (
         <div style={{ marginBottom: 0, display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px 12px 16px', flexShrink: 0 }}>
-          <EmployeeSearchFilter searchText={searchText} onSearchChange={setSearchText} />
+          <EmployeeSearchFilter 
+            searchText={searchText} 
+            onSearchChange={setSearchText}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+          />
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
               type="primary"

@@ -3,13 +3,31 @@
  */
 
 /**
- * Фильтрация сотрудников по поисковому запросу
+ * Фильтрация сотрудников по поисковому запросу и статусу
+ * Статусы:
+ * - 'new': фильтр по new и tb_passed
+ * - 'draft': черновик
+ * - 'processed': обработанные
  */
-export const filterEmployees = (employees, searchText) => {
-  if (!searchText) return employees;
+export const filterEmployees = (employees, searchText, statusFilter = null) => {
+  let filtered = employees;
+
+  // Фильтр по статусу
+  if (statusFilter) {
+    if (statusFilter === 'new') {
+      filtered = filtered.filter(e => e.status === 'new' || e.status === 'tb_passed');
+    } else if (statusFilter === 'draft') {
+      filtered = filtered.filter(e => e.status === 'draft');
+    } else if (statusFilter === 'processed') {
+      filtered = filtered.filter(e => e.status === 'processed');
+    }
+  }
+
+  // Фильтр по поисковому запросу
+  if (!searchText) return filtered;
 
   const searchLower = searchText.toLowerCase();
-  return employees.filter((employee) => {
+  return filtered.filter((employee) => {
     return (
       employee.firstName?.toLowerCase().includes(searchLower) ||
       employee.lastName?.toLowerCase().includes(searchLower) ||
