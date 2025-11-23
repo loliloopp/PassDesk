@@ -2,7 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { validate } from '../middleware/validator.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import upload from '../middleware/upload.js';
+import upload, { fixFilenameEncoding } from '../middleware/upload.js';
 import * as employeeController from '../controllers/employee.controller.js';
 import * as employeeFileController from '../controllers/employeeFile.controller.js';
 
@@ -88,6 +88,7 @@ router.get('/search', employeeController.searchEmployees);
 // Пользователи (user) могут загружать файлы только для своего профиля
 router.post('/:employeeId/files', 
   upload.array('files', 10), // максимум 10 файлов за раз
+  fixFilenameEncoding,
   employeeFileController.uploadEmployeeFiles
 );
 router.get('/:employeeId/files', 

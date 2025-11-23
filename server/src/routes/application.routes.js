@@ -18,7 +18,7 @@ import {
   getApplicationFileViewLink
 } from '../controllers/applicationFile.controller.js';
 import { authenticate } from '../middleware/auth.js';
-import upload from '../middleware/upload.js';
+import upload, { fixFilenameEncoding } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -41,7 +41,7 @@ router.get('/helpers/contracts', getContractsForApplication);
 router.get('/helpers/employees', getEmployeesForApplication);
 
 // Работа с файлами заявки
-router.post('/:applicationId/files', upload.array('files', 10), uploadApplicationFiles);
+router.post('/:applicationId/files', upload.array('files', 10), fixFilenameEncoding, uploadApplicationFiles);
 router.get('/:applicationId/files', getApplicationFiles);
 router.delete('/:applicationId/files/:fileId', deleteApplicationFile);
 router.get('/:applicationId/files/:fileId/download', getApplicationFileDownloadLink);
