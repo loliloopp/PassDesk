@@ -1,13 +1,21 @@
 # 🏗️ Архитектура PassDesk для Production (VPS)
 
+## 🎯 Реальная конфигурация развертывания
+
+**Развернут на VPS FirstVDS**
+- **Домен:** passdesk.fvds.ru
+- **IP сервера:** 185.200.179.0
+- **Пользователь приложения:** passdesk
+- **Управление хостингом:** ISPManager
+
 ## Общее описание
 
 PassDesk в production развертывается как **полнофункциональная веб-система** на едином VPS с четырьмя основными компонентами:
 
 1. **Фронтенд** - React/Vite (статические файлы)
-2. **Бэкенд** - Node.js/Express (API сервер)
-3. **База данных** - PostgreSQL (удаленная)
-4. **Хранилище** - S3-совместимое (облачное)
+2. **Бэкенд** - Node.js/Express (API сервер на порту 5000)
+3. **База данных** - PostgreSQL (Yandex Cloud)
+4. **Хранилище** - S3-совместимое (Cloud.ru)
 
 ---
 
@@ -19,11 +27,13 @@ PassDesk в production развертывается как **полнофунк�
 │                   (Браузер пользователя)                        │
 └──────────────────────────┬──────────────────────────────────────┘
                            │ HTTPS 443
-                           │ yourdomain.com
+                           │ passdesk.fvds.ru
                            │
         ┌──────────────────▼───────────────────┐
-        │       VPS Server (Ubuntu 22.04)      │
-        │  IP: 185.200.179.x                   │
+        │    VPS Server (FirstVDS)             │
+        │  IP: 185.200.179.0                   │
+        │  ОС: Linux (Ubuntu/Debian)           │
+        │  Управление: ISPManager              │
         │                                      │
         │  ┌─────────────────────────────────┐ │
         │  │   Nginx (веб-сервер)            │ │
@@ -77,7 +87,11 @@ PassDesk в production развертывается как **полнофунк�
 
 **Роль:** Обратный прокси, раздача статики, SSL/TLS termination
 
-**Расположение:** `/etc/nginx/sites-available/passdesk.conf`
+**Расположение:** `/etc/nginx/vhosts/passdesk/passdesk.fvds.ru.conf`
+
+**Путь статики:** `/var/www/passdesk/data/www/passdesk.fvds.ru/`
+
+**Логи:** `/var/www/httpd-logs/passdesk.fvds.ru.*.log`
 
 **Основные функции:**
 ```
@@ -156,9 +170,13 @@ server {
 
 **Роль:** API сервер, бизнес-логика, управление данными
 
-**Расположение:** `/home/wstil/passdesk/server/`
+**Расположение:** `/var/www/passdesk/data/passdesk/server/`
 
-**Процесс управления:** pm2 (Process Manager)
+**Процесс управления:** PM2 (Process Manager v6.0.13)
+
+**Пользователь:** passdesk
+
+**Порт:** 5000 (cluster mode, 2 процесса)
 
 **Основные функции:**
 
@@ -254,7 +272,7 @@ server/
 11. Возвращает клиенту с заголовками Content-Encoding: gzip
 ```
 
-**Окружающие переменные (на VPS в `/home/wstil/passdesk/server/.env`):**
+**Окружающие переменные (на VPS в `/var/www/passdesk/data/passdesk/server/.env`):**
 
 ```env
 # Окружение
@@ -263,30 +281,43 @@ PORT=5000
 API_VERSION=v1
 
 # База данных (Yandex Cloud)
-DB_HOST=rc1a-c7...yandex.net
+DB_HOST=rc1b-r05alhnj8s89jsb8.mdb.yandexcloud.net
 DB_PORT=6432
-DB_NAME=passdesk_prod
-DB_USER=passdesk_admin
-DB_PASSWORD=super-strong-password-here
+DB_NAME=dbsu10
+DB_USER=wstil
+DB_PASSWORD=Ae1T...
 DB_SSL=true
 
 # CORS & безопасность
-ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
-CLIENT_URL=https://yourdomain.com
+ALLOWED_ORIGINS=https://passdesk.fvds.ru,https://www.passdesk.fvds.ru
+CLIENT_URL=https://passdesk.fvds.ru
 
-# S3 Хранилище
-S3_ENDPOINT=https://storage.yandexcloud.net
-S3_REGION=ru-central1
-S3_ACCESS_KEY=YCAJ...
-S3_SECRET_KEY=YCP...
-S3_BUCKET=passdesk-files
+# S3 Хранилище (Cloud.ru)
+STORAGE_PROVIDER=cloudru
+CLOUDRU_S3_ENDPOINT=https://s3.cloud.ru
+CLOUDRU_S3_REGION=ru-central-1
+CLOUDRU_S3_ACCESS_KEY_ID=75b5873d-08f3-4815-b059-e26dc32412dc:e9a17a2bbaef0a8cf7259decf9b23b27
+CLOUDRU_S3_SECRET_ACCESS_KEY=8f65eb0...
+CLOUDRU_S3_BUCKET_NAME=passdesk
+CLOUDRU_S3_BASE_PATH=
 
 # JWT
-JWT_SECRET=super-secret-key-min-32-characters-long-and-random
-JWT_EXPIRY=7d
+JWT_SECRET=dev_secret_key_change_in_production_12345
+JWT_EXPIRE=7d
+JWT_REFRESH_SECRET=dev_refresh_token_secret_67890
+JWT_REFRESH_EXPIRE=30d
 
 # Логирование
-LOG_LEVEL=info
+LOG_LEVEL=debug
+```
+
+**Конфигурация PM2 (`ecosystem.config.cjs`):**
+```javascript
+// 2 процесса в cluster mode для балансировки нагрузки
+instances: 2
+exec_mode: 'cluster'
+error_file: '/var/www/passdesk/data/logs/error.log'
+out_file: '/var/www/passdesk/data/logs/out.log'
 ```
 
 ---
@@ -295,7 +326,9 @@ LOG_LEVEL=info
 
 **Роль:** SPA (Single Page Application), пользовательский интерфейс
 
-**Расположение (собранный код):** `/var/www/passdesk/dist/`
+**Расположение (собранный код):** `/var/www/passdesk/data/www/passdesk.fvds.ru/`
+
+**Источник (исходный код):** `/var/www/passdesk/data/passdesk/client/`
 
 **Основные функции:**
 
@@ -628,18 +661,18 @@ ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 ### Логирование
 
 ```
-PM2 логи:
-- /home/wstil/passdesk/logs/error.log - Ошибки приложения
-- /home/wstil/passdesk/logs/out.log   - Стандартный вывод
+PM2 логи (от пользователя passdesk):
+- /var/www/passdesk/data/logs/error.log - Ошибки приложения
+- /var/www/passdesk/data/logs/out.log   - Стандартный вывод
 
 Nginx логи:
-- /var/log/nginx/passdesk-access.log  - Все HTTP запросы
-- /var/log/nginx/passdesk-error.log   - Ошибки Nginx
+- /var/www/httpd-logs/passdesk.fvds.ru.access.log  - Все HTTP запросы
+- /var/www/httpd-logs/passdesk.fvds.ru.error.log   - Ошибки Nginx
 
 Просмотр:
-pm2 logs passdesk-server              # Реальное время
-tail -f /var/log/nginx/passdesk-access.log  # Requests
-tail -f /home/wstil/passdesk/logs/error.log # Errors
+pm2 logs passdesk-server                      # Реальное время (от passdesk)
+tail -f /var/www/httpd-logs/passdesk.fvds.ru.access.log  # Requests
+tail -f /var/www/passdesk/data/logs/error.log # Errors
 ```
 
 ### Health Check
@@ -704,26 +737,29 @@ API ответы:
 1. На локальной машине:
    git push origin main
 
-2. На VPS (от пользователя wstil):
-   cd ~/passdesk
+2. На VPS (от пользователя passdesk):
+   cd /var/www/passdesk/data/passdesk
    git pull origin main
 
 3. Если изменился бэкенд:
    cd server
    npm install
-   npm run build (если есть компиляция TypeScript)
    pm2 restart passdesk-server
 
 4. Если изменился фронтенд:
    cd ../client
    npm install
    npm run build
-   cp -r dist/* /var/www/passdesk/dist/
+   cp -r dist/* /var/www/passdesk/data/www/passdesk.fvds.ru/
    sudo systemctl reload nginx
 
 5. Проверка:
-   curl https://yourdomain.com/api/v1/health
-   curl https://yourdomain.com (должна загружаться React app)
+   curl http://127.0.0.1/api/v1/health
+   curl http://127.0.0.1/ (должна загружаться React app)
+   
+6. Просмотр логов:
+   pm2 logs passdesk-server --lines 50
+   tail -100 /var/www/passdesk/data/logs/error.log
 ```
 
 ---
@@ -733,14 +769,68 @@ API ответы:
 | Проблема | Решение |
 |----------|---------|
 | Сайт не открывается | Проверить nginx: `sudo nginx -t && sudo systemctl status nginx` |
-| API ошибка 502 | Проверить pm2: `pm2 logs passdesk-server`, перезагрузить: `pm2 restart passdesk-server` |
-| SSL ошибка | Проверить сертификат: `sudo certbot certificates` |
-| Файлы не загружаются | Проверить S3 ключи в `.env` и права доступа |
-| Медленные запросы | Проверить PostgreSQL: `psql -U user -d passdesk_prod -c "SELECT COUNT(*) FROM employees"` |
+| API ошибка 502 | Проверить pm2: `pm2 logs passdesk-server` (от passdesk), перезагрузить: `su - passdesk -c "pm2 restart passdesk-server"` |
+| SSL ошибка (браузер ругается) | Это самоподписанный сертификат (нормально для тестирования). Через неделю обновим на Let's Encrypt |
+| Файлы не загружаются | Проверить S3 ключи Cloud.ru в `.env` и права доступа на бакет |
+| PM2 процессы не живы | Проверить: `su - passdesk -c "pm2 status"`, логи: `tail -50 /var/www/passdesk/data/logs/error.log` |
+| Nginx не перегружается | Проверить синтаксис: `sudo nginx -t`, конфиг: `/etc/nginx/vhosts/passdesk/passdesk.fvds.ru.conf` |
 
 ---
 
-**Версия:** 1.0  
-**Дата:** 2025-01-23  
-**Статус:** ✅ Архитектура завершена
+---
+
+## 🎯 Реальное развертывание на VPS FirstVDS
+
+### Дата развертывания: 2025-11-24
+
+### Параметры VPS:
+- **Доменное имя:** passdesk.fvds.ru
+- **IP адрес:** 185.200.179.0
+- **Пользователь приложения:** passdesk (отдельный от других сайтов)
+- **Управление:** ISPManager + BIND (DNS)
+
+### Развернутые компоненты:
+✅ Git репо клонирован с GitHub  
+✅ Фронтенд собран (React/Vite → dist/)  
+✅ Бэкенд запущен (Node.js v18.19.1, PM2)  
+✅ Nginx настроен как reverse proxy  
+✅ SSL сертификат установлен (самоподписанный)  
+✅ PM2 управляет 2 процессами Node.js  
+✅ БД подключена (Yandex Cloud PostgreSQL)  
+✅ S3 хранилище настроено (Cloud.ru)  
+✅ Логирование работает  
+✅ DNS записи добавлены  
+
+### Статус:
+- **Фронтенд:** ✅ Работает (React SPA)
+- **Бэкенд:** ✅ Работает (API на /api/v1/*, порт 5000)
+- **БД:** ✅ Подключена (Yandex Cloud)
+- **S3:** ✅ Настроен (Cloud.ru S3)
+- **SSL:** ✅ Установлен (самоподписанный - можно обновить на Let's Encrypt)
+- **DNS:** ✅ Настроен (через ISPManager/BIND)
+
+### Команды для управления:
+
+```bash
+# Просмотр статуса PM2 (от passdesk)
+su - passdesk -c "pm2 status"
+
+# Просмотр логов
+su - passdesk -c "pm2 logs passdesk-server --lines 50"
+tail -50 /var/www/passdesk/data/logs/error.log
+
+# Перезагрузка бэкенда
+su - passdesk -c "pm2 restart passdesk-server"
+
+# Перезагрузка Nginx
+sudo systemctl reload nginx
+
+# Обновление кода
+cd /var/www/passdesk/data/passdesk
+git pull origin main
+```
+
+**Версия:** 2.0 (реальное развертывание)  
+**Дата обновления:** 2025-11-24  
+**Статус:** ✅ Развернуто на production VPS
 
