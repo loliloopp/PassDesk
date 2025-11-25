@@ -21,11 +21,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: '192.168.1.9', // Слушать на конкретном IP адресе
+    host: 'localhost', // localhost для разработки, VPS использует production build
     https: true, // Включить HTTPS с самоподписанным сертификатом (basicSsl плагин)
     proxy: {
       '/api': {
-        target: 'http://192.168.1.9:5000', // Проксируем на бэкенд по IP адресу
+        target: 'http://localhost:5000', // Проксируем на локальный бэкенд
         changeOrigin: true,
         secure: false,
       },

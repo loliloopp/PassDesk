@@ -71,25 +71,36 @@ export const useEmployeeColumns = ({
         ellipsis: false,
         render: (_, record) => {
           const mappings = record.employeeCounterpartyMappings || [];
-          const currentDepartmentId = mappings[0]?.departmentId;
+          const currentMapping = mappings[0];
+          const currentDepartmentId = currentMapping?.departmentId;
+          const currentDepartmentName = currentMapping?.department?.name;
 
           return (
             <Select
-              value={currentDepartmentId || undefined}
+              value={
+                currentDepartmentId
+                  ? { label: currentDepartmentName, value: currentDepartmentId }
+                  : undefined
+              }
               placeholder="Выберите подразделение"
               style={{ width: '100%' }}
               className="department-select"
               popupMatchSelectWidth={false}
-              onChange={(value) => onDepartmentChange(record.id, value)}
+              onChange={(option) => onDepartmentChange(record.id, option.value)}
               allowClear
               showSearch
               optionFilterProp="children"
               filterOption={(input, option) =>
                 option.children.toLowerCase().includes(input.toLowerCase())
               }
+              labelInValue
             >
               {departments.map((dept) => (
-                <Select.Option key={dept.id} value={dept.id}>
+                <Select.Option 
+                  key={dept.id} 
+                  value={dept.id}
+                  label={dept.name}
+                >
                   {dept.name}
                 </Select.Option>
               ))}
