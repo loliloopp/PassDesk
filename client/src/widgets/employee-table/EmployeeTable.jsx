@@ -45,6 +45,11 @@ const tableStyles = `
   .ant-table-wrapper {
     margin-top: 0 !important;
   }
+  
+  /* Отступ пагинации от правого края */
+  .ant-pagination {
+    padding-right: 10px !important;
+  }
 `;
 
 /**
@@ -95,10 +100,10 @@ export const EmployeeTable = ({
         }
         scroll={{ 
           x: 1300,
-          y: 'calc(100vh - 64px - 77px - 60px)'
+          y: 'calc(100vh - 64px - 77px - 85px)'
           // 64px - Header
           // 77px - Заголовок страницы (padding 16*2 + title ~40px + border 1px)
-          // 60px - Pagination
+          // 85px - Pagination (увеличено для размещения)
           // Заголовки таблицы автоматически sticky при scroll.y
         }}
       />
