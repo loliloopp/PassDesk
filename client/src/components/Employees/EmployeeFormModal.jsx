@@ -697,26 +697,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     }
   };
 
-  // Обработчик закрытия модального окна с подтверждением
+  // Обработчик закрытия модального окна
   const handleModalCancel = () => {
-    // Проверяем, есть ли несохраненные изменения
-    const hasChanges = form.isFieldsTouched();
-    
-    if (hasChanges) {
-      Modal.confirm({
-        title: 'Закрыть окно?',
-        icon: <ExclamationCircleOutlined />,
-        content: 'При закрытии окна введенные данные пропадут. Закрыть окно?',
-        okText: 'ОК',
-        cancelText: 'Отмена',
-        onOk: () => {
-          onCancel();
-        },
-      });
-    } else {
-      // Если изменений нет, просто закрываем
-      onCancel();
-    }
+    onCancel();
   };
 
   // Определяем стиль вкладки (обычный черный текст)
