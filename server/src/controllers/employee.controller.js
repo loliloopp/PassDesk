@@ -3,7 +3,21 @@ import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import storageProvider from '../config/storage.js';
 import { buildEmployeeFilePath } from '../utils/transliterate.js';
+import { checkEmployeeAccess } from '../utils/permissionUtils.js';
 import { AppError } from '../middleware/errorHandler.js';
+
+// Опции для загрузки сотрудника с маппингами (для проверки прав)
+const employeeAccessInclude = [
+  {
+    model: EmployeeCounterpartyMapping,
+    as: 'employeeCounterpartyMappings',
+    include: [{
+      model: Counterparty,
+      as: 'counterparty',
+      attributes: ['id']
+    }]
+  }
+];
 
 // Функция для вычисления статуса заполнения карточки сотрудника
 const calculateStatusCard = (employee) => {
@@ -245,6 +259,9 @@ export const getEmployeeById = async (req, res, next) => {
       });
     }
 
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+
     // Пересчитываем statusCard
     const employeeData = employee.toJSON();
     employeeData.statusCard = calculateStatusCard(employeeData);
@@ -449,7 +466,9 @@ export const updateEmployee = async (req, res, next) => {
     
     console.log('Updates to apply:', JSON.stringify(updates, null, 2));
 
-    const employee = await Employee.findByPk(id);
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
 
     if (!employee) {
       return res.status(404).json({
@@ -458,18 +477,8 @@ export const updateEmployee = async (req, res, next) => {
       });
     }
 
-    // Проверка прав доступа для обычных пользователей (не admin)
-    if (req.user.role !== 'admin') {
-      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
-      
-      // Для контрагента по умолчанию - только свои созданные сотрудники
-      if (req.user.counterpartyId === defaultCounterpartyId) {
-        if (employee.createdBy !== req.user.id) {
-          throw new AppError('Недостаточно прав. Вы можете редактировать только созданных вами сотрудников.', 403);
-        }
-      }
-      // Для остальных контрагентов - все сотрудники доступны для редактирования
-    }
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
 
     await employee.update(updates);
     
@@ -577,7 +586,9 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
     const { id } = req.params;
     const { siteIds } = req.body;
     
-    const employee = await Employee.findByPk(id);
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
     
     if (!employee) {
       return res.status(404).json({
@@ -586,18 +597,8 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
       });
     }
     
-    // Проверка прав доступа для обычных пользователей (не admin)
-    if (req.user.role !== 'admin') {
-      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
-      
-      // Для контрагента по умолчанию - только свои созданные сотрудники
-      if (req.user.counterpartyId === defaultCounterpartyId) {
-        if (employee.createdBy !== req.user.id) {
-          throw new AppError('Недостаточно прав. Вы можете редактировать только созданных вами сотрудников.', 403);
-        }
-      }
-      // Для остальных контрагентов - все сотрудники доступны для редактирования
-    }
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
     
     // Получаем существующие маппинги сотрудника для текущего контрагента
     const existingMappings = await EmployeeCounterpartyMapping.findAll({
@@ -655,7 +656,9 @@ export const updateEmployeeDepartment = async (req, res, next) => {
     const { id } = req.params;
     const { departmentId } = req.body;
     
-    const employee = await Employee.findByPk(id);
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
     
     if (!employee) {
       return res.status(404).json({
@@ -664,18 +667,8 @@ export const updateEmployeeDepartment = async (req, res, next) => {
       });
     }
     
-    // Проверка прав доступа для обычных пользователей (не admin)
-    if (req.user.role !== 'admin') {
-      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
-      
-      // Для контрагента по умолчанию - только свои созданные сотрудники
-      if (req.user.counterpartyId === defaultCounterpartyId) {
-        if (employee.createdBy !== req.user.id) {
-          throw new AppError('Недостаточно прав. Вы можете редактировать только созданных вами сотрудников.', 403);
-        }
-      }
-      // Для остальных контрагентов - все сотрудники доступны для редактирования
-    }
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
     
     // Получаем первый маппинг сотрудника для текущего контрагента
     let mapping = await EmployeeCounterpartyMapping.findOne({
@@ -719,7 +712,9 @@ export const deleteEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const employee = await Employee.findByPk(id);
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
 
     if (!employee) {
       await transaction.rollback();
@@ -729,31 +724,12 @@ export const deleteEmployee = async (req, res, next) => {
       });
     }
 
-    // Проверка прав доступа
-    if (req.user.role !== 'admin') {
-      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
-      
-      // Контрагент по умолчанию - только свои созданные сотрудники
-      if (req.user.counterpartyId === defaultCounterpartyId) {
-        if (employee.createdBy !== req.user.id) {
-          await transaction.rollback();
-          throw new AppError('Недостаточно прав. Вы можете удалять только созданных вами сотрудников.', 403);
-        }
-      } else {
-        // Другие контрагенты - проверяем, что сотрудник принадлежит контрагенту пользователя
-        const employeeMapping = await EmployeeCounterpartyMapping.findOne({
-          where: {
-            employeeId: id,
-            counterpartyId: req.user.counterpartyId
-          },
-          transaction
-        });
-        
-        if (!employeeMapping) {
-          await transaction.rollback();
-          throw new AppError('Недостаточно прав. Вы можете удалять только сотрудников своего контрагента.', 403);
-        }
-      }
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    try {
+      await checkEmployeeAccess(req.user, employee);
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
 
     console.log('=== DELETING EMPLOYEE ===');
@@ -858,6 +834,7 @@ export const searchEmployees = async (req, res, next) => {
     const { query, counterpartyId, position } = req.query;
 
     const where = {};
+    const userId = req.user.id;
 
     if (query) {
       where[Op.or] = [
@@ -866,25 +843,59 @@ export const searchEmployees = async (req, res, next) => {
         { middleName: { [Op.iLike]: `%${query}%` } }
       ];
     }
-
-    if (counterpartyId) {
-      where.counterpartyId = counterpartyId;
-    }
-
-    if (position) {
-      where.position = { [Op.iLike]: `%${position}%` };
-    }
-
-    const employees = await Employee.findAll({
-      where,
-      order: [['lastName', 'ASC']],
-      include: [
+    
+    // Переопределяем логику поиска
+    
+    const include = [
         {
           model: Counterparty,
           as: 'counterparty',
           attributes: ['id', 'name']
         }
-      ]
+    ];
+    
+    // Если пользователь не админ, добавляем фильтр по маппингу или createdBy
+    if (req.user.role !== 'admin') {
+         const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+         
+         if (req.user.counterpartyId === defaultCounterpartyId) {
+             where.createdBy = userId;
+         } else {
+             // Фильтруем через маппинг
+             include.push({
+                 model: EmployeeCounterpartyMapping,
+                 as: 'employeeCounterpartyMappings',
+                 where: { counterpartyId: req.user.counterpartyId },
+                 required: true,
+                 attributes: []
+             });
+         }
+    } else if (counterpartyId) {
+        // Админ может фильтровать по переданному counterpartyId
+        include.push({
+             model: EmployeeCounterpartyMapping,
+             as: 'employeeCounterpartyMappings',
+             where: { counterpartyId: counterpartyId },
+             required: true,
+             attributes: []
+         });
+    }
+
+    if (position) {
+      // Позиция теперь в таблице Position, а не поле position
+      // Но здесь в старом коде было where.position. Исправим на связь.
+       include.push({
+           model: Position,
+           as: 'position',
+           where: { name: { [Op.iLike]: `%${position}%` } },
+           attributes: ['id', 'name']
+       });
+    }
+
+    const employees = await Employee.findAll({
+      where,
+      order: [['lastName', 'ASC']],
+      include: include
     });
 
     res.json({

@@ -89,6 +89,10 @@ Pass.belongsTo(User, { foreignKey: 'revoked_by', as: 'revoker' });
 User.hasMany(File, { foreignKey: 'uploaded_by', as: 'uploadedFiles' });
 File.belongsTo(User, { foreignKey: 'uploaded_by', as: 'uploader' });
 
+// Employee -> File (файлы сотрудника)
+Employee.hasMany(File, { foreignKey: 'employee_id', as: 'files' });
+File.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
+
 // ConstructionSite -> Contract (объект -> договоры на объекте)
 ConstructionSite.hasMany(Contract, { foreignKey: 'construction_site_id', as: 'contracts' });
 Contract.belongsTo(ConstructionSite, { foreignKey: 'construction_site_id', as: 'constructionSite' });

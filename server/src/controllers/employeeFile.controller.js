@@ -1,7 +1,25 @@
-import { File, Employee, Counterparty, EmployeeCounterpartyMapping } from '../models/index.js';
+import { File, Employee, Counterparty, EmployeeCounterpartyMapping, Setting } from '../models/index.js';
 import storageProvider from '../config/storage.js';
 import { buildEmployeeFilePath, sanitizeFileName, formatEmployeeFileName } from '../utils/transliterate.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { checkEmployeeAccess } from '../utils/permissionUtils.js';
+
+/**
+ * Helper: Загрузить сотрудника с маппингами для проверки прав
+ */
+const fetchEmployeeWithMappings = async (employeeId) => {
+  return Employee.findByPk(employeeId, {
+    include: [{
+      model: EmployeeCounterpartyMapping,
+      as: 'employeeCounterpartyMappings',
+      include: [{
+        model: Counterparty,
+        as: 'counterparty',
+        attributes: ['id', 'name']
+      }]
+    }]
+  });
+};
 
 /**
  * Загрузка файлов для сотрудника
@@ -37,25 +55,28 @@ export const uploadEmployeeFiles = async (req, res, next) => {
     }
     
     // Загружаем данные сотрудника с контрагентом через маппинг
-    const employee = await Employee.findByPk(employeeId, {
-      include: [{
-        model: EmployeeCounterpartyMapping,
-        as: 'employeeCounterpartyMappings',
-        include: [{
-          model: Counterparty,
-          as: 'counterparty',
-          attributes: ['id', 'name']
-        }]
-      }]
-    });
+    const employee = await fetchEmployeeWithMappings(employeeId);
     
     if (!employee) {
       throw new AppError('Сотрудник не найден', 404);
     }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
     
+
     const mapping = employee.employeeCounterpartyMappings?.[0];
+    // Для пользователей с дефолтным контрагентом маппинга может и не быть при создании,
+    // но если они прошли checkEmployeeAccess, значит они создатели.
+    // Однако для сохранения файла нам нужно имя контрагента для пути.
+    // Если маппинга нет (редкий случай для созданного сотрудника, обычно создается сразу),
+    // нужно решить откуда брать имя папки.
+    // В createEmployee маппинг создается всегда.
+    
     if (!mapping || !mapping.counterparty) {
-      throw new AppError('У сотрудника не указан контрагент', 400);
+      // Если маппинга нет, но доступ разрешен (например, создатель без маппинга?),
+      // это странная ситуация, так как при создании маппинг создается.
+      throw new AppError('У сотрудника не указан контрагент (нарушение целостности данных)', 400);
     }
     
     const counterparty = mapping.counterparty;
@@ -205,11 +226,14 @@ export const getEmployeeFiles = async (req, res, next) => {
   try {
     const { employeeId } = req.params;
     
-    // Проверяем существование сотрудника
-    const employee = await Employee.findByPk(employeeId);
+    // Проверяем существование сотрудника и права доступа
+    const employee = await fetchEmployeeWithMappings(employeeId);
     if (!employee) {
       throw new AppError('Сотрудник не найден', 404);
     }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
     
     // Получаем все файлы сотрудника
     const files = await File.findAll({
@@ -249,19 +273,38 @@ export const deleteEmployeeFile = async (req, res, next) => {
   try {
     const { employeeId, fileId } = req.params;
     
-    // Находим файл
+    // Проверяем права доступа к сотруднику
+    const employee = await fetchEmployeeWithMappings(employeeId);
+    if (!employee) {
+      throw new AppError('Сотрудник не найден', 404);
+    }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+    
+    // Находим файл с проверкой прав через сотрудника
     const file = await File.findOne({
       where: {
         id: fileId,
         entityType: 'employee',
         entityId: employeeId,
         isDeleted: false
-      }
+      },
+      include: [{
+        model: Employee,
+        as: 'employee',
+        include: [{
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          attributes: ['counterpartyId']
+        }]
+      }]
     });
     
     if (!file) {
       throw new AppError('Файл не найден', 404);
     }
+
     
     // Удаляем файл из хранилища
     try {
@@ -290,19 +333,38 @@ export const getEmployeeFileDownloadLink = async (req, res, next) => {
   try {
     const { employeeId, fileId } = req.params;
     
-    // Находим файл
+    // Проверяем права доступа к сотруднику
+    const employee = await fetchEmployeeWithMappings(employeeId);
+    if (!employee) {
+      throw new AppError('Сотрудник не найден', 404);
+    }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+    
+    // Находим файл с проверкой прав
     const file = await File.findOne({
       where: {
         id: fileId,
         entityType: 'employee',
         entityId: employeeId,
         isDeleted: false
-      }
+      },
+      include: [{
+        model: Employee,
+        as: 'employee',
+        include: [{
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          attributes: ['counterpartyId']
+        }]
+      }]
     });
     
     if (!file) {
       throw new AppError('Файл не найден', 404);
     }
+
     
     const downloadData = await storageProvider.getDownloadUrl(file.filePath, { 
       expiresIn: 3600,
@@ -328,19 +390,38 @@ export const getEmployeeFileViewLink = async (req, res, next) => {
   try {
     const { employeeId, fileId } = req.params;
     
-    // Находим файл
+    // Проверяем права доступа к сотруднику
+    const employee = await fetchEmployeeWithMappings(employeeId);
+    if (!employee) {
+      throw new AppError('Сотрудник не найден', 404);
+    }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+    
+    // Находим файл с проверкой прав
     const file = await File.findOne({
       where: {
         id: fileId,
         entityType: 'employee',
         entityId: employeeId,
         isDeleted: false
-      }
+      },
+      include: [{
+        model: Employee,
+        as: 'employee',
+        include: [{
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          attributes: ['counterpartyId']
+        }]
+      }]
     });
     
     if (!file) {
       throw new AppError('Файл не найден', 404);
     }
+
     
     const viewData = await storageProvider.getPublicUrl(file.filePath, { expiresIn: 86400 });
     

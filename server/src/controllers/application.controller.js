@@ -752,6 +752,14 @@ export const getContractsForApplication = async (req, res) => {
         message: 'Требуются counterpartyId и constructionSiteId'
       });
     }
+
+    // Проверка прав: пользователь может смотреть договоры только своего контрагента
+    if (req.user.role !== 'admin' && req.user.counterpartyId !== counterpartyId) {
+       return res.status(403).json({
+        success: false,
+        message: 'Нет доступа к данным другого контрагента'
+      });
+    }
     
     // Получаем контрагента
     const counterparty = await Counterparty.findByPk(counterpartyId);
