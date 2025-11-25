@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Button, Tag, Tooltip, Space, Popconfirm, Select } from 'antd';
+import { Button, Tag, Tooltip, Space, Popconfirm, Select, Badge } from 'antd';
 import {
   EditOutlined,
   DeleteOutlined,
@@ -205,6 +205,14 @@ export const useEmployeeColumns = ({
             '';
           return aSite.localeCompare(bSite);
         },
+        filters: uniqueFilters.constructionSites?.map((site) => ({ text: site, value: site })) || [],
+        onFilter: (value, record) => {
+          const mappings = record.employeeCounterpartyMappings || [];
+          return mappings.some((m) => {
+            const siteName = m.constructionSite?.shortName || m.constructionSite?.name;
+            return siteName === value;
+          });
+        },
       },
       {
         title: 'Гражданство',
@@ -265,31 +273,29 @@ export const useEmployeeColumns = ({
           const filesCount = record.filesCount || 0;
           return (
             <Tooltip title={filesCount > 0 ? `Просмотр файлов (${filesCount})` : 'Нет файлов'}>
-              <Button
-                type="text"
-                icon={<FileOutlined />}
-                onClick={() => onViewFiles(record)}
-                disabled={filesCount === 0}
-                style={{
-                  color: filesCount > 0 ? '#1890ff' : '#d9d9d9',
-                  position: 'relative',
+              <Badge 
+                count={filesCount > 0 ? filesCount : 0}
+                offset={[-8, 4]}
+                style={{ 
+                  backgroundColor: filesCount > 0 ? '#ff7a45' : '#d9d9d9',
+                  fontSize: '10px',
+                  height: '16px',
+                  lineHeight: '16px',
+                  minWidth: '16px',
+                  padding: '0 3px'
                 }}
               >
-                {filesCount > 0 && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '-2px',
-                      right: '-2px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      color: '#000',
-                    }}
-                  >
-                    {filesCount}
-                  </span>
-                )}
-              </Button>
+                <Button
+                  type="text"
+                  icon={<FileOutlined />}
+                  onClick={() => onViewFiles(record)}
+                  disabled={filesCount === 0}
+                  style={{
+                    color: filesCount > 0 ? '#1890ff' : '#d9d9d9',
+                    padding: '4px 8px',
+                  }}
+                />
+              </Badge>
             </Tooltip>
           );
         },

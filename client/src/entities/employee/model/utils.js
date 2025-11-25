@@ -68,12 +68,21 @@ export const getUniqueFilterValues = (employees) => {
         .filter(Boolean)
     ),
   ];
+  const constructionSites = [
+    ...new Set(
+      employees
+        .flatMap((e) => e.employeeCounterpartyMappings || [])
+        .map((m) => m.constructionSite?.shortName || m.constructionSite?.name)
+        .filter(Boolean)
+    ),
+  ];
   const citizenships = [...new Set(employees.map((e) => e.citizenship?.name).filter(Boolean))];
 
   return {
     positions: positions.sort(),
     departments: departments.sort(),
     counterparties: counterparties.sort(),
+    constructionSites: constructionSites.sort(),
     citizenships: citizenships.sort(),
   };
 };
