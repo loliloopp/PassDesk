@@ -133,7 +133,7 @@ const DepartmentsPage = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', paddingRight: 10 }}>
         <Button
           type="primary"
           icon={<PlusOutlined />}

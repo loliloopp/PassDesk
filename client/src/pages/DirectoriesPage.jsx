@@ -43,13 +43,14 @@ const DirectoriesPage = () => {
             </Title>
           </Space>
         }
-        style={{ margin: '-24px', minHeight: 'calc(100vh - 112px)' }}
+        style={{ margin: '0 -24px -24px -24px', minHeight: 'calc(100vh - 112px)' }}
       >
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
           items={tabItems}
           size="large"
+          tabBarStyle={{ paddingLeft: '10px' }}
         />
       </Card>
     </div>
