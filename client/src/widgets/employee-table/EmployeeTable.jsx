@@ -3,6 +3,19 @@ import { useEmployeeColumns } from './EmployeeColumns';
 
 // CSS для чередующихся цветов строк и переноса текста в Select
 const tableStyles = `
+  /* Компактный размер таблицы */
+  .ant-table {
+    font-size: 13px !important;
+  }
+  
+  .ant-table td {
+    padding: 8px 12px !important;
+  }
+  
+  .ant-table th {
+    padding: 8px 12px !important;
+  }
+  
   .table-row-light {
     background-color: #ffffff;
   }
