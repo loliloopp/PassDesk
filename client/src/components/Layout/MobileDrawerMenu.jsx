@@ -17,19 +17,26 @@ const MobileDrawerMenu = ({ visible, onClose }) => {
   const location = useLocation();
   const { logout, user } = useAuthStore();
 
-  // Верхняя часть меню (для админов)
-  const topMenuItems = user?.role === 'admin' ? [
-    {
+  // Верхняя часть меню (для админов и пользователей)
+  const topMenuItems = [];
+  
+  // Сотрудники доступны админам и пользователям
+  if (user?.role === 'admin' || user?.role === 'user') {
+    topMenuItems.push({
       key: '/employees',
       icon: <TeamOutlined />,
       label: 'Сотрудники',
-    },
-    {
+    });
+  }
+  
+  // Администирование только для админов
+  if (user?.role === 'admin') {
+    topMenuItems.push({
       key: '/admin',
       icon: <SettingOutlined />,
       label: 'Администирование',
-    },
-  ] : [];
+    });
+  }
 
   // Нижняя часть меню (профиль и выход)
   const bottomMenuItems = [
