@@ -306,7 +306,7 @@ export const useEmployeeColumns = ({
         key: 'status',
         width: 120,
         render: (_, record) => {
-          // Приоритет: statusSecure (Заблокирован) > statusActive (Уволен/Неактивный) > status (Новый/Проведен ТБ/Обработан)
+          // Приоритет: statusSecure (Заблокирован) > statusActive (Уволен/Неактивный) > status (Черновик/Новый/Проведен ТБ/Обработан)
 
           if (record.statusSecure === 'block' || record.statusSecure === 'block_compl') {
             return <Tag color="red">Заблокирован</Tag>;
@@ -320,6 +320,7 @@ export const useEmployeeColumns = ({
           }
 
           const statusMap = {
+            draft: { text: 'Черновик', color: 'default' },
             new: { text: 'Новый', color: 'default' },
             tb_passed: { text: 'Проведен ТБ', color: 'green' },
             processed: { text: 'Обработан', color: 'success' },
@@ -333,6 +334,7 @@ export const useEmployeeColumns = ({
           { text: 'Заблокирован', value: 'blocked' },
           { text: 'Уволен', value: 'fired' },
           { text: 'Неактивный', value: 'inactive' },
+          { text: 'Черновик', value: 'draft' },
           { text: 'Новый', value: 'new' },
           { text: 'Проведен ТБ', value: 'tb_passed' },
           { text: 'Обработан', value: 'processed' },
