@@ -16,6 +16,14 @@ import { useAuthStore } from '@/store/authStore'
 
 const { Sider } = Layout
 
+// Стили для кнопки сворачивания
+const sidebarStyles = `
+  .ant-layout-sider-trigger {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+`;
+
 const Sidebar = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -90,20 +98,22 @@ const Sidebar = () => {
   }
 
   return (
-    <Sider
-      collapsible
-      collapsed={collapsed}
-      onCollapse={setCollapsed}
-      width={250}
-      style={{
-        overflow: 'auto',
-        height: '100vh',
-        position: 'sticky',
-        left: 0,
-        top: 0,
-        bottom: 0,
-      }}
-    >
+    <>
+      <style>{sidebarStyles}</style>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        width={250}
+        style={{
+          overflow: 'auto',
+          height: '100vh',
+          position: 'sticky',
+          left: 0,
+          top: 0,
+          bottom: 0,
+        }}
+      >
       <div
         style={{
           height: 64,
@@ -142,7 +152,8 @@ const Sidebar = () => {
           style={{ border: 'none' }}
         />
       </div>
-    </Sider>
+      </Sider>
+    </>
   )
 }
 
