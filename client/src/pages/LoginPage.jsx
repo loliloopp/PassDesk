@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Form, Input, Button, Card, Typography, message, Tabs, Alert } from 'antd'
+import { Form, Input, Button, Card, Typography, Tabs, Alert, App } from 'antd'
 import { UserOutlined, LockOutlined, LoginOutlined, UserAddOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
 import { forbiddenPasswordValidator } from '@/utils/forbiddenPasswords'
@@ -11,6 +11,7 @@ const LoginPage = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { login, register } = useAuthStore()
+  const { message } = App.useApp()
   const [loading, setLoading] = useState(false)
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()

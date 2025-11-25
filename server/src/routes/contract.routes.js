@@ -6,17 +6,25 @@ import {
   updateContract,
   deleteContract
 } from '../controllers/contract.controller.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Все роуты требуют аутентификации
 router.use(authenticate);
 
+// ======================================
+// ЧТЕНИЕ - доступно всем авторизованным пользователям
+// ======================================
 router.get('/', getAllContracts);
 router.get('/:id', getContractById);
-router.post('/', createContract);
-router.put('/:id', updateContract);
-router.delete('/:id', deleteContract);
+
+// ======================================
+// ИЗМЕНЕНИЕ - только для администраторов
+// ======================================
+router.post('/', authorize('admin'), createContract);
+router.put('/:id', authorize('admin'), updateContract);
+router.delete('/:id', authorize('admin'), deleteContract);
 
 export default router;
 

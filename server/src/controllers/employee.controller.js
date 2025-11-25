@@ -278,10 +278,11 @@ export const getEmployeeById = async (req, res, next) => {
 
 export const createEmployee = async (req, res, next) => {
   try {
-    console.log('=== CREATE EMPLOYEE REQUEST ===');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    console.log('User ID:', req.user?.id);
-    console.log('User Counterparty ID:', req.user?.counterpartyId);
+    // Логируем только в development и без персональных данных
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== CREATE EMPLOYEE REQUEST ===');
+      console.log('User ID:', req.user?.id);
+    }
     
     // Удаляем counterpartyId, constructionSiteId из данных сотрудника
     // Используем переданный фронтендом status ('draft' или 'new')
@@ -293,8 +294,6 @@ export const createEmployee = async (req, res, next) => {
       status: status || 'new', // Используем переданный фронтендом status, по умолчанию 'new'
       statusActive: null // При создании statusActive всегда null
     };
-    
-    console.log('Employee data to create:', JSON.stringify(employeeData, null, 2));
 
     const employee = await Employee.create(employeeData);
     
@@ -430,9 +429,11 @@ export const updateEmployee = async (req, res, next) => {
   try {
     const { id } = req.params;
     
-    console.log('=== UPDATE EMPLOYEE REQUEST ===');
-    console.log('Employee ID:', id);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    // Логируем только в development и без персональных данных
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== UPDATE EMPLOYEE REQUEST ===');
+      console.log('Employee ID:', id);
+    }
     
     // Не перезаписываем counterpartyId при обновлении, constructionSiteId идет в маппинг
     const { counterpartyId, constructionSiteId, isDraft, ...updateData } = req.body;
@@ -463,8 +464,6 @@ export const updateEmployee = async (req, res, next) => {
       ...cleanedData,
       updatedBy: req.user.id
     };
-    
-    console.log('Updates to apply:', JSON.stringify(updates, null, 2));
 
     const employee = await Employee.findByPk(id, {
       include: employeeAccessInclude

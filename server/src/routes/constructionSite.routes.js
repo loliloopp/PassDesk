@@ -6,17 +6,25 @@ import {
   updateConstructionSite,
   deleteConstructionSite
 } from '../controllers/constructionSite.controller.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Все роуты требуют аутентификации
 router.use(authenticate);
 
+// ======================================
+// ЧТЕНИЕ - доступно всем авторизованным пользователям
+// ======================================
 router.get('/', getAllConstructionSites);
 router.get('/:id', getConstructionSiteById);
-router.post('/', createConstructionSite);
-router.put('/:id', updateConstructionSite);
-router.delete('/:id', deleteConstructionSite);
+
+// ======================================
+// ИЗМЕНЕНИЕ - только для администраторов
+// ======================================
+router.post('/', authorize('admin'), createConstructionSite);
+router.put('/:id', authorize('admin'), updateConstructionSite);
+router.delete('/:id', authorize('admin'), deleteConstructionSite);
 
 export default router;
 

@@ -65,12 +65,14 @@ export const register = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   
   try {
-    console.log('📝 Registration request body:', req.body);
+    // Логируем только в development и без персональных данных
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📝 Registration attempt');
+    }
     const { email, password, fullName, registrationCode } = req.body;
 
     // Валидация входных данных
     if (!email || !password || !fullName) {
-      console.log('❌ Validation failed:', { email: !!email, password: !!password, fullName: !!fullName });
       throw new AppError('Все обязательные поля должны быть заполнены', 400);
     }
 

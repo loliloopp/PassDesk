@@ -1,11 +1,74 @@
 import storageProvider from '../config/storage.js';
 import { AppError } from '../middleware/errorHandler.js';
+import { checkEmployeeAccess } from '../utils/permissionUtils.js';
+
+/**
+ * Проверка прав доступа к файлу
+ * Проверяет, имеет ли пользователь доступ к сущности, которой принадлежит файл
+ */
+const checkFileAccess = async (file, user) => {
+  // Админ имеет доступ ко всем файлам
+  if (user.role === 'admin') {
+    return true;
+  }
+
+  const { File, Employee, Application, EmployeeCounterpartyMapping, Counterparty } = await import('../models/index.js');
+
+  // Проверка по типу сущности
+  if (file.entityType === 'employee') {
+    // Загружаем сотрудника с маппингами
+    const employee = await Employee.findByPk(file.entityId, {
+      include: [{
+        model: EmployeeCounterpartyMapping,
+        as: 'employeeCounterpartyMappings',
+        include: [{
+          model: Counterparty,
+          as: 'counterparty',
+          attributes: ['id']
+        }]
+      }]
+    });
+
+    if (!employee) {
+      throw new AppError('Сотрудник, которому принадлежит файл, не найден', 404);
+    }
+
+    // Используем стандартную проверку доступа к сотруднику
+    await checkEmployeeAccess(user, employee);
+    return true;
+  }
+
+  if (file.entityType === 'application') {
+    // Загружаем заявку
+    const application = await Application.findByPk(file.entityId);
+
+    if (!application) {
+      throw new AppError('Заявка, которой принадлежит файл, не найдена', 404);
+    }
+
+    // Пользователь может видеть только свои заявки
+    if (application.createdBy !== user.id) {
+      throw new AppError('Нет доступа к этому файлу', 403);
+    }
+
+    return true;
+  }
+
+  // Для других типов сущностей - запрещаем доступ обычным пользователям
+  throw new AppError('Нет доступа к этому файлу', 403);
+};
 
 /**
  * Загрузка файла в Object Storage
+ * ВНИМАНИЕ: Этот endpoint устарел. Используйте загрузку через /employees/:id/files
  */
 export const uploadFile = async (req, res, next) => {
   try {
+    // Только админы могут загружать файлы напрямую (без привязки к сущности)
+    if (req.user.role !== 'admin') {
+      throw new AppError('Загрузка файлов напрямую доступна только администраторам. Используйте загрузку через /employees/:id/files', 403);
+    }
+
     if (!req.file) {
       throw new AppError('No file provided', 400);
     }
@@ -40,9 +103,15 @@ export const uploadFile = async (req, res, next) => {
 
 /**
  * Загрузка нескольких файлов
+ * ВНИМАНИЕ: Этот endpoint устарел. Используйте загрузку через /employees/:id/files
  */
 export const uploadMultipleFiles = async (req, res, next) => {
   try {
+    // Только админы могут загружать файлы напрямую (без привязки к сущности)
+    if (req.user.role !== 'admin') {
+      throw new AppError('Загрузка файлов напрямую доступна только администраторам', 403);
+    }
+
     if (!req.files || req.files.length === 0) {
       throw new AppError('No files provided', 400);
     }
@@ -84,6 +153,7 @@ export const uploadMultipleFiles = async (req, res, next) => {
 
 /**
  * Получить ссылку для скачивания файла по ID
+ * ПРОВЕРКА ПРАВ ДОСТУПА через связанную сущность
  */
 export const getFileById = async (req, res, next) => {
   try {
@@ -103,10 +173,13 @@ export const getFileById = async (req, res, next) => {
     if (!file) {
       throw new AppError('Файл не найден', 404);
     }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkFileAccess(file, req.user);
     
     const downloadData = await storageProvider.getDownloadUrl(file.filePath, { 
       expiresIn: 3600,
-      fileName: file.originalName || file.fileName // Передаём имя файла для заголовка Content-Disposition
+      fileName: file.originalName || file.fileName
     });
 
     res.json({
@@ -122,15 +195,38 @@ export const getFileById = async (req, res, next) => {
 };
 
 /**
- * Получить ссылку для скачивания файла
+ * Получить ссылку для скачивания файла по fileKey
+ * ПРОВЕРКА ПРАВ ДОСТУПА через связанную сущность
  */
 export const getFile = async (req, res, next) => {
   try {
     const { fileKey } = req.params;
+    
+    // Импортируем модель File
+    const { File } = await import('../models/index.js');
+    
+    // Ищем файл по fileKey в БД для проверки прав
+    const file = await File.findOne({
+      where: {
+        fileKey: fileKey,
+        isDeleted: false
+      }
+    });
+    
+    // Если файл найден в БД - проверяем права
+    if (file) {
+      await checkFileAccess(file, req.user);
+    } else {
+      // Файл не в БД - только админы могут получить доступ
+      if (req.user.role !== 'admin') {
+        throw new AppError('Файл не найден или нет прав доступа', 404);
+      }
+    }
+
     const filePath = storageProvider.resolvePath(fileKey);
     const downloadData = await storageProvider.getDownloadUrl(filePath, { 
       expiresIn: 3600,
-      fileName: fileKey // Передаём имя файла для заголовка Content-Disposition
+      fileName: fileKey
     });
 
     res.json({
@@ -147,10 +243,33 @@ export const getFile = async (req, res, next) => {
 
 /**
  * Получить публичную ссылку на файл
+ * ПРОВЕРКА ПРАВ ДОСТУПА через связанную сущность
  */
 export const getPublicLink = async (req, res, next) => {
   try {
     const { fileKey } = req.params;
+    
+    // Импортируем модель File
+    const { File } = await import('../models/index.js');
+    
+    // Ищем файл по fileKey в БД для проверки прав
+    const file = await File.findOne({
+      where: {
+        fileKey: fileKey,
+        isDeleted: false
+      }
+    });
+    
+    // Если файл найден в БД - проверяем права
+    if (file) {
+      await checkFileAccess(file, req.user);
+    } else {
+      // Файл не в БД - только админы могут получить доступ
+      if (req.user.role !== 'admin') {
+        throw new AppError('Файл не найден или нет прав доступа', 404);
+      }
+    }
+
     const filePath = storageProvider.resolvePath(fileKey);
     const publicLink = await storageProvider.getPublicUrl(filePath, { expiresIn: 86400 });
 
@@ -168,9 +287,16 @@ export const getPublicLink = async (req, res, next) => {
 
 /**
  * Удалить файл
+ * ТОЛЬКО АДМИНИСТРАТОРЫ могут удалять файлы напрямую
  */
 export const deleteFile = async (req, res, next) => {
   try {
+    // Только админы могут удалять файлы напрямую по ключу
+    // Обычные пользователи должны использовать /employees/:id/files/:fileId
+    if (req.user.role !== 'admin') {
+      throw new AppError('Удаление файлов напрямую доступно только администраторам', 403);
+    }
+
     const { fileKey } = req.params;
     const filePath = storageProvider.resolvePath(fileKey);
     await storageProvider.deleteFile(filePath);

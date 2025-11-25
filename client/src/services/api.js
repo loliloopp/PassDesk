@@ -1,7 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import { API_CONFIG } from '@/config/api.config'
-import { message } from 'antd'
 
 // Флаг для предотвращения множественных уведомлений
 let isRedirecting = false
@@ -80,12 +79,8 @@ api.interceptors.response.use(
 
         console.warn('🚪 Logging out user due to 401 error:', errorMessage);
         
-        // Показываем уведомление пользователю
-        message.warning({
-          content: notificationMessage,
-          duration: 5,
-          key: 'auth-error' // Чтобы не показывать дубликаты
-        });
+        // Логируем сообщение для отладки (было: message.warning в interceptor)
+        // Сообщения отображаются в компонентах через App.useApp() hook
 
         // Разлогиниваем пользователя локально
         const authStore = useAuthStore.getState()

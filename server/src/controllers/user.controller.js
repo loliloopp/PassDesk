@@ -3,6 +3,29 @@ import { User } from '../models/index.js';
 import { Op } from 'sequelize';
 import { isPasswordAllowed, getForbiddenPasswordMessage } from '../utils/forbiddenPasswords.js';
 
+/**
+ * Генерация уникального УИН (6-значный)
+ */
+const generateUniqueUIN = async () => {
+  const maxAttempts = 1000;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    // Генерация случайного 6-значного числа
+    const uin = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    
+    // Проверка уникальности
+    const existing = await User.findOne({ where: { identificationNumber: uin } });
+    if (!existing) {
+      return uin;
+    }
+    
+    attempts++;
+  }
+  
+  throw new AppError('Не удалось сгенерировать уникальный УИН', 500);
+};
+
 export const getAllUsers = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, search, role, isActive } = req.query;
@@ -122,6 +145,11 @@ export const updateUser = async (req, res, next) => {
       if (existingUser) {
         throw new AppError('Пользователь с таким email уже существует', 409);
       }
+    }
+
+    // Если УИН пустой или отсутствует - генерируем новый
+    if (!user.identificationNumber || user.identificationNumber.trim() === '') {
+      updateData.identificationNumber = await generateUniqueUIN();
     }
 
     await user.update(updateData);
