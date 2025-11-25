@@ -96,10 +96,19 @@ const MobileUsersList = ({
                     {getCounterpartyName(user.counterpartyId)}
                   </Text>
 
-                  {/* Email */}
-                  <Text type="secondary" style={{ fontSize: 11, display: 'block', color: '#999' }}>
-                    {user.email}
-                  </Text>
+                  {/* Email и УИН */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 11, color: '#999', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {user.email}
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 11, color: '#999', flexShrink: 0 }}>
+                      {(() => {
+                        if (!user.identificationNumber) return '-';
+                        const digits = user.identificationNumber.toString().replace(/\D/g, '');
+                        return digits.length >= 6 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}` : user.identificationNumber;
+                      })()}
+                    </Text>
+                  </div>
                 </div>
               </div>
 
@@ -183,6 +192,13 @@ const UserDrawer = ({
     return new Date(date).toLocaleString('ru-RU');
   };
 
+  // Форматировать УИН в маску XXX-XXX
+  const formatUIN = (value) => {
+    if (!value) return '-';
+    const digits = value.toString().replace(/\D/g, '');
+    return digits.length >= 6 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}` : value;
+  };
+
   const handleEdit = () => {
     onClose();
     onEdit(user);
@@ -237,6 +253,11 @@ const UserDrawer = ({
         <div>
           <Text strong style={{ display: 'block', marginBottom: 4 }}>Дата создания</Text>
           <Text>{formatDate(user.createdAt)}</Text>
+        </div>
+
+        <div>
+          <Text strong style={{ display: 'block', marginBottom: 4 }}>УИН</Text>
+          <Text>{formatUIN(user.identificationNumber)}</Text>
         </div>
 
         <div>
