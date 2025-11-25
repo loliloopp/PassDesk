@@ -46,6 +46,7 @@ const UsersPage = () => {
   const [editingUser, setEditingUser] = useState(null)
   const { user: currentUser } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState([])
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
 
   useEffect(() => {
     fetchUsers()
@@ -55,7 +56,7 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const response = await userService.getAll()
+      const response = await userService.getAll({ limit: 1000 })
       // Правильный путь: response.data.users (Axios уже распаковывает один уровень data)
       setUsers(response?.data?.users || [])
     } catch (error) {
@@ -74,6 +75,11 @@ const UsersPage = () => {
       console.error('Error loading counterparties:', error)
     }
   }
+
+  // Восстановить пагинацию при смене поиска или фильтра
+  useEffect(() => {
+    setPagination({ current: 1, pageSize: 10 })
+  }, [searchText, statusFilter])
 
   const roleLabels = {
     admin: { text: 'Администратор', color: 'red' },
@@ -323,6 +329,11 @@ const UsersPage = () => {
     return searchMatch && statusMatch
   })
 
+  // Пагинация на клиенте
+  const start = (pagination.current - 1) * pagination.pageSize
+  const end = start + pagination.pageSize
+  const paginatedUsers = filteredUsers.slice(start, end)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <div
@@ -384,13 +395,21 @@ const UsersPage = () => {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
         <Table
           columns={columns}
-          dataSource={filteredUsers}
+          dataSource={paginatedUsers}
           rowKey="id"
           loading={loading}
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: filteredUsers.length,
             showSizeChanger: true,
             showTotal: (total) => `Всего: ${total}`,
+            onChange: (page, pageSize) => {
+              setPagination({ current: page, pageSize })
+            },
+            onShowSizeChange: (current, pageSize) => {
+              setPagination({ current: 1, pageSize })
+            },
           }}
           scroll={{ x: 'max-content', y: 'calc(100vh - 400px)' }}
           style={{ height: '100%' }}
