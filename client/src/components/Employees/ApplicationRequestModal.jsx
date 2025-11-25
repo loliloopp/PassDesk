@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal, Table, Checkbox, Space, Button, App } from 'antd';
 import { FileExcelOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
@@ -13,8 +13,11 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees })
   const [allSelected, setAllSelected] = useState(false);
 
   // Фильтруем только сотрудников со статусами new и tb_passed
-  const availableEmployees = allEmployees.filter(emp => 
-    emp.status === 'new' || emp.status === 'tb_passed'
+  const availableEmployees = useMemo(() =>
+    allEmployees.filter(emp => 
+      emp.status === 'new' || emp.status === 'tb_passed'
+    ),
+    [allEmployees]
   );
 
   useEffect(() => {
@@ -22,7 +25,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees })
       setSelectedEmployees(availableEmployees.map(emp => emp.id));
       setAllSelected(true);
     }
-  }, [visible, availableEmployees]);
+  }, [visible]);
 
   // Обработчик выбора/снятия всех
   const handleSelectAll = (e) => {
