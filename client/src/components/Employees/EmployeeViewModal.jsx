@@ -41,9 +41,6 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={24}>
               <Space size="large">
-                <Checkbox checked={employee.status === 'tb_passed' || employee.status === 'processed'} disabled>
-                  <span style={{ color: '#52c41a' }}>Проведен инструктаж ТБ</span>
-                </Checkbox>
                 <Checkbox checked={employee.statusActive === 'fired'} disabled>
                   <span style={{ color: '#ff4d4f' }}>Уволен</span>
                 </Checkbox>
