@@ -308,7 +308,8 @@ const UsersPage = () => {
     const searchMatch =
       (user.email?.toLowerCase().includes(searchLower) || false) ||
       (user.firstName?.toLowerCase().includes(searchLower) || false) ||
-      (user.lastName?.toLowerCase().includes(searchLower) || false)
+      (user.lastName?.toLowerCase().includes(searchLower) || false) ||
+      (user.identificationNumber?.toLowerCase().includes(searchLower) || false)
 
     // Фильтрация по статусу
     let statusMatch = true
