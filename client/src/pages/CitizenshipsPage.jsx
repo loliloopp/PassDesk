@@ -139,6 +139,7 @@ const CitizenshipsPage = () => {
       title: 'Гражданство',
       dataIndex: 'name',
       key: 'name',
+      width: 220,
       sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
@@ -167,6 +168,8 @@ const CitizenshipsPage = () => {
     {
       title: 'Синонимы',
       key: 'synonyms',
+      flex: 1,
+      minWidth: 300,
       render: (_, record) => (
         <Space size={4} wrap>
           {record.synonyms && record.synonyms.length > 0 ? (
@@ -184,7 +187,7 @@ const CitizenshipsPage = () => {
     {
       title: 'Действия',
       key: 'actions',
-      width: 180,
+      width: 120,
       align: 'center',
       render: (_, record) => (
         <Space size={4}>

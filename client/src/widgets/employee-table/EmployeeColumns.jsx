@@ -30,7 +30,7 @@ export const useEmployeeColumns = ({
       {
         title: 'ФИО',
         key: 'fullName',
-        width: 200,
+        width: 230,
         render: (_, record) => (
           <div style={{ whiteSpace: 'normal', wordBreak: 'normal', overflowWrap: 'break-word' }}>
             {record.lastName} {record.firstName} {record.middleName || ''}
@@ -42,7 +42,7 @@ export const useEmployeeColumns = ({
         title: 'Должность',
         dataIndex: ['position', 'name'],
         key: 'position',
-        width: 156,
+        width: 186,
         ellipsis: false,
         render: (name) => (
           <div
@@ -210,6 +210,7 @@ export const useEmployeeColumns = ({
         title: 'Гражданство',
         dataIndex: ['citizenship', 'name'],
         key: 'citizenship',
+        width: 150,
         ellipsis: true,
         render: (name) => name || '-',
         sorter: (a, b) => {
@@ -223,7 +224,7 @@ export const useEmployeeColumns = ({
       {
         title: 'Заполнен',
         key: 'statusCard',
-        width: 100,
+        width: 130,
         align: 'center',
         render: (_, record) => {
           const isCompleted = record.statusCard === 'completed';
