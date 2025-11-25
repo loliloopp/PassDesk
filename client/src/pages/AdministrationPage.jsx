@@ -125,20 +125,11 @@ const AdministrationPage = () => {
           items={desktopItems}
           size="large"
           style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0, margin: 0 }}
-          styles={{ 
-            tabBar: { 
-              margin: 0,
-              borderBottom: '1px solid #f0f0f0',
-              flexShrink: 0
-            },
-            tabpane: { 
-              display: 'flex', 
-              flexDirection: 'column', 
-              flex: 1, 
-              overflow: 'hidden',
-              minHeight: 0,
-              padding: '16px'
-            }
+          tabBarStyle={{ 
+            margin: 0,
+            borderBottom: '1px solid #f0f0f0',
+            flexShrink: 0,
+            paddingLeft: '10px'
           }}
         />
       </Card>
