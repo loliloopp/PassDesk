@@ -249,11 +249,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const requiredFieldsByTab = getRequiredFieldsByTab();
 
   const computeValidation = (forceCompute = false, citizenshipOverride = null) => {
-    if (!forceCompute && !dataLoaded) {
-      return tabsValidation; // Не валидируем, пока данные не загружены
-    }
-    
-    // ВАЖНО: передаем true, чтобы получить все значения из store, даже для скрытых полей
+    // Получаем значения из формы (включая скрытые поля)
     const values = form.getFieldsValue(true);
     const validation = {};
     
