@@ -161,10 +161,15 @@ const UsersPage = () => {
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
     },
     {
-      title: 'Последний вход',
-      dataIndex: 'lastLogin',
-      key: 'lastLogin',
-      render: (date) => (date ? new Date(date).toLocaleString('ru-RU') : '-'),
+      title: 'УИН',
+      dataIndex: 'identificationNumber',
+      key: 'identificationNumber',
+      render: (value) => {
+        if (!value) return '-';
+        // Форматируем в маску XXX-XXX
+        const digits = value.toString().replace(/\D/g, '');
+        return digits.length >= 6 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}` : value;
+      },
     },
     {
       title: 'Действия',
