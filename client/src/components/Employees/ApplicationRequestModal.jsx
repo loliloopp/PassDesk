@@ -76,6 +76,19 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees })
 
       // Создаем Excel файл
       const worksheet = XLSX.utils.json_to_sheet(excelData);
+      
+      // Устанавливаем ширину столбцов (в символах, где 1 символ ≈ 7px)
+      worksheet['!cols'] = [
+        { wch: 6 },    // A: 40px
+        { wch: 43 },   // B: 300px
+        { wch: 17 },   // C: 120px
+        { wch: 17 },   // D: 120px
+        { wch: 17 },   // E: 120px
+        { wch: 17 },   // F: 120px
+        { wch: 20 },   // G: 140px
+        { wch: 17 },   // H: 120px
+      ];
+      
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Заявка');
 
