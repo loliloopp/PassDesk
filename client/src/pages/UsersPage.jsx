@@ -336,63 +336,65 @@ const UsersPage = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      {/* Заголовок, поиск, фильтр и кнопка на одной строке */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 16,
-          padding: '0 24px 0 24px',
-          paddingTop: 24,
-          flexWrap: 'wrap',
+          padding: '24px 24px 0 24px',
           gap: 16,
           flexShrink: 0,
         }}
       >
-        <Title level={2} style={{ margin: 0 }}>
+        <Title level={2} style={{ margin: 0, flexShrink: 0 }}>
           Пользователи
         </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Добавить пользователя
+
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+          <Input
+            placeholder="Поиск по email или ФИО..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            size="large"
+            style={{ maxWidth: 500 }}
+          />
+          <Popover
+            content={
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 200 }}>
+                <div style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Статус</div>
+                <Checkbox.Group
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                >
+                  <Checkbox value="active">Активен</Checkbox>
+                  <Checkbox value="inactive">Неактивен</Checkbox>
+                </Checkbox.Group>
+              </div>
+            }
+            trigger="click"
+            placement="bottomLeft"
+          >
+            <Button
+              type={statusFilter.length > 0 ? 'primary' : 'default'}
+              icon={<FilterOutlined />}
+            >
+              Фильтр
+            </Button>
+          </Popover>
+        </div>
+
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} style={{ flexShrink: 0 }}>
+          Добавить
         </Button>
       </div>
 
-      {/* Поиск и фильтр */}
-      <div style={{ marginBottom: 16, paddingLeft: 24, paddingRight: 24, flexShrink: 0, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <Input
-          placeholder="Поиск по email или ФИО..."
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          size="large"
-          style={{ maxWidth: 500 }}
-        />
-        <Popover
-          content={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 200 }}>
-              <div style={{ fontSize: 12, fontWeight: 'bold', color: '#666' }}>Статус</div>
-              <Checkbox.Group
-                value={statusFilter}
-                onChange={setStatusFilter}
-              >
-                <Checkbox value="active">Активен</Checkbox>
-                <Checkbox value="inactive">Неактивен</Checkbox>
-              </Checkbox.Group>
-            </div>
-          }
-          trigger="click"
-          placement="bottomLeft"
-        >
-          <Button
-            type={statusFilter.length > 0 ? 'primary' : 'default'}
-            icon={<FilterOutlined />}
-          >
-            Фильтр
-          </Button>
-        </Popover>
-      </div>
+      {/* Отступ под заголовок */}
+      <div style={{ marginBottom: 16, flexShrink: 0 }} />
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
         <Table
           columns={columns}
           dataSource={paginatedUsers}
@@ -411,8 +413,8 @@ const UsersPage = () => {
               setPagination({ current: 1, pageSize })
             },
           }}
-          scroll={{ x: 'max-content', y: 'calc(100vh - 400px)' }}
-          style={{ height: '100%' }}
+          scroll={{ x: 'max-content', y: 510 }}
+          style={{ width: '100%' }}
         />
       </div>
 
