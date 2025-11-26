@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Input, Space, Modal, Form, Select, message, Tag, Tooltip, Typography, Row, Col } from 'antd';
+import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
 
@@ -12,6 +12,7 @@ const typeMap = {
 };
 
 const CounterpartiesPage = () => {
+  const { message } = App.useApp();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
