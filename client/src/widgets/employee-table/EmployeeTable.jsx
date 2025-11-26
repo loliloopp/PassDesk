@@ -1,5 +1,7 @@
 import { Table } from 'antd';
+import { useState } from 'react';
 import { useEmployeeColumns } from './EmployeeColumns';
+import { useTableFilters } from './useTableFilters';
 
 // CSS для чередующихся цветов строк и переноса текста в Select
 const tableStyles = `
@@ -55,6 +57,7 @@ const tableStyles = `
 /**
  * Widget таблицы сотрудников
  * Оптимизирован для быстрой загрузки и рендеринга
+ * Сохраняет состояние фильтров в localStorage
  */
 export const EmployeeTable = ({
   employees,
@@ -69,6 +72,9 @@ export const EmployeeTable = ({
   canDeleteEmployee,
   uniqueFilters,
 }) => {
+  const { filters, onFiltersChange } = useTableFilters();
+  const [sortOrder, setSortOrder] = useState({});
+
   const columns = useEmployeeColumns({
     departments,
     onEdit,
@@ -79,7 +85,21 @@ export const EmployeeTable = ({
     canExport,
     canDeleteEmployee,
     uniqueFilters,
+    filters, // Передаем фильтры в хук колонок
   });
+
+  // Обработчик изменения фильтров
+  const handleTableChange = (pagination, filters, sorter) => {
+    onFiltersChange(filters);
+    
+    // Сохраняем сортировку
+    if (sorter.field) {
+      setSortOrder({
+        field: sorter.field,
+        order: sorter.order,
+      });
+    }
+  };
 
   return (
     <>
@@ -102,6 +122,7 @@ export const EmployeeTable = ({
           x: 1300,
           y: 670
         }}
+        onChange={handleTableChange}
       />
     </>
   );

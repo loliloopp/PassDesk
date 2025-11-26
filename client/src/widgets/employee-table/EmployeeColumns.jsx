@@ -24,6 +24,7 @@ export const useEmployeeColumns = ({
   canExport,
   canDeleteEmployee,
   uniqueFilters,
+  filters = {}, // Состояние фильтров из localStorage
 }) => {
   return useMemo(() => {
     const columns = [
@@ -62,6 +63,7 @@ export const useEmployeeColumns = ({
           return aPos.localeCompare(bPos);
         },
         filters: uniqueFilters.positions.map((pos) => ({ text: pos, value: pos })),
+        filteredValue: filters.position || [],
         onFilter: (value, record) => record.position?.name === value,
       },
       {
@@ -113,6 +115,7 @@ export const useEmployeeColumns = ({
           return aDept.localeCompare(bDept);
         },
         filters: uniqueFilters.departments.map((dept) => ({ text: dept, value: dept })),
+        filteredValue: filters.department || [],
         onFilter: (value, record) => {
           const mappings = record.employeeCounterpartyMappings || [];
           return mappings.some((m) => m.department?.name === value);
@@ -152,6 +155,7 @@ export const useEmployeeColumns = ({
                 return aCounterparty.localeCompare(bCounterparty);
               },
               filters: uniqueFilters.counterparties.map((cp) => ({ text: cp, value: cp })),
+              filteredValue: filters.counterparty || [],
               onFilter: (value, record) => {
                 const mappings = record.employeeCounterpartyMappings || [];
                 return mappings.some((m) => m.counterparty?.name === value);
@@ -206,6 +210,7 @@ export const useEmployeeColumns = ({
           return aSite.localeCompare(bSite);
         },
         filters: uniqueFilters.constructionSites?.map((site) => ({ text: site, value: site })) || [],
+        filteredValue: filters.constructionSite || [],
         onFilter: (value, record) => {
           const mappings = record.employeeCounterpartyMappings || [];
           return mappings.some((m) => {
@@ -227,6 +232,7 @@ export const useEmployeeColumns = ({
           return aCit.localeCompare(bCit);
         },
         filters: uniqueFilters.citizenships.map((cit) => ({ text: cit, value: cit })),
+        filteredValue: filters.citizenship || [],
         onFilter: (value, record) => record.citizenship?.name === value,
       },
       {
@@ -262,6 +268,7 @@ export const useEmployeeColumns = ({
           { text: 'Заполнен', value: 'completed' },
           { text: 'Не заполнен', value: 'draft' },
         ],
+        filteredValue: filters.statusCard || [],
         onFilter: (value, record) => record.statusCard === value,
       },
       {
@@ -339,6 +346,7 @@ export const useEmployeeColumns = ({
           { text: 'Проведен ТБ', value: 'tb_passed' },
           { text: 'Обработан', value: 'processed' },
         ],
+        filteredValue: filters.status || [],
         onFilter: (value, record) => {
           if (value === 'blocked') {
             return record.statusSecure === 'block' || record.statusSecure === 'block_compl';
@@ -395,6 +403,7 @@ export const useEmployeeColumns = ({
     canExport,
     canDeleteEmployee,
     uniqueFilters,
+    filters,
   ]);
 };
 
