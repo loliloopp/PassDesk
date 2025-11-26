@@ -12,7 +12,7 @@ const typeMap = {
 };
 
 const CounterpartiesPage = () => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -55,7 +55,7 @@ const CounterpartiesPage = () => {
   };
 
   const handleDelete = async (id) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Удалить контрагента?',
       content: 'Это действие нельзя отменить',
       onOk: async () => {

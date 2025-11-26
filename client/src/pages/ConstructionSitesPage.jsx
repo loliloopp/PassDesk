@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Input, Space, Modal, Form, message } from 'antd';
+import { Card, Table, Button, Input, Space, Modal, Form, message as msgStatic, Typography, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { constructionSiteService } from '../services/constructionSiteService';
 
 const { TextArea } = Input;
+const { Title } = Typography;
 
 const ConstructionSitesPage = () => {
+  const { message, modal } = App.useApp();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -48,7 +50,7 @@ const ConstructionSitesPage = () => {
   };
 
   const handleDelete = async (id) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Удалить объект строительства?',
       onOk: async () => {
         try {
@@ -95,35 +97,46 @@ const ConstructionSitesPage = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <h1>Объекты строительства</h1>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+    <div style={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Card
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 0 }}
+        styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0, padding: 0 } }}
+      >
+        <div style={{ flexShrink: 0, padding: '16px 24px', display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+          <Title level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>
+            Объекты строительства
+          </Title>
+          <Input
+            placeholder="Поиск по названию или адресу"
+            prefix={<SearchOutlined />}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 300 }}
+            allowClear
+          />
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} style={{ marginLeft: 'auto' }}>
             Добавить
           </Button>
         </div>
 
-        <Input
-          placeholder="Поиск по названию или адресу"
-          prefix={<SearchOutlined />}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 400 }}
-          allowClear
-        />
-
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            ...pagination,
-            onChange: (page) => setPagination(prev => ({ ...prev, current: page }))
-          }}
-        />
-      </Space>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 24px 24px 24px' }}>
+          <Table
+            columns={columns}
+            dataSource={data}
+            rowKey="id"
+            loading={loading}
+            size="small"
+            pagination={{
+              ...pagination,
+              onChange: (page) => setPagination(prev => ({ ...prev, current: page })),
+              onShowSizeChange: (current, pageSize) => setPagination(prev => ({ ...prev, current: 1, pageSize })),
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: (total) => `Всего: ${total} записей`
+            }}
+          />
+        </div>
+      </Card>
 
       <Modal
         title={editingId ? 'Редактировать объект' : 'Добавить объект'}
