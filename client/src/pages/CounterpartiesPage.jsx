@@ -199,9 +199,14 @@ const CounterpartiesPage = () => {
             dataSource={data}
             rowKey="id"
             loading={loading}
+            size="small"
             pagination={{
               ...pagination,
-              onChange: (page) => setPagination(prev => ({ ...prev, current: page }))
+              onChange: (page) => setPagination(prev => ({ ...prev, current: page })),
+              onShowSizeChange: (current, pageSize) => setPagination(prev => ({ ...prev, current: 1, pageSize })),
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: (total) => `Всего: ${total} записей`
             }}
           />
         </div>
