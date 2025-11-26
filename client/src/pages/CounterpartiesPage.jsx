@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Input, Space, Modal, Form, Select, message, Tag, Tooltip } from 'antd';
+import { Card, Table, Button, Input, Space, Modal, Form, Select, message, Tag, Tooltip, Typography } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
+
+const { Title } = Typography;
 
 const typeMap = {
   customer: { label: 'Заказчик', color: 'blue' },
@@ -159,16 +161,15 @@ const CounterpartiesPage = () => {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
-      <div style={{ flexShrink: 0, padding: 24, paddingBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h1 style={{ margin: 0 }}>Контрагенты</h1>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Добавить
-          </Button>
-        </div>
-
-        <Space>
+    <div style={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Card
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 0 }}
+        styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0, padding: 0 } }}
+      >
+        <div style={{ flexShrink: 0, padding: '16px 24px', display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+          <Title level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>
+            Контрагенты
+          </Title>
           <Input
             placeholder="Поиск по названию или ИНН"
             prefix={<SearchOutlined />}
@@ -187,21 +188,24 @@ const CounterpartiesPage = () => {
             <Select.Option value="contractor">Подрядчик</Select.Option>
             <Select.Option value="general_contractor">Генподрядчик</Select.Option>
           </Select>
-        </Space>
-      </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} style={{ marginLeft: 'auto' }}>
+            Добавить
+          </Button>
+        </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 24px 24px 24px' }}>
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            ...pagination,
-            onChange: (page) => setPagination(prev => ({ ...prev, current: page }))
-          }}
-        />
-      </div>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 24px 24px 24px' }}>
+          <Table
+            columns={columns}
+            dataSource={data}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              ...pagination,
+              onChange: (page) => setPagination(prev => ({ ...prev, current: page }))
+            }}
+          />
+        </div>
+      </Card>
 
       <Modal
         title={editingId ? 'Редактировать контрагента' : 'Добавить контрагента'}
