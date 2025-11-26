@@ -1,4 +1,4 @@
-import { Form, Input, Select, DatePicker, Button, Space, Typography, Checkbox, Spin, Collapse } from 'antd';
+import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse } from 'antd';
 import { SaveOutlined, CaretRightOutlined, FileOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
@@ -47,7 +47,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     if (citizenships.length && positions.length) {
       // Если это новый сотрудник (id изменился)
       if (employee?.id !== employeeIdOnLoad) {
-        const formData = initializeEmployeeData();
+        const formData = initializeEmployeeData(true);
         if (formData) {
           form.setFieldsValue(formData);
           
@@ -152,28 +152,43 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               rules={[
                 { required: true, message: 'Укажите дату рождения' },
                 {
+                  pattern: /^\d{2}\.\d{2}\.\d{4}$/,
+                  message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
+                },
+                {
                   validator: (_, value) => {
                     if (!value) {
                       return Promise.resolve();
                     }
-                    const age = dayjs().diff(value, 'year');
-                    if (age < 18) {
-                      return Promise.reject(new Error('Возраст сотрудника должен быть не менее 18 лет'));
-                    }
-                    if (age > 80) {
-                      return Promise.reject(new Error('Возраст сотрудника должен быть не более 80 лет'));
+                    try {
+                      const dateObj = dayjs(value, DATE_FORMAT, true);
+                      if (!dateObj.isValid()) {
+                        return Promise.reject(new Error('Некорректная дата'));
+                      }
+                      const age = dayjs().diff(dateObj, 'year');
+                      if (age < 18) {
+                        return Promise.reject(new Error('Возраст сотрудника должен быть не менее 18 лет'));
+                      }
+                      if (age > 80) {
+                        return Promise.reject(new Error('Возраст сотрудника должен быть не более 80 лет'));
+                      }
+                    } catch (e) {
+                      return Promise.reject(new Error('Некорректная дата'));
                     }
                     return Promise.resolve();
                   }
                 }
               ]}
+              normalize={(value) => {
+                if (!value) return value;
+                // Если это строка, возвращаем как есть
+                if (typeof value === 'string') return value;
+                // Если это dayjs объект, форматируем в строку
+                if (value && value.format) return value.format(DATE_FORMAT);
+                return value;
+              }}
             >
-              <DatePicker
-                placeholder="Выберите дату"
-                format={DATE_FORMAT}
-                size="large"
-                style={{ width: '100%' }}
-              />
+              <Input placeholder="ДД.ММ.ГГГГ" size="large" />
             </Form.Item>
 
             <Form.Item
@@ -280,14 +295,37 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             <Form.Item
               label="Дата выдачи паспорта"
               name="passportDate"
-              rules={[{ required: true, message: 'Укажите дату выдачи' }]}
+              rules={[
+                { required: true, message: 'Укажите дату выдачи' },
+                {
+                  pattern: /^\d{2}\.\d{2}\.\d{4}$/,
+                  message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
+                },
+                {
+                  validator: (_, value) => {
+                    if (!value) {
+                      return Promise.resolve();
+                    }
+                    try {
+                      const dateObj = dayjs(value, DATE_FORMAT, true);
+                      if (!dateObj.isValid()) {
+                        return Promise.reject(new Error('Некорректная дата'));
+                      }
+                    } catch (e) {
+                      return Promise.reject(new Error('Некорректная дата'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+              normalize={(value) => {
+                if (!value) return value;
+                if (typeof value === 'string') return value;
+                if (value && value.format) return value.format(DATE_FORMAT);
+                return value;
+              }}
             >
-              <DatePicker
-                placeholder="Выберите дату"
-                format={DATE_FORMAT}
-                size="large"
-                style={{ width: '100%' }}
-              />
+              <Input placeholder="ДД.ММ.ГГГГ" size="large" />
             </Form.Item>
 
             <Form.Item
@@ -331,14 +369,37 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               <Form.Item
                 label="Дата выдачи патента"
                 name="patentIssueDate"
-                rules={[{ required: true, message: 'Укажите дату выдачи патента' }]}
+                rules={[
+                  { required: true, message: 'Укажите дату выдачи патента' },
+                  {
+                    pattern: /^\d{2}\.\d{2}\.\d{4}$/,
+                    message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
+                  },
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+                      try {
+                        const dateObj = dayjs(value, DATE_FORMAT, true);
+                        if (!dateObj.isValid()) {
+                          return Promise.reject(new Error('Некорректная дата'));
+                        }
+                      } catch (e) {
+                        return Promise.reject(new Error('Некорректная дата'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+                normalize={(value) => {
+                  if (!value) return value;
+                  if (typeof value === 'string') return value;
+                  if (value && value.format) return value.format(DATE_FORMAT);
+                  return value;
+                }}
               >
-                <DatePicker
-                  placeholder="Выберите дату"
-                  format={DATE_FORMAT}
-                  size="large"
-                  style={{ width: '100%' }}
-                />
+                <Input placeholder="ДД.ММ.ГГГГ" size="large" />
               </Form.Item>
 
               <Form.Item

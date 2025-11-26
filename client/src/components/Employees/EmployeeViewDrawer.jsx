@@ -1,4 +1,4 @@
-import { Drawer, Form, Input, Select, DatePicker, Typography, Collapse, Button, Space } from 'antd';
+import { Drawer, Form, Input, Select, Typography, Collapse, Button, Space } from 'antd';
 import { CloseOutlined, EditOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
@@ -41,7 +41,7 @@ const EmployeeViewDrawer = ({
         middleName: employee.middleName,
         positionId: employee.positionId,
         citizenshipId: employee.citizenshipId,
-        birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
+        birthDate: employee.birthDate ? dayjs(employee.birthDate).format(DATE_FORMAT) : null,
         registrationAddress: employee.registrationAddress,
         phone: employee.phone,
         note: employee.note,
@@ -49,10 +49,10 @@ const EmployeeViewDrawer = ({
         snils: employee.snils,
         kig: employee.kig,
         passportNumber: employee.passportNumber,
-        passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
+        passportDate: employee.passportDate ? dayjs(employee.passportDate).format(DATE_FORMAT) : null,
         passportIssuer: employee.passportIssuer,
         patentNumber: employee.patentNumber,
-        patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+        patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate).format(DATE_FORMAT) : null,
         blankNumber: employee.blankNumber,
         isFired: employee.isFired,
         isInactive: employee.isInactive,
@@ -141,13 +141,7 @@ const EmployeeViewDrawer = ({
             label="Дата рождения"
             name="birthDate"
           >
-            <DatePicker
-              placeholder="Выберите дату"
-              format={DATE_FORMAT}
-              size="large"
-              style={{ width: '100%' }}
-              disabled
-            />
+            <Input size="large" disabled />
           </Form.Item>
 
           <Form.Item
@@ -209,13 +203,7 @@ const EmployeeViewDrawer = ({
             label="Дата выдачи паспорта"
             name="passportDate"
           >
-            <DatePicker
-              placeholder="Выберите дату"
-              format={DATE_FORMAT}
-              size="large"
-              style={{ width: '100%' }}
-              disabled
-            />
+            <Input size="large" disabled />
           </Form.Item>
 
           <Form.Item
@@ -247,13 +235,7 @@ const EmployeeViewDrawer = ({
             label="Дата выдачи патента"
             name="patentIssueDate"
           >
-            <DatePicker
-              placeholder="Выберите дату"
-              format={DATE_FORMAT}
-              size="large"
-              style={{ width: '100%' }}
-              disabled
-            />
+            <Input size="large" disabled />
           </Form.Item>
 
           <Form.Item

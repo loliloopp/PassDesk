@@ -164,20 +164,47 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     return value.replace(/[^\d]/g, '');
   };
 
+  // Нормализация дат (может быть dayjs или строка в формате ДД.ММ.ГГГГ)
+  const normalizeDateField = (value) => {
+    if (!value) return null;
+    // Если это dayjs объект
+    if (value && value.format) return value.format('YYYY-MM-DD');
+    // Если это строка в формате ДД.ММ.ГГГГ
+    if (typeof value === 'string' && value.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+      const date = dayjs(value, 'DD.MM.YYYY', true);
+      return date.isValid() ? date.format('YYYY-MM-DD') : null;
+    }
+    return null;
+  };
+
   // Загрузка справочников при монтировании
   useEffect(() => {
     loadReferences();
   }, []);
 
   // Инициализация данных сотрудника
-  const initializeEmployeeData = () => {
+  const initializeEmployeeData = (isMobile = false) => {
     if (employee) {
       const mapping = employee.employeeCounterpartyMappings?.[0];
+      
+      // Для мобильной версии даты как строки, для десктопной - dayjs объекты
+      const birthDateValue = isMobile 
+        ? (employee.birthDate ? dayjs(employee.birthDate).format('DD.MM.YYYY') : null)
+        : (employee.birthDate ? dayjs(employee.birthDate) : null);
+      
+      const passportDateValue = isMobile
+        ? (employee.passportDate ? dayjs(employee.passportDate).format('DD.MM.YYYY') : null)
+        : (employee.passportDate ? dayjs(employee.passportDate) : null);
+      
+      const patentIssueDateValue = isMobile
+        ? (employee.patentIssueDate ? dayjs(employee.patentIssueDate).format('DD.MM.YYYY') : null)
+        : (employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null);
+      
       const formData = {
         ...employee,
-        birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
-        passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
-        patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+        birthDate: birthDateValue,
+        passportDate: passportDateValue,
+        patentIssueDate: patentIssueDateValue,
         constructionSiteId: mapping?.constructionSiteId || null,
         isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
         isInactive: employee.statusActive === 'inactive',
@@ -208,9 +235,9 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
       // Нормализация данных
       const normalizedValues = {
         ...values,
-        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
-        passportDate: values.passportDate ? values.passportDate.format('YYYY-MM-DD') : null,
-        patentIssueDate: values.patentIssueDate ? values.patentIssueDate.format('YYYY-MM-DD') : null,
+        birthDate: normalizeDateField(values.birthDate),
+        passportDate: normalizeDateField(values.passportDate),
+        patentIssueDate: normalizeDateField(values.patentIssueDate),
         phone: normalizePhoneNumber(values.phone),
         snils: normalizeSnils(values.snils),
         inn: normalizeInn(values.inn),
@@ -254,9 +281,9 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
       // Нормализация данных (если заполнены)
       const normalizedValues = {
         ...values,
-        birthDate: values.birthDate ? values.birthDate.format('YYYY-MM-DD') : null,
-        passportDate: values.passportDate ? values.passportDate.format('YYYY-MM-DD') : null,
-        patentIssueDate: values.patentIssueDate ? values.patentIssueDate.format('YYYY-MM-DD') : null,
+        birthDate: normalizeDateField(values.birthDate),
+        passportDate: normalizeDateField(values.passportDate),
+        patentIssueDate: normalizeDateField(values.patentIssueDate),
         phone: values.phone ? normalizePhoneNumber(values.phone) : null,
         snils: values.snils ? normalizeSnils(values.snils) : null,
         inn: values.inn ? normalizeInn(values.inn) : null,
