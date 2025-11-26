@@ -271,12 +271,14 @@ const PositionsPage = () => {
         dataSource={positions}
         rowKey="id"
         loading={loading}
+        scroll={{ y: 'calc(100vh - 420px)' }}
         pagination={{
           current: currentPage,
           pageSize: 50,
           total: totalCount,
           onChange: (page) => fetchPositions(page, searchText),
-          showSizeChanger: false,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `Всего: ${total}`
         }}
       />
