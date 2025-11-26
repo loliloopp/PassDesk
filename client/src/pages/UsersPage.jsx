@@ -46,7 +46,7 @@ const UsersPage = () => {
   const [editingUser, setEditingUser] = useState(null)
   const { user: currentUser } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState([])
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 })
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 })
 
   useEffect(() => {
     fetchUsers()
@@ -78,7 +78,7 @@ const UsersPage = () => {
 
   // Восстановить пагинацию при смене поиска или фильтра
   useEffect(() => {
-    setPagination({ current: 1, pageSize: 10 })
+    setPagination({ current: 1, pageSize: 20 })
   }, [searchText, statusFilter])
 
   const roleLabels = {
@@ -400,6 +400,7 @@ const UsersPage = () => {
           dataSource={paginatedUsers}
           rowKey="id"
           loading={loading}
+          size="small"
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
