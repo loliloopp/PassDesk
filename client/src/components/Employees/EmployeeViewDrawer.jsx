@@ -2,6 +2,7 @@ import { Drawer, Form, Input, Select, Typography, Collapse, Button, Space } from
 import { CloseOutlined, EditOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
+import EmployeeFileUpload from './EmployeeFileUpload';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -20,7 +21,7 @@ const EmployeeViewDrawer = ({
   onEdit 
 }) => {
   const [form] = Form.useForm();
-  const [activeKeys, setActiveKeys] = useState(['personal', 'documents']);
+  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'files']);
   
   const {
     citizenships,
@@ -249,7 +250,22 @@ const EmployeeViewDrawer = ({
     });
   }
 
-  // Блок 4: Статусы (если редактирование)
+  // Блок 4: Фото документов
+  if (employee?.id) {
+    collapseItems.push({
+      key: 'files',
+      label: <Title level={5} style={{ margin: 0 }}>📸 Фото документов</Title>,
+      children: (
+        <EmployeeFileUpload 
+          employeeId={employee.id} 
+          readonly={true} 
+          hideUploadButton={true}
+        />
+      ),
+    });
+  }
+
+  // Блок 5: Статусы (если редактирование)
   if (employee?.id && canEditConstructionSite) {
     collapseItems.push({
       key: 'statuses',
