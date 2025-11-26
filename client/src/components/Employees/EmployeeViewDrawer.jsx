@@ -100,7 +100,7 @@ const EmployeeViewDrawer = ({
           </Form.Item>
 
           <Form.Item label="Отчество" name="middleName">
-            <Input disabled size="large" />
+            <Input disabled size="large" placeholder={employee?.middleName ? undefined : ""} />
           </Form.Item>
 
           <Form.Item
@@ -161,11 +161,11 @@ const EmployeeViewDrawer = ({
             label="Телефон"
             name="phone"
           >
-            <Input placeholder="+7 (___) ___-__-__" size="large" disabled />
+            <Input placeholder={employee?.phone ? undefined : ""} size="large" disabled />
           </Form.Item>
 
           <Form.Item label="Примечание" name="note">
-            <TextArea rows={2} placeholder="Дополнительная информация" size="large" disabled />
+            <TextArea rows={2} placeholder={employee?.note ? undefined : ""} size="large" disabled />
           </Form.Item>
         </>
       ),
@@ -179,14 +179,14 @@ const EmployeeViewDrawer = ({
             label="ИНН"
             name="inn"
           >
-            <Input placeholder="1234-567890-12" size="large" disabled />
+            <Input placeholder={employee?.inn ? undefined : ""} size="large" disabled />
           </Form.Item>
 
           <Form.Item
             label="СНИЛС"
             name="snils"
           >
-            <Input placeholder="123-456-789 00" size="large" disabled />
+            <Input placeholder={employee?.snils ? undefined : ""} size="large" disabled />
           </Form.Item>
 
           {requiresPatent && (
@@ -194,7 +194,7 @@ const EmployeeViewDrawer = ({
               label="КИГ (Карта иностранного гражданина)"
               name="kig"
             >
-              <Input placeholder="AF 1234567" size="large" maxLength={10} disabled />
+              <Input placeholder={employee?.kig ? undefined : ""} size="large" maxLength={10} disabled />
             </Form.Item>
           )}
 
@@ -202,7 +202,7 @@ const EmployeeViewDrawer = ({
             label="Паспорт (серия и номер)"
             name="passportNumber"
           >
-            <Input placeholder="1234 567890" size="large" disabled />
+            <Input placeholder={employee?.passportNumber ? undefined : ""} size="large" disabled />
           </Form.Item>
 
           <Form.Item
@@ -222,7 +222,7 @@ const EmployeeViewDrawer = ({
             label="Кем выдан паспорт"
             name="passportIssuer"
           >
-            <TextArea placeholder="Наименование органа выдачи" rows={3} size="large" disabled />
+            <TextArea placeholder={employee?.passportIssuer ? undefined : ""} rows={3} size="large" disabled />
           </Form.Item>
         </>
       ),
@@ -240,7 +240,7 @@ const EmployeeViewDrawer = ({
             label="Номер патента"
             name="patentNumber"
           >
-            <Input placeholder="01 №1234567890" size="large" disabled />
+            <Input placeholder={employee?.patentNumber ? undefined : ""} size="large" disabled />
           </Form.Item>
 
           <Form.Item
@@ -260,7 +260,7 @@ const EmployeeViewDrawer = ({
             label="Номер бланка"
             name="blankNumber"
           >
-            <Input placeholder="ПР1234567" size="large" maxLength={9} disabled />
+            <Input placeholder={employee?.blankNumber ? undefined : ""} size="large" maxLength={9} disabled />
           </Form.Item>
         </>
       ),
