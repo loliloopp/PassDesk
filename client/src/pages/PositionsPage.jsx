@@ -241,11 +241,11 @@ const PositionsPage = () => {
       <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Должности</h1>
         <Space size="small">
-          <Input.Search
+          <Input
             placeholder="Поиск"
             allowClear
             style={{ width: 200 }}
-            onSearch={handleSearch}
+            onChange={(e) => handleSearch(e.target.value)}
             size="small"
           />
           {canEditAndDelete && (
