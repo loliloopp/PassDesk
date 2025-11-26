@@ -134,6 +134,7 @@ const ConstructionSitesPage = () => {
               pageSizeOptions: ['10', '20', '50', '100'],
               showTotal: (total) => `Всего: ${total} записей`
             }}
+            style={{ fontSize: 12 }}
           />
         </div>
       </Card>

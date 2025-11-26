@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Space, Modal, Form, Select, DatePicker, Input, message, Tag } from 'antd';
+import { Card, Table, Button, Space, Modal, Form, Select, DatePicker, Input, message as msgStatic, Tag, Typography, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { contractService } from '../services/contractService';
 import { counterpartyService } from '../services/counterpartyService';
@@ -10,14 +10,17 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
 
 const DATE_FORMAT = 'DD.MM.YYYY';
+const { Title } = Typography;
 
 const ContractsPage = () => {
+  const { message, modal } = App.useApp();
   const [data, setData] = useState([]);
   const [counterparties, setCounterparties] = useState([]);
   const [sites, setSites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -111,7 +114,7 @@ const ContractsPage = () => {
             setModalVisible(true);
           }} />
           <Button icon={<DeleteOutlined />} danger onClick={() => {
-            Modal.confirm({
+            modal.confirm({
               title: 'Удалить договор?',
               onOk: async () => {
                 await contractService.delete(record.id);
@@ -126,21 +129,43 @@ const ContractsPage = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <h1>Договора</h1>
+    <div style={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden' }}>
+      <Card
+        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 0 }}
+        styles={{ body: { display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0, padding: 0 } }}
+      >
+        <div style={{ flexShrink: 0, padding: '16px 24px', display: 'flex', gap: 12, alignItems: 'center', borderBottom: '1px solid #f0f0f0' }}>
+          <Title level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>
+            Договора
+          </Title>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => {
             setEditingId(null);
             form.resetFields();
             setModalVisible(true);
-          }}>
+          }} style={{ marginLeft: 'auto' }}>
             Добавить
           </Button>
         </div>
 
-        <Table columns={columns} dataSource={data} rowKey="id" loading={loading} />
-      </Space>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 24px 24px 24px' }}>
+          <Table 
+            columns={columns} 
+            dataSource={data} 
+            rowKey="id" 
+            loading={loading}
+            size="small"
+            style={{ fontSize: 12 }}
+            pagination={{
+              ...pagination,
+              onChange: (page) => setPagination(prev => ({ ...prev, current: page })),
+              onShowSizeChange: (current, pageSize) => setPagination(prev => ({ ...prev, current: 1, pageSize })),
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: (total) => `Всего: ${total} записей`
+            }}
+          />
+        </div>
+      </Card>
 
       <Modal
         title={editingId ? 'Редактировать договор' : 'Добавить договор'}
