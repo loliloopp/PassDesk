@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Tabs, Typography, Space, Grid, Segmented } from 'antd';
 import { SettingOutlined, TeamOutlined, GlobalOutlined, ShopOutlined } from '@ant-design/icons';
 import UsersPage from './UsersPage';
@@ -12,9 +12,18 @@ const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
 const AdministrationPage = () => {
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Загружаем сохраненную вкладку из localStorage
+    const savedTab = localStorage.getItem('administrationActiveTab');
+    return savedTab || 'users';
+  });
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+
+  // Сохраняем активную вкладку в localStorage при изменении
+  useEffect(() => {
+    localStorage.setItem('administrationActiveTab', activeTab);
+  }, [activeTab]);
 
   // Десктопные вкладки (Tabs)
   const desktopItems = [
