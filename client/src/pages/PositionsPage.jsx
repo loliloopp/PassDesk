@@ -192,30 +192,31 @@ const PositionsPage = () => {
     {
       title: '№',
       key: 'index',
-      width: 60,
+      width: '10%',
       render: (_, __, index) => (currentPage - 1) * 50 + index + 1
     },
     {
       title: 'Название должности',
       dataIndex: 'name',
       key: 'name',
+      width: '70%',
       sorter: (a, b) => a.name.localeCompare(b.name)
     },
     {
       title: 'Действия',
       key: 'actions',
-      width: 150,
+      width: '10%',
       render: (_, record) => (
-        <Space>
+        <Space size="small">
           {canEditAndDelete ? (
             <>
               <Button
                 type="link"
+                size="small"
                 icon={<EditOutlined />}
                 onClick={() => handleEdit(record)}
-              >
-                Редактировать
-              </Button>
+                title="Редактировать"
+              />
               <Popconfirm
                 title="Удалить должность?"
                 description="Вы уверены, что хотите удалить эту должность?"
@@ -223,13 +224,17 @@ const PositionsPage = () => {
                 okText="Да"
                 cancelText="Нет"
               >
-                <Button type="link" danger icon={<DeleteOutlined />}>
-                  Удалить
-                </Button>
+                <Button 
+                  type="link" 
+                  danger 
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  title="Удалить"
+                />
               </Popconfirm>
             </>
           ) : (
-            <span style={{ color: '#999' }}>Нет прав</span>
+            <span style={{ color: '#999', fontSize: 12 }}>Нет прав</span>
           )}
         </Space>
       )
@@ -273,7 +278,7 @@ const PositionsPage = () => {
         rowKey="id"
         loading={loading}
         size="small"
-        scroll={{ y: 'calc(100vh - 380px)' }}
+        scroll={{ y: 'calc(100vh - 320px)' }}
         pagination={{
           current: currentPage,
           pageSize: 50,
