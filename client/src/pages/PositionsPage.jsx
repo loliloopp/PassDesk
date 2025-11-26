@@ -237,15 +237,16 @@ const PositionsPage = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>Должности</h1>
-        <Space>
+    <div style={{ padding: '12px 16px' }}>
+      <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Должности</h1>
+        <Space size="small">
           <Input.Search
-            placeholder="Поиск по названию"
+            placeholder="Поиск"
             allowClear
-            style={{ width: 300 }}
+            style={{ width: 200 }}
             onSearch={handleSearch}
+            size="small"
           />
           {canEditAndDelete && (
             <>
@@ -254,12 +255,12 @@ const PositionsPage = () => {
                 beforeUpload={handleImportExcel}
                 showUploadList={false}
               >
-                <Button icon={<UploadOutlined />}>
-                  Импорт из Excel
+                <Button icon={<UploadOutlined />} size="small">
+                  Импорт
                 </Button>
               </Upload>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                Добавить должность
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} size="small">
+                Добавить
               </Button>
             </>
           )}
@@ -271,7 +272,8 @@ const PositionsPage = () => {
         dataSource={positions}
         rowKey="id"
         loading={loading}
-        scroll={{ y: 'calc(100vh - 420px)' }}
+        size="small"
+        scroll={{ y: 'calc(100vh - 380px)' }}
         pagination={{
           current: currentPage,
           pageSize: 50,
@@ -279,7 +281,8 @@ const PositionsPage = () => {
           onChange: (page) => fetchPositions(page, searchText),
           showSizeChanger: true,
           pageSizeOptions: ['10', '20', '50', '100'],
-          showTotal: (total) => `Всего: ${total}`
+          showTotal: (total) => `Всего: ${total}`,
+          size: 'small'
         }}
       />
 
