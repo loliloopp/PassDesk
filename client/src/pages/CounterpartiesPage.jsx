@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Button, Input, Space, Modal, Form, Select, message, Tag, Tooltip, Typography } from 'antd';
+import { Card, Table, Button, Input, Space, Modal, Form, Select, message, Tag, Tooltip, Typography, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
 
@@ -217,56 +217,86 @@ const CounterpartiesPage = () => {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         onOk={() => form.submit()}
-        width={600}
+        width={800}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="name" label="Название" rules={[{ required: true, message: 'Введите название' }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item 
-            name="inn" 
-            label="ИНН" 
-            rules={[
-              { required: true, message: 'Введите ИНН' },
-              { pattern: /^\d{10}$|^\d{12}$/, message: 'ИНН должен содержать 10 или 12 цифр' }
-            ]}
-          >
-            <Input maxLength={12} />
-          </Form.Item>
-          <Form.Item 
-            name="kpp" 
-            label="КПП"
-            rules={[
-              { pattern: /^\d{9}$/, message: 'КПП должен содержать 9 цифр' }
-            ]}
-          >
-            <Input maxLength={9} />
-          </Form.Item>
-          <Form.Item 
-            name="ogrn" 
-            label="ОГРН"
-            rules={[
-              { pattern: /^\d{13}$|^\d{15}$/, message: 'ОГРН должен содержать 13 или 15 цифр' }
-            ]}
-          >
-            <Input maxLength={15} />
-          </Form.Item>
-          <Form.Item name="type" label="Тип" rules={[{ required: true }]}>
-            <Select>
-              <Select.Option value="customer">Заказчик</Select.Option>
-              <Select.Option value="contractor">Подрядчик</Select.Option>
-              <Select.Option value="general_contractor">Генподрядчик</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="legalAddress" label="Юридический адрес">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="phone" label="Телефон">
-            <Input />
-          </Form.Item>
-          <Form.Item name="email" label="Email">
-            <Input />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="name" label="Название" rules={[{ required: true, message: 'Введите название' }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item 
+                name="inn" 
+                label="ИНН" 
+                rules={[
+                  { required: true, message: 'Введите ИНН' },
+                  { pattern: /^\d{10}$|^\d{12}$/, message: 'ИНН должен содержать 10 или 12 цифр' }
+                ]}
+              >
+                <Input maxLength={12} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item 
+                name="kpp" 
+                label="КПП"
+                rules={[
+                  { pattern: /^\d{9}$/, message: 'КПП должен содержать 9 цифр' }
+                ]}
+              >
+                <Input maxLength={9} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item 
+                name="ogrn" 
+                label="ОГРН"
+                rules={[
+                  { pattern: /^\d{13}$|^\d{15}$/, message: 'ОГРН должен содержать 13 или 15 цифр' }
+                ]}
+              >
+                <Input maxLength={15} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="type" label="Тип" rules={[{ required: true }]}>
+                <Select>
+                  <Select.Option value="customer">Заказчик</Select.Option>
+                  <Select.Option value="contractor">Подрядчик</Select.Option>
+                  <Select.Option value="general_contractor">Генподрядчик</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="phone" label="Телефон">
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="email" label="Email">
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="legalAddress" label="Юридический адрес">
+                <Input.TextArea rows={2} />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>
