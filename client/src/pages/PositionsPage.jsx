@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Input, Space, Modal, Form, message, Popconfirm, Upload } from 'antd';
+import { Table, Button, Input, Space, Modal, Form, App, Popconfirm, Upload } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import positionService from '../services/positionService';
 import settingsService from '../services/settingsService';
@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import * as XLSX from 'xlsx';
 
 const PositionsPage = () => {
+  const { message } = App.useApp();
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
