@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { App } from 'antd';
 import { employeeApi } from '../api/employeeApi';
+import { employeeStatusService } from '@/services/employeeStatusService';
 
 /**
  * Хук для работы с сотрудниками
@@ -17,7 +18,25 @@ export const useEmployees = () => {
     try {
       const response = await employeeApi.getAll();
       // employeeApi возвращает response.data, структура: { success: true, data: { employees: [], pagination: {} } }
-      const employeesData = response?.data?.employees || [];
+      let employeesData = response?.data?.employees || [];
+      
+      // Загружаем статусы для всех сотрудников одним batch запросом
+      if (employeesData.length > 0) {
+        try {
+          const employeeIds = employeesData.map(emp => emp.id);
+          const statusesBatch = await employeeStatusService.getStatusesBatch(employeeIds);
+          
+          // Добавляем статусы к каждому сотруднику
+          employeesData = employeesData.map(emp => ({
+            ...emp,
+            statusMappings: statusesBatch[emp.id] || []
+          }));
+        } catch (statusErr) {
+          console.warn('Error loading statuses batch:', statusErr);
+          // Если ошибка - продолжаем без статусов
+        }
+      }
+      
       setEmployees(employeesData);
       return employeesData;
     } catch (err) {

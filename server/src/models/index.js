@@ -16,6 +16,8 @@ import UserEmployeeMapping from './UserEmployeeMapping.js';
 import Department from './Department.js';
 import EmployeeCounterpartyMapping from './EmployeeCounterpartyMapping.js';
 import Position from './Position.js';
+import Status from './Status.js';
+import EmployeeStatusMapping from './EmployeeStatusMapping.js';
 
 // Define associations
 
@@ -227,6 +229,20 @@ User.hasMany(Position, { foreignKey: 'updated_by', as: 'updatedPositions' });
 Position.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 Position.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 
+// Status -> EmployeeStatusMapping (статус -> маппинги)
+Status.hasMany(EmployeeStatusMapping, { foreignKey: 'status_id', as: 'employeeStatuses' });
+EmployeeStatusMapping.belongsTo(Status, { foreignKey: 'status_id', as: 'status' });
+
+// Employee -> EmployeeStatusMapping (сотрудник -> его статусы)
+Employee.hasMany(EmployeeStatusMapping, { foreignKey: 'employee_id', as: 'statusMappings' });
+EmployeeStatusMapping.belongsTo(Employee, { foreignKey: 'employee_id', as: 'employee' });
+
+// User -> EmployeeStatusMapping (создатель/редактор)
+User.hasMany(EmployeeStatusMapping, { foreignKey: 'created_by', as: 'createdStatusMappings' });
+User.hasMany(EmployeeStatusMapping, { foreignKey: 'updated_by', as: 'updatedStatusMappings' });
+EmployeeStatusMapping.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
+EmployeeStatusMapping.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
 export {
   sequelize,
   User,
@@ -245,7 +261,9 @@ export {
   UserEmployeeMapping,
   Department,
   EmployeeCounterpartyMapping,
-  Position
+  Position,
+  Status,
+  EmployeeStatusMapping
 };
 
 

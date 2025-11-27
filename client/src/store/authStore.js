@@ -7,6 +7,7 @@ export const useAuthStore = create(
     (set, get) => ({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
@@ -14,11 +15,12 @@ export const useAuthStore = create(
         set({ isLoading: true })
         try {
           const response = await api.post('/auth/login', credentials)
-          const { user, token } = response.data.data
+          const { user, token, refreshToken } = response.data.data
 
           set({
             user,
             token,
+            refreshToken,
             isAuthenticated: true,
             isLoading: false
           })
@@ -35,11 +37,12 @@ export const useAuthStore = create(
         try {
           const response = await api.post('/auth/register', userData)
           
-          const { user, token } = response.data.data
+          const { user, token, refreshToken } = response.data.data
 
           set({
             user,
             token,
+            refreshToken,
             isAuthenticated: true,
             isLoading: false
           })
@@ -65,6 +68,7 @@ export const useAuthStore = create(
         set({
           user: null,
           token: null,
+          refreshToken: null,
           isAuthenticated: false
         })
         
@@ -93,6 +97,10 @@ export const useAuthStore = create(
 
       updateToken: (token) => {
         set({ token })
+      },
+
+      updateTokens: (token, refreshToken) => {
+        set({ token, refreshToken })
       }
     }),
     {
@@ -100,6 +108,7 @@ export const useAuthStore = create(
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated
       })
     }

@@ -4,6 +4,7 @@ import { ArrowLeftOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '@/entities/employee';
 import { employeeService } from '@/services/employeeService';
+import { employeeStatusService } from '@/services/employeeStatusService';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '@/utils/formatters';
@@ -22,7 +23,11 @@ const ApplicationRequestPage = () => {
 
   // Фильтруем только сотрудников со статусами new и tb_passed
   const availableEmployees = useMemo(() => 
-    employees.filter(emp => emp.status === 'new' || emp.status === 'tb_passed'),
+    employees.filter(emp => {
+      const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
+      const statusName = statusMapping?.status?.name;
+      return statusName === 'status_new' || statusName === 'status_tb_passed';
+    }),
     [employees]
   );
 
@@ -113,16 +118,24 @@ const ApplicationRequestPage = () => {
       XLSX.writeFile(workbook, fileName);
 
       // Обновляем статусы сотрудников: new и tb_passed -> processed
-      const employeesToUpdate = employeesToExport
-        .filter(emp => emp.status === 'new' || emp.status === 'tb_passed')
-        .map(emp => ({ id: emp.id, status: 'processed' }));
+      const employeesToUpdate = employeesToExport.filter(emp => {
+        const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
+        const statusName = statusMapping?.status?.name;
+        return statusName === 'status_new' || statusName === 'status_tb_passed';
+      });
       
       if (employeesToUpdate.length > 0) {
-        await Promise.all(
-          employeesToUpdate.map(({ id, status }) =>
-            employeeService.update(id, { status })
-          )
-        );
+        // Получаем ID статуса 'status_processed'
+        const allStatuses = await employeeStatusService.getAllStatuses();
+        const processedStatus = allStatuses.find(s => s.name === 'status_processed');
+        
+        if (processedStatus) {
+          await Promise.all(
+            employeesToUpdate.map(emp =>
+              employeeStatusService.setStatus(emp.id, processedStatus.id)
+            )
+          );
+        }
       }
 
       message.success(`Файл успешно сохранен: ${fileName}`);
@@ -207,8 +220,17 @@ const ApplicationRequestPage = () => {
                     <div style={{ fontSize: '12px', color: '#999', marginTop: 4 }}>
                       {employee.position?.name && <span>{employee.position.name}</span>}
                       {employee.kig && <span> • КИГ: {formatKig(employee.kig)}</span>}
-                      {employee.status === 'new' && <span style={{ marginLeft: 8, color: '#faad14' }}>● Новый</span>}
-                      {employee.status === 'tb_passed' && <span style={{ marginLeft: 8, color: '#52c41a' }}>● Прошел ТБ</span>}
+                      {(() => {
+                        const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
+                        const statusName = statusMapping?.status?.name;
+                        if (statusName === 'status_new') {
+                          return <span style={{ marginLeft: 8, color: '#faad14' }}>● Новый</span>;
+                        }
+                        if (statusName === 'status_tb_passed') {
+                          return <span style={{ marginLeft: 8, color: '#52c41a' }}>● Прошел ТБ</span>;
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 ))}

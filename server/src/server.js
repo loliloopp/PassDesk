@@ -51,6 +51,19 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true // Не считать успешные запросы
 });
 
+// Лимит для refresh токена (мягкий - разрешить частые обновления)
+const refreshLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 минута
+  max: 30, // Максимум 30 обновлений в минуту (достаточно для проактивного обновления)
+  message: {
+    success: false,
+    message: 'Слишком много попыток обновления токена. Попробуйте снова через минуту.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true // Не считать успешные запросы обновления
+});
+
 // Лимит для регистрации (умеренный)
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 час
@@ -110,7 +123,7 @@ const apiPrefix = `/api/${process.env.API_VERSION || 'v1'}`;
 // Строгие лимиты для аутентификации
 app.use(`${apiPrefix}/auth/login`, authLimiter);
 app.use(`${apiPrefix}/auth/register`, registerLimiter);
-app.use(`${apiPrefix}/auth/refresh`, authLimiter);
+app.use(`${apiPrefix}/auth/refresh`, refreshLimiter);
 
 // Общий лимит для всего API
 app.use(apiPrefix, apiLimiter);

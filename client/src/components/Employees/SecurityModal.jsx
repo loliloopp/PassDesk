@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal, Table, Input, Select, Space, Button, App, Tooltip } from 'antd';
 import { SearchOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
+import { employeeStatusService } from '../../services/employeeStatusService';
 import { counterpartyService } from '../../services/counterpartyService';
 
 const { Option } = Select;
@@ -34,13 +35,25 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
   const [searchText, setSearchText] = useState('');
   const [selectedCounterparty, setSelectedCounterparty] = useState(null);
   const [statusFilters, setStatusFilters] = useState([]);
+  const [allStatuses, setAllStatuses] = useState([]); // Кэш статусов
 
   useEffect(() => {
     if (visible) {
       fetchCounterparties();
+      fetchAllStatuses(); // Загружаем статусы один раз
       fetchEmployees();
     }
   }, [visible, selectedCounterparty, searchText, statusFilters]);
+
+  const fetchAllStatuses = async () => {
+    try {
+      const statuses = await employeeStatusService.getAllStatuses();
+      setAllStatuses(statuses);
+    } catch (error) {
+      console.error('Error loading statuses:', error);
+      message.error('Ошибка при загрузке списка статусов');
+    }
+  };
 
   const fetchCounterparties = async () => {
     try {
@@ -54,11 +67,33 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
+      
+      // Загружаем список сотрудников
       const response = await employeeService.getAll();
-      const allEmployees = response.data.employees || [];
+      let allEmployees = response.data.employees || [];
+
+      // Загружаем статусы для всех сотрудников одним batch запросом
+      if (allEmployees.length > 0) {
+        try {
+          const employeeIds = allEmployees.map(emp => emp.id);
+          const statusesBatch = await employeeStatusService.getStatusesBatch(employeeIds);
+          
+          // Добавляем статусы к каждому сотруднику
+          allEmployees = allEmployees.map(emp => ({
+            ...emp,
+            statusMappings: statusesBatch[emp.id] || []
+          }));
+        } catch (statusErr) {
+          console.warn('Error loading statuses batch:', statusErr);
+          // Если ошибка - продолжаем без статусов
+        }
+      }
 
       // Показываем всех сотрудников, исключая черновики
-      let filtered = allEmployees.filter(emp => emp.statusCard !== 'draft');
+      let filtered = allEmployees.filter(emp => {
+        const cardStatusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
+        return cardStatusMapping?.status?.name !== 'status_card_draft';
+      });
 
       // Фильтруем по контрагенту
       if (selectedCounterparty) {
@@ -81,17 +116,20 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       if (statusFilters.length > 0) {
         filtered = filtered.filter(emp => {
           return statusFilters.some(filter => {
+            const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
+            const secureMapping = emp.statusMappings?.find(m => m.statusGroup === 'status_secure' || m.status_group === 'status_secure');
+            
             if (filter === 'tb_passed') {
-              return emp.status === 'tb_passed' || emp.status === 'processed';
+              return statusMapping?.status?.name === 'status_tb_passed' || statusMapping?.status?.name === 'status_processed';
             }
             if (filter === 'tb_not_passed') {
-              return emp.status === 'new';
+              return statusMapping?.status?.name === 'status_new';
             }
             if (filter === 'not_blocked') {
-              return emp.statusSecure === 'allow' || !emp.statusSecure;
+              return secureMapping?.status?.name === 'status_secure_allow' || !secureMapping;
             }
             if (filter === 'blocked') {
-              return emp.statusSecure === 'block' || emp.statusSecure === 'block_compl';
+              return secureMapping?.status?.name === 'status_secure_block' || secureMapping?.status?.name === 'status_secure_block_compl';
             }
             return false;
           });
@@ -108,74 +146,82 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
   };
 
   const handleBlock = async (employeeId) => {
-    // Оптимистичное обновление UI
-    setEmployees(prev => prev.map(emp => 
-      emp.id === employeeId ? { ...emp, statusSecure: 'block' } : emp
-    ));
-
     try {
-      await employeeService.update(employeeId, { statusSecure: 'block' });
+      // Используем кэшированный список статусов
+      const blockStatus = allStatuses.find(s => s.name === 'status_secure_block');
+      
+      if (!blockStatus) {
+        throw new Error('Статус блокировки не найден');
+      }
+
+      await employeeStatusService.setStatus(employeeId, blockStatus.id);
       message.success('Сотрудник заблокирован');
       onSuccess && onSuccess();
+      // Перезагружаем список
+      fetchEmployees();
     } catch (error) {
       console.error('Error blocking employee:', error);
       message.error('Ошибка при блокировке сотрудника');
-      // Откатываем изменения при ошибке
-      fetchEmployees();
     }
   };
 
   const handleUnblock = async (employeeId) => {
-    // Оптимистичное обновление UI
-    setEmployees(prev => prev.map(emp => 
-      emp.id === employeeId ? { ...emp, statusSecure: 'allow' } : emp
-    ));
-
     try {
-      await employeeService.update(employeeId, { statusSecure: 'allow' });
+      // Используем кэшированный список статусов
+      const allowStatus = allStatuses.find(s => s.name === 'status_secure_allow');
+      
+      if (!allowStatus) {
+        throw new Error('Статус разблокировки не найден');
+      }
+
+      await employeeStatusService.setStatus(employeeId, allowStatus.id);
       message.success('Сотрудник разблокирован');
       onSuccess && onSuccess();
+      // Перезагружаем список
+      fetchEmployees();
     } catch (error) {
       console.error('Error unblocking employee:', error);
       message.error('Ошибка при разблокировке сотрудника');
-      // Откатываем изменения при ошибке
-      fetchEmployees();
     }
   };
 
   const handleTbPassed = async (employeeId) => {
-    // Оптимистичное обновление UI
-    setEmployees(prev => prev.map(emp => 
-      emp.id === employeeId ? { ...emp, status: 'tb_passed' } : emp
-    ));
-
     try {
-      await employeeService.update(employeeId, { status: 'tb_passed' });
+      // Используем кэшированный список статусов
+      const tbPassedStatus = allStatuses.find(s => s.name === 'status_tb_passed');
+      
+      if (!tbPassedStatus) {
+        throw new Error('Статус ТБ не найден');
+      }
+
+      await employeeStatusService.setStatus(employeeId, tbPassedStatus.id);
       message.success('Статус обновлен: Проведен инструктаж ТБ');
       onSuccess && onSuccess();
+      // Перезагружаем список
+      fetchEmployees();
     } catch (error) {
       console.error('Error updating TB status:', error);
       message.error('Ошибка при обновлении статуса ТБ');
-      // Откатываем изменения при ошибке
-      fetchEmployees();
     }
   };
 
   const handleTbRevoke = async (employeeId) => {
-    // Оптимистичное обновление UI
-    setEmployees(prev => prev.map(emp => 
-      emp.id === employeeId ? { ...emp, status: 'new' } : emp
-    ));
-
     try {
-      await employeeService.update(employeeId, { status: 'new' });
+      // Используем кэшированный список статусов
+      const newStatus = allStatuses.find(s => s.name === 'status_new');
+      
+      if (!newStatus) {
+        throw new Error('Статус "Новый" не найден');
+      }
+
+      await employeeStatusService.setStatus(employeeId, newStatus.id);
       message.success('Статус обновлен: Новый');
       onSuccess && onSuccess();
+      // Перезагружаем список
+      fetchEmployees();
     } catch (error) {
       console.error('Error revoking TB status:', error);
       message.error('Ошибка при отмене статуса ТБ');
-      // Откатываем изменения при ошибке
-      fetchEmployees();
     }
   };
 
@@ -216,8 +262,11 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       align: 'center',
       width: 120,
       render: (_, record) => {
+        const statusMapping = record.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
+        const statusName = statusMapping?.status?.name;
+        
         // Если статус "Новый" - показываем "НЕТ" с оранжевым контуром
-        if (record.status === 'new') {
+        if (statusName === 'status_new') {
           return (
             <Button
               size="small"
@@ -254,8 +303,11 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       width: 120,
       align: 'center',
       render: (_, record) => {
-        const isBlocked = record.statusSecure === 'block' || record.statusSecure === 'block_compl';
-        const isBlockCompleted = record.statusSecure === 'block_compl';
+        const secureMapping = record.statusMappings?.find(m => m.statusGroup === 'status_secure' || m.status_group === 'status_secure');
+        const secureName = secureMapping?.status?.name;
+        
+        const isBlocked = secureName === 'status_secure_block' || secureName === 'status_secure_block_compl';
+        const isBlockCompleted = secureName === 'status_secure_block_compl';
 
         if (!isBlocked) {
           // Сотрудник не заблокирован - показываем кнопку "Заблокировать"

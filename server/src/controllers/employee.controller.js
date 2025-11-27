@@ -5,6 +5,7 @@ import storageProvider from '../config/storage.js';
 import { buildEmployeeFilePath } from '../utils/transliterate.js';
 import { checkEmployeeAccess } from '../utils/permissionUtils.js';
 import { AppError } from '../middleware/errorHandler.js';
+import EmployeeStatusService from '../services/employeeStatusService.js';
 
 // Опции для загрузки сотрудника с маппингами (для проверки прав)
 const employeeAccessInclude = [
@@ -284,18 +285,18 @@ export const createEmployee = async (req, res, next) => {
       console.log('User ID:', req.user?.id);
     }
     
-    // Удаляем counterpartyId, constructionSiteId из данных сотрудника
-    // Используем переданный фронтендом status ('draft' или 'new')
-    const { counterpartyId, constructionSiteId, statusActive, status, ...cleanEmployeeData } = req.body;
+    // Удаляем counterpartyId, constructionSiteId, и все поля статусов из данных сотрудника
+    const { counterpartyId, constructionSiteId, statusActive, status, statusCard, statusSecure, ...cleanEmployeeData } = req.body;
     
     const employeeData = {
       ...cleanEmployeeData,
-      createdBy: req.user.id,
-      status: status || 'new', // Используем переданный фронтендом status, по умолчанию 'new'
-      statusActive: null // При создании statusActive всегда null
+      createdBy: req.user.id
     };
 
     const employee = await Employee.create(employeeData);
+    
+    // Инициализируем статусы для нового сотрудника
+    await EmployeeStatusService.initializeEmployeeStatuses(employee.id, req.user.id);
     
     // Создаём запись в маппинге (сотрудник-контрагент-объект)
     await EmployeeCounterpartyMapping.create({
@@ -318,7 +319,7 @@ export const createEmployee = async (req, res, next) => {
       console.log('✓ User-Employee mapping created');
     }
     
-    // Получаем созданного сотрудника с гражданством для правильного расчета statusCard
+    // Получаем созданного сотрудника со всеми отношениями
     const createdEmployee = await Employee.findByPk(employee.id, {
       include: [
         {
@@ -327,7 +328,7 @@ export const createEmployee = async (req, res, next) => {
           attributes: ['id', 'name', 'code', 'requiresPatent']
         },
         {
-          model: Position, // Добавлена связь с Position
+          model: Position,
           as: 'position',
           attributes: ['id', 'name']
         },
@@ -352,10 +353,21 @@ export const createEmployee = async (req, res, next) => {
     
     const employeeDataWithStatus = createdEmployee.toJSON();
     const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus);
-    
-    // Сохраняем вычисленный statusCard в базу данных
-    await employee.update({ statusCard: calculatedStatusCard });
     employeeDataWithStatus.statusCard = calculatedStatusCard;
+
+    // Если все поля заполнены (статус 'completed') - обновляем статусы с draft на новые
+    if (calculatedStatusCard === 'completed') {
+      try {
+        // Меняем status_draft → status_new
+        await EmployeeStatusService.setStatusByName(employee.id, 'status_new', req.user.id);
+        // Меняем status_card_draft → status_card_completed
+        await EmployeeStatusService.setStatusByName(employee.id, 'status_card_completed', req.user.id);
+        console.log('✓ Employee statuses updated to completed');
+      } catch (statusError) {
+        console.warn('Warning: could not update statuses:', statusError.message);
+        // Не прерываем создание, если ошибка со статусами
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -436,7 +448,7 @@ export const updateEmployee = async (req, res, next) => {
     }
     
     // Не перезаписываем counterpartyId при обновлении, constructionSiteId идет в маппинг
-    const { counterpartyId, constructionSiteId, isDraft, ...updateData } = req.body;
+    const { counterpartyId, constructionSiteId, isDraft, isFired, isInactive, ...updateData } = req.body;
     
     // Очищаем данные - преобразуем пустые строки в null для всех полей
     const cleanedData = {};
@@ -518,10 +530,50 @@ export const updateEmployee = async (req, res, next) => {
     
     const employeeDataWithStatus = updatedEmployee.toJSON();
     const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus);
-    
-    // Сохраняем вычисленный statusCard в базу данных
-    await employee.update({ statusCard: calculatedStatusCard });
     employeeDataWithStatus.statusCard = calculatedStatusCard;
+
+    // Обновляем статусы на основе текущего состояния
+    try {
+      // Если все поля заполнены (статус 'completed') - меняем статусы с draft на новые
+      if (calculatedStatusCard === 'completed') {
+        // Меняем status_draft → status_new (если был в draft)
+        const currentStatusMapping = await EmployeeStatusService.getCurrentStatus(id, 'status');
+        if (currentStatusMapping?.status?.name === 'status_draft') {
+          await EmployeeStatusService.setStatusByName(id, 'status_new', req.user.id);
+        }
+        // Меняем status_card_draft → status_card_completed (если был в draft)
+        const currentCardStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_card');
+        if (currentCardStatus?.status?.name === 'status_card_draft') {
+          await EmployeeStatusService.setStatusByName(id, 'status_card_completed', req.user.id);
+        }
+        console.log('✓ Employee statuses updated to completed');
+      }
+
+        // Обновляем статус активности на основе чекбоксов
+      console.log('=== UPDATING EMPLOYEE ACTIVE STATUS ===');
+      console.log('isFired:', isFired);
+      console.log('isInactive:', isInactive);
+      
+      if (isFired || isInactive) {
+        const statusName = isFired ? 'status_active_fired' : 'status_active_inactive';
+        console.log(`Setting status_active to ${statusName}`);
+        await EmployeeStatusService.setStatusByName(id, statusName, req.user.id);
+        console.log(`✓ Employee status_active updated to ${statusName}`);
+      } else {
+        // Если ни один чекбокс не выбран - сотрудник активен
+        console.log('No checkboxes selected, checking if needs to be set to employed');
+        const currentActiveStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_active');
+        console.log('Current active status:', currentActiveStatus?.status?.name);
+        if (currentActiveStatus?.status?.name !== 'status_active_employed') {
+          console.log('Setting status_active to employed');
+          await EmployeeStatusService.setStatusByName(id, 'status_active_employed', req.user.id);
+          console.log('✓ Employee status_active updated to employed');
+        }
+      }
+    } catch (statusError) {
+      console.warn('Warning: could not update statuses:', statusError.message);
+      // Не прерываем обновление, если ошибка со статусами
+    }
 
     res.json({
       success: true,

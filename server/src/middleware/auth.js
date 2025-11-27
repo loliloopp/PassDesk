@@ -101,6 +101,11 @@ export const authorize = (...roles) => {
       return next(new AppError('Необходима авторизация', 401));
     }
 
+    console.log('=== AUTHORIZE CHECK ===');
+    console.log('User role:', req.user.role);
+    console.log('Required roles:', roles);
+    console.log('Has access:', roles.includes(req.user.role));
+
     if (!roles.includes(req.user.role)) {
       return next(new AppError(`Недостаточно прав. Требуется роль: ${roles.join(' или ')}`, 403));
     }

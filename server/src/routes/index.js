@@ -12,6 +12,7 @@ import citizenshipRoutes from './citizenship.routes.js';
 import settingsRoutes from './settings.routes.js';
 import departmentRoutes from './department.routes.js';
 import positionRoutes from './position.routes.js';
+import employeeStatusRoutes from './employeeStatus.routes.js';
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ const router = express.Router();
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/employees', employeeRoutes);
+router.use('/', employeeStatusRoutes);  // Роуты статусов уже содержат полный путь /employees/:id/statuses
 router.use('/passes', passRoutes);
 router.use('/files', fileRoutes);
 router.use('/counterparties', counterpartyRoutes);

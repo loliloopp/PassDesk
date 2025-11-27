@@ -334,14 +334,34 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           // Сразу устанавливаем данные сотрудника в форму (без ожидания гражданства)
           const mapping = employee.employeeCounterpartyMappings?.[0];
           
+          // Определяем текущие статусы из маппинга
+          let isFired = false;
+          let isInactive = false;
+          
+          if (employee.statusMappings && Array.isArray(employee.statusMappings)) {
+            const statusMapping = employee.statusMappings.find(m => {
+              const mappingGroup = m.statusGroup || m.status_group;
+              return mappingGroup === 'status_active';
+            });
+            if (statusMapping) {
+              const statusObj = statusMapping.status || statusMapping.Status;
+              const statusName = statusObj?.name;
+              if (statusName === 'status_active_fired' || statusName === 'status_active_fired_compl') {
+                isFired = true;
+              } else if (statusName === 'status_active_inactive') {
+                isInactive = true;
+              }
+            }
+          }
+          
           const formData = {
             ...employee,
             birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
             passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
             patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
             constructionSiteId: mapping?.constructionSiteId || null,
-            isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
-            isInactive: employee.statusActive === 'inactive',
+            isFired: isFired,
+            isInactive: isInactive,
             // Форматируем ИНН, СНИЛС, телефон, КИГ, номер патента и номер бланка при загрузке
             inn: employee.inn ? formatInn(employee.inn) : null,
             snils: employee.snils ? formatSnils(employee.snils) : null,
@@ -534,12 +554,19 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       const uuidFields = ['positionId', 'citizenshipId']; // UUID поля требуют null вместо пустых строк
       
       Object.keys(values).forEach(key => {
-        // Пропускаем чекбоксы статусов и constructionSiteId - они не сохраняются при обновлении сотрудника
-        if (key === 'isFired' || key === 'isInactive' || key === 'constructionSiteId') {
+        // constructionSiteId обрабатывается отдельно
+        if (key === 'constructionSiteId') {
           return;
         }
         
         const value = values[key];
+        
+        // Обрабатываем чекбоксы статусов отдельно - отправляем как boolean
+        if (key === 'isFired' || key === 'isInactive') {
+          formattedValues[key] = !!value;
+          return;
+        }
+        
         if (value === '' || value === undefined || value === null) {
           formattedValues[key] = null;
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
@@ -565,27 +592,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         }
       });
 
-      // Обрабатываем статусы
-      // status: при сохранении черновика нового сотрудника → 'draft', иначе сохраняем существующий
-      if (employee) {
-        // Редактирование существующего - сохраняем его статус
-        formattedValues.status = employee.status;
-      } else {
-        // Создание нового сотрудника как черновик → 'draft'
-        formattedValues.status = 'draft';
-      }
-      
-      // statusActive: взаимоисключающие статусы
-      if (values.isFired) {
-        formattedValues.statusActive = 'fired';
-      } else if (values.isInactive) {
-        formattedValues.statusActive = 'inactive';
-      } else {
-        formattedValues.statusActive = null;
-      }
-
-      formattedValues.statusCard = 'draft';
-      formattedValues.isDraft = true; // Флаг для бэкенда и фронтенда
+      formattedValues.isDraft = true; // Флаг для фронтенда
       await onSuccess(formattedValues);
       
       // При сохранении черновика модальное окно НЕ закрывается
@@ -620,12 +627,19 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       const uuidFields = ['positionId', 'citizenshipId']; // UUID поля требуют null вместо пустых строк
       
       Object.keys(values).forEach(key => {
-        // Пропускаем чекбоксы статусов и constructionSiteId - они не сохраняются при обновлении сотрудника
-        if (key === 'isFired' || key === 'isInactive' || key === 'constructionSiteId') {
+        // constructionSiteId обрабатывается отдельно
+        if (key === 'constructionSiteId') {
           return;
         }
         
         const value = values[key];
+        
+        // Обрабатываем чекбоксы статусов отдельно - отправляем как boolean
+        if (key === 'isFired' || key === 'isInactive') {
+          formattedValues[key] = !!value;
+          return;
+        }
+        
         if (value === '' || value === undefined || value === null) {
           formattedValues[key] = null;
         } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
@@ -651,26 +665,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         }
       });
 
-      // Обрабатываем статусы
-      // status: при полном сохранении нового сотрудника → 'new', иначе сохраняем существующий
-      if (employee) {
-        // Редактирование существующего - сохраняем его статус
-        formattedValues.status = employee.status;
-      } else {
-        // Создание нового сотрудника со всеми полями → 'new'
-        formattedValues.status = 'new';
-      }
-      
-      // statusActive: взаимоисключающие статусы
-      if (values.isFired) {
-        formattedValues.statusActive = 'fired';
-      } else if (values.isInactive) {
-        formattedValues.statusActive = 'inactive';
-      } else {
-        formattedValues.statusActive = null;
-      }
-
-      formattedValues.statusCard = 'completed';
       await onSuccess(formattedValues);
       
       // Если это добавление нового сотрудника - НЕ закрываем окно

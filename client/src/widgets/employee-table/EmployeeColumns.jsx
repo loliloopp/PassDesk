@@ -313,27 +313,46 @@ export const useEmployeeColumns = ({
         key: 'status',
         width: 120,
         render: (_, record) => {
-          // Приоритет: statusSecure (Заблокирован) > statusActive (Уволен/Неактивный) > status (Черновик/Новый/Проведен ТБ/Обработан)
+          // Получаем текущие статусы из маппинга
+          const statusMappings = record.statusMappings || [];
+          
+          // Функция для получения статуса по группе
+          // API возвращает snake_case поля: status_group, status.name
+          const getStatusByGroup = (group) => {
+            const mapping = statusMappings.find(m => {
+              const mappingGroup = m.statusGroup || m.status_group;
+              return mappingGroup === group;
+            });
+            if (!mapping) return null;
+            // Статус может быть в status или Status
+            const statusObj = mapping.status || mapping.Status;
+            return statusObj?.name;
+          };
 
-          if (record.statusSecure === 'block' || record.statusSecure === 'block_compl') {
+          // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status (Черновик/Новый/Проведен ТБ/Обработан)
+          const secureStatus = getStatusByGroup('status_secure');
+          const activeStatus = getStatusByGroup('status_active');
+          const mainStatus = getStatusByGroup('status');
+
+          if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') {
             return <Tag color="red">Заблокирован</Tag>;
           }
 
-          if (record.statusActive === 'fired') {
+          if (activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl') {
             return <Tag color="red">Уволен</Tag>;
           }
-          if (record.statusActive === 'inactive') {
+          if (activeStatus === 'status_active_inactive') {
             return <Tag color="blue">Неактивный</Tag>;
           }
 
           const statusMap = {
-            draft: { text: 'Черновик', color: 'default' },
-            new: { text: 'Новый', color: 'default' },
-            tb_passed: { text: 'Проведен ТБ', color: 'green' },
-            processed: { text: 'Обработан', color: 'success' },
+            'status_draft': { text: 'Черновик', color: 'default' },
+            'status_new': { text: 'Новый', color: 'default' },
+            'status_tb_passed': { text: 'Проведен ТБ', color: 'green' },
+            'status_processed': { text: 'Обработан', color: 'success' },
           };
 
-          const statusInfo = statusMap[record.status] || { text: '-', color: 'default' };
+          const statusInfo = statusMap[mainStatus] || { text: '-', color: 'default' };
           return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
         },
         sorter: (a, b) => getStatusPriority(a) - getStatusPriority(b),
@@ -348,16 +367,38 @@ export const useEmployeeColumns = ({
         ],
         filteredValue: filters.status || [],
         onFilter: (value, record) => {
+          const statusMappings = record.statusMappings || [];
+          const getStatusByGroup = (group) => {
+            const mapping = statusMappings.find(m => {
+              const mappingGroup = m.statusGroup || m.status_group;
+              return mappingGroup === group;
+            });
+            if (!mapping) return null;
+            const statusObj = mapping.status || mapping.Status;
+            return statusObj?.name;
+          };
+
+          const secureStatus = getStatusByGroup('status_secure');
+          const activeStatus = getStatusByGroup('status_active');
+          const mainStatus = getStatusByGroup('status');
+
           if (value === 'blocked') {
-            return record.statusSecure === 'block' || record.statusSecure === 'block_compl';
+            return secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl';
           }
-          if (value === 'fired' || value === 'inactive') {
-            return record.statusActive === value;
+          if (value === 'fired') {
+            return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
           }
+          if (value === 'inactive') {
+            return activeStatus === 'status_active_inactive';
+          }
+          
           return (
-            (!record.statusSecure || record.statusSecure === 'allow') &&
-            !record.statusActive &&
-            record.status === value
+            secureStatus !== 'status_secure_block' && 
+            secureStatus !== 'status_secure_block_compl' &&
+            activeStatus !== 'status_active_fired' &&
+            activeStatus !== 'status_active_fired_compl' &&
+            activeStatus !== 'status_active_inactive' &&
+            mainStatus === `status_${value}`
           );
         },
       },

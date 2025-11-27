@@ -41,10 +41,24 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={24}>
               <Space size="large">
-                <Checkbox checked={employee.statusActive === 'fired'} disabled>
+                <Checkbox 
+                  checked={(() => {
+                    const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_active' || m.status_group === 'status_active');
+                    const statusName = statusMapping?.status?.name;
+                    return statusName === 'status_active_fired' || statusName === 'status_active_fired_compl';
+                  })()} 
+                  disabled
+                >
                   <span style={{ color: '#ff4d4f' }}>Уволен</span>
                 </Checkbox>
-                <Checkbox checked={employee.statusActive === 'inactive'} disabled>
+                <Checkbox 
+                  checked={(() => {
+                    const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_active' || m.status_group === 'status_active');
+                    const statusName = statusMapping?.status?.name;
+                    return statusName === 'status_active_inactive';
+                  })()} 
+                  disabled
+                >
                   <span style={{ color: '#1890ff' }}>Неактивный</span>
                 </Checkbox>
               </Space>

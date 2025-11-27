@@ -4,6 +4,7 @@ import { citizenshipService } from '@/services/citizenshipService';
 import { constructionSiteService } from '@/services/constructionSiteService';
 import positionService from '@/services/positionService';
 import settingsService from '@/services/settingsService';
+import { employeeStatusService } from '@/services/employeeStatusService';
 import { useAuthStore } from '@/store/authStore';
 import dayjs from 'dayjs';
 
@@ -200,14 +201,34 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         ? (employee.patentIssueDate ? dayjs(employee.patentIssueDate).format('DD.MM.YYYY') : null)
         : (employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null);
       
+      // Определяем текущие статусы из маппинга
+      let isFired = false;
+      let isInactive = false;
+      
+      if (employee.statusMappings && Array.isArray(employee.statusMappings)) {
+        const statusMapping = employee.statusMappings.find(m => {
+          const mappingGroup = m.statusGroup || m.status_group;
+          return mappingGroup === 'status_active';
+        });
+        if (statusMapping) {
+          const statusObj = statusMapping.status || statusMapping.Status;
+          const statusName = statusObj?.name;
+          if (statusName === 'status_active_fired' || statusName === 'status_active_fired_compl') {
+            isFired = true;
+          } else if (statusName === 'status_active_inactive') {
+            isInactive = true;
+          }
+        }
+      }
+      
       const formData = {
         ...employee,
         birthDate: birthDateValue,
         passportDate: passportDateValue,
         patentIssueDate: patentIssueDateValue,
         constructionSiteId: mapping?.constructionSiteId || null,
-        isFired: employee.statusActive === 'fired' || employee.statusActive === 'fired_compl',
-        isInactive: employee.statusActive === 'inactive',
+        isFired: isFired,
+        isInactive: isInactive,
         inn: employee.inn ? formatInn(employee.inn) : null,
         snils: employee.snils ? formatSnils(employee.snils) : null,
         phone: employee.phone ? formatPhoneNumber(employee.phone) : null,
@@ -243,24 +264,13 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         inn: normalizeInn(values.inn),
         kig: normalizeKig(values.kig),
         patentNumber: normalizePatentNumber(values.patentNumber),
-        // Статусы
-        statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : null),
+        // УБРАНО: статусы теперь управляются через employeeStatusService
       };
 
       // Убираем временные поля
       delete normalizedValues.isFired;
       delete normalizedValues.isInactive;
 
-      // Устанавливаем статус: при полном сохранении нового сотрудника → 'new'
-      if (!employee) {
-        // Создание нового сотрудника со всеми полями → 'new'
-        normalizedValues.status = 'new';
-      } else {
-        // Редактирование существующего - сохраняем его статус
-        normalizedValues.status = employee.status;
-      }
-
-      normalizedValues.statusCard = 'completed';
       await onSuccess(normalizedValues);
       setLoading(false);
     } catch (error) {
@@ -289,29 +299,17 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         inn: values.inn ? normalizeInn(values.inn) : null,
         kig: values.kig ? normalizeKig(values.kig) : null,
         patentNumber: values.patentNumber ? normalizePatentNumber(values.patentNumber) : null,
-        // Статусы
-        statusActive: values.isFired ? 'fired' : (values.isInactive ? 'inactive' : null),
+        // УБРАНО: статусы теперь управляются через employeeStatusService
       };
 
       // Убираем временные поля
       delete normalizedValues.isFired;
       delete normalizedValues.isInactive;
 
-      // Устанавливаем статус: при сохранении черновика нового сотрудника → 'draft'
-      if (!employee) {
-        // Создание нового сотрудника как черновик → 'draft'
-        normalizedValues.status = 'draft';
-      } else {
-        // Редактирование существующего - сохраняем его статус
-        normalizedValues.status = employee.status;
-      }
-
-      normalizedValues.statusCard = 'draft';
-
-      // Отправляем на фронтенд флаг isDraft, который используется в обработчике
+      // Флаг для фронтенда - говорит что это черновик
       const dataToSend = {
         ...normalizedValues,
-        isDraft: true, // Флаг для фронтенда
+        isDraft: true,
       };
 
       await onSuccess(dataToSend);

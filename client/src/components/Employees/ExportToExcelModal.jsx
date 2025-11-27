@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal, Select, Radio, Table, Checkbox, Space, Button, App } from 'antd';
 import { FileExcelOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
+import { employeeStatusService } from '../../services/employeeStatusService';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { counterpartyService } from '../../services/counterpartyService';
 import dayjs from 'dayjs';
@@ -83,14 +84,25 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
           if (!hasMatchingMapping) return false;
 
           // Фильтр по типу
+          const getStatusByGroup = (group) => {
+            const mapping = emp.statusMappings?.find(m => m.statusGroup === group || m.status_group === group);
+            return mapping?.status?.name;
+          };
+
+          const mainStatus = getStatusByGroup('status');
+          const activeStatus = getStatusByGroup('status_active');
+          const secureStatus = getStatusByGroup('status_secure');
+
           if (filterType === 'tb_passed') {
-            return emp.status === 'tb_passed';
+            return mainStatus === 'status_tb_passed';
           } else if (filterType === 'blocked') {
             // 'blocked': статусы fired, inactive, block
-            return emp.statusActive === 'fired' || emp.statusActive === 'inactive' || emp.statusSecure === 'block';
+            return activeStatus === 'status_active_fired' || 
+                   activeStatus === 'status_active_inactive' || 
+                   secureStatus === 'status_secure_block';
           } else {
             // 'all': статусы 'tb_passed' или 'processed'
-            return emp.status === 'tb_passed' || emp.status === 'processed';
+            return mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
           }
         });
 
@@ -156,34 +168,46 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
       XLSX.writeFile(workbook, fileName);
 
       // Обновляем статусы сотрудников в зависимости от типа
-      const employeesToUpdate = [];
+      // Обновляем статусы сотрудников после экспорта
+      const allStatuses = await employeeStatusService.getAllStatuses();
+      const statusUpdates = [];
       
       if (filterType === 'tb_passed') {
         // Для типа "Новые сотрудники (прошедшие ТБ)": меняем status с 'tb_passed' на 'processed'
-        employeesToUpdate.push(
-          ...employeesToExport
-            .filter(emp => emp.status === 'tb_passed')
-            .map(emp => ({ id: emp.id, status: 'processed' }))
-        );
+        const processedStatus = allStatuses.find(s => s.name === 'status_processed');
+        if (processedStatus) {
+          employeesToExport.forEach(emp => {
+            const mainStatus = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status')?.status?.name;
+            if (mainStatus === 'status_tb_passed') {
+              statusUpdates.push({ employeeId: emp.id, statusId: processedStatus.id });
+            }
+          });
+        }
       } else if (filterType === 'blocked') {
         // Для типа "Заблокированные": 
         // - fired -> fired_compl
         // - block -> block_compl
         // inactive остается без изменений
-        employeesToUpdate.push(
-          ...employeesToExport
-            .filter(emp => emp.statusActive === 'fired')
-            .map(emp => ({ id: emp.id, statusActive: 'fired_compl' })),
-          ...employeesToExport
-            .filter(emp => emp.statusSecure === 'block')
-            .map(emp => ({ id: emp.id, statusSecure: 'block_compl' }))
-        );
+        const firedComplStatus = allStatuses.find(s => s.name === 'status_active_fired_compl');
+        const blockComplStatus = allStatuses.find(s => s.name === 'status_secure_block_compl');
+
+        employeesToExport.forEach(emp => {
+          const activeStatus = emp.statusMappings?.find(m => m.statusGroup === 'status_active' || m.status_group === 'status_active')?.status?.name;
+          const secureStatus = emp.statusMappings?.find(m => m.statusGroup === 'status_secure' || m.status_group === 'status_secure')?.status?.name;
+
+          if (activeStatus === 'status_active_fired' && firedComplStatus) {
+            statusUpdates.push({ employeeId: emp.id, statusId: firedComplStatus.id });
+          }
+          if (secureStatus === 'status_secure_block' && blockComplStatus) {
+            statusUpdates.push({ employeeId: emp.id, statusId: blockComplStatus.id });
+          }
+        });
       }
       
-      if (employeesToUpdate.length > 0) {
+      if (statusUpdates.length > 0) {
         await Promise.all(
-          employeesToUpdate.map(({ id, ...updates }) =>
-            employeeService.update(id, updates)
+          statusUpdates.map(({ employeeId, statusId }) =>
+            employeeStatusService.setStatus(employeeId, statusId)
           )
         );
       }

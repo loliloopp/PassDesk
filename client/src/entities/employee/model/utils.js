@@ -91,12 +91,21 @@ export const getUniqueFilterValues = (employees) => {
  * Получить приоритет статуса сотрудника для сортировки
  */
 export const getStatusPriority = (record) => {
-  if (record.statusSecure === 'block' || record.statusSecure === 'block_compl') return 1; // Заблокирован
-  if (record.statusActive === 'fired') return 2; // Уволен
-  if (record.statusActive === 'inactive') return 3; // Неактивный
-  if (record.status === 'new') return 4; // Новый
-  if (record.status === 'tb_passed') return 5; // Проведен ТБ
-  if (record.status === 'processed') return 6; // Обработан
+  const getStatusByGroup = (group) => {
+    const mapping = record.statusMappings?.find(m => m.statusGroup === group || m.status_group === group);
+    return mapping?.status?.name;
+  };
+
+  const secureStatus = getStatusByGroup('status_secure');
+  const activeStatus = getStatusByGroup('status_active');
+  const mainStatus = getStatusByGroup('status');
+
+  if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') return 1; // Заблокирован
+  if (activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl') return 2; // Уволен
+  if (activeStatus === 'status_active_inactive') return 3; // Неактивный
+  if (mainStatus === 'status_new') return 4; // Новый
+  if (mainStatus === 'status_tb_passed') return 5; // Проведен ТБ
+  if (mainStatus === 'status_processed') return 6; // Обработан
   return 7; // Остальные
 };
 

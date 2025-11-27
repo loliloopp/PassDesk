@@ -1,9 +1,33 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import { API_CONFIG } from '@/config/api.config'
+import { jwtDecode } from 'jwt-decode'
 
 // Флаг для предотвращения множественных уведомлений
 let isRedirecting = false
+
+// Флаг для предотвращения множественных refresh запросов
+let isRefreshing = false
+let failedQueue = []
+
+// Счетчик попыток refresh для exponential backoff
+let refreshAttempts = 0
+const MAX_REFRESH_ATTEMPTS = 3
+const REFRESH_TIMEOUT = 5000 // 5 секунд между попытками
+
+// Очередь для обработки запросов, пока идет refresh
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token)
+    }
+  })
+  
+  isRefreshing = false
+  failedQueue = []
+}
 
 // Функция для получения базового URL
 export const getBaseURL = () => {
@@ -13,6 +37,76 @@ export const getBaseURL = () => {
   // Тем самым устраняется ошибка Mixed Content
   return '/api/v1';
 };
+
+// Функция для проверки, истекает ли токен в течение N минут
+const isTokenExpiringSoon = (token, minutesBeforeExpiry = 1) => {
+  try {
+    if (!token) return false
+    
+    const decoded = jwtDecode(token)
+    const expiryTime = decoded.exp * 1000 // exp в секундах, переводим в миллисекунды
+    const currentTime = Date.now()
+    const timeUntilExpiry = expiryTime - currentTime
+    const minutesUntilExpiry = timeUntilExpiry / (1000 * 60)
+    
+    return minutesUntilExpiry <= minutesBeforeExpiry
+  } catch (error) {
+    console.error('❌ Error checking token expiry:', error)
+    return false
+  }
+}
+
+// Функция для переиспускания токена
+const refreshAccessToken = async () => {
+  try {
+    // Проверяем, не превышена ли максимальное количество попыток
+    if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
+      console.error('❌ Max refresh attempts reached. Logging out user.')
+      refreshAttempts = 0
+      return null
+    }
+
+    const authStore = useAuthStore.getState()
+    const refreshToken = authStore.refreshToken
+    
+    if (!refreshToken) {
+      console.warn('⚠️ Refresh token not available. Logging out user.')
+      refreshAttempts = 0
+      return null
+    }
+    
+    refreshAttempts++
+    
+    // Вызываем refresh endpoint
+    const response = await axios.post(`${getBaseURL()}/auth/refresh`, {
+      refreshToken
+    })
+    
+    const { token: newToken, refreshToken: newRefreshToken } = response.data.data
+    
+    // Обновляем токены в store
+    authStore.updateTokens(newToken, newRefreshToken)
+    
+    // Сбрасываем счетчик попыток при успехе
+    refreshAttempts = 0
+    
+    console.log('✅ Token refreshed successfully')
+    return newToken
+  } catch (error) {
+    console.error('❌ Error refreshing token:', error.response?.status, error.message)
+    
+    // Если это 429 (rate limit) или другая ошибка - логируем пользователя
+    const authStore = useAuthStore.getState()
+    authStore.user = null
+    authStore.token = null
+    authStore.refreshToken = null
+    authStore.isAuthenticated = false
+    localStorage.removeItem('auth-storage')
+    
+    refreshAttempts = 0
+    return null
+  }
+}
 
 // Создаем базовый экземпляр с правильным baseURL
 const api = axios.create({
@@ -25,13 +119,28 @@ const api = axios.create({
   timeout: 60000 // Увеличиваем до 60 секунд для импорта больших файлов
 })
 
-// Interceptor для обновления baseURL перед каждым запросом
+// Request interceptor - добавляем токен и проверяем его жизненный цикл
 api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().token
+  async (config) => {
+    const authStore = useAuthStore.getState()
+    const token = authStore.token
+    
     if (token) {
+      // Проверяем, истекает ли токен в течение 1 минуты
+      if (isTokenExpiringSoon(token, 1)) {
+        console.log('⏱️ Token expiring soon. Attempting to refresh...')
+        
+        // Пытаемся обновить токен
+        const newToken = await refreshAccessToken()
+        if (newToken) {
+          config.headers.Authorization = `Bearer ${newToken}`
+          return config
+        }
+      }
+      
       config.headers.Authorization = `Bearer ${token}`
     }
+    
     return config
   },
   (error) => {
@@ -61,6 +170,17 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/logout')) {
       originalRequest._retry = true
 
+      // Попытаемся обновить токен и повторить запрос
+      console.log('🔄 Attempting to refresh token and retry request...')
+      const newToken = await refreshAccessToken()
+      
+      if (newToken) {
+        // Обновляем токен в заголовке и повторяем запрос
+        originalRequest.headers.Authorization = `Bearer ${newToken}`
+        return api(originalRequest)
+      }
+
+      // Если не удалось обновить токен - разлогиниваем пользователя
       // Предотвращаем множественные редиректы
       if (!isRedirecting) {
         isRedirecting = true
@@ -86,6 +206,7 @@ api.interceptors.response.use(
         const authStore = useAuthStore.getState()
         authStore.user = null
         authStore.token = null
+        authStore.refreshToken = null
         authStore.isAuthenticated = false
         
         // Очищаем localStorage

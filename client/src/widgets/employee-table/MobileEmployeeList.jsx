@@ -155,9 +155,13 @@ const MobileEmployeeList = ({
                         <span>{formatPhone(employee.phone)}</span>
                       </div>
                     )}
-                    {employee.statusCard === 'draft' && (
-                      <Tag color="default" style={{ fontSize: 10, margin: 0 }}>Черновик</Tag>
-                    )}
+                    {(() => {
+                      const cardStatusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
+                      if (cardStatusMapping?.status?.name === 'status_card_draft') {
+                        return <Tag color="default" style={{ fontSize: 10, margin: 0 }}>Черновик</Tag>;
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               </div>

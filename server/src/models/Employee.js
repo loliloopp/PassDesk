@@ -184,36 +184,6 @@ Employee.init(
     notes: {
       type: DataTypes.TEXT
     },
-    statusCard: {
-      type: DataTypes.STRING(20),
-      defaultValue: 'draft',
-      allowNull: false,
-      field: 'status_card',
-      validate: {
-        isIn: [['draft', 'completed']]
-      },
-      comment: 'Статус заполнения данных сотрудника: draft (черновик), completed (заполнено)'
-    },
-    status: {
-      type: DataTypes.ENUM('new', 'tb_passed', 'processed'),
-      defaultValue: 'new',
-      allowNull: false,
-      field: 'status',
-      comment: 'Статус сотрудника: new (Новый), tb_passed (Проведен ТБ), processed (Обработан)'
-    },
-    statusActive: {
-      type: DataTypes.ENUM('fired', 'inactive', 'fired_compl'),
-      allowNull: true,
-      field: 'status_active',
-      comment: 'Активность сотрудника: fired (Уволен), inactive (Неактивный), fired_compl (Уволен и обработан), NULL (Активен)'
-    },
-    statusSecure: {
-      type: DataTypes.ENUM('allow', 'block', 'block_compl'),
-      defaultValue: 'allow',
-      allowNull: false,
-      field: 'status_secure',
-      comment: 'Статус безопасности: allow (Разрешен), block (Заблокирован), block_compl (Заблокирован и обработан)'
-    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

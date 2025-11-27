@@ -15,13 +15,17 @@ export const employeeService = {
 
   // Создать сотрудника
   create: async (employeeData) => {
-    const response = await api.post('/employees', employeeData)
+    // Удаляем старые поля статусов, если они переданы
+    const { status, statusCard, statusActive, statusSecure, ...cleanData } = employeeData
+    const response = await api.post('/employees', cleanData)
     return response.data
   },
 
   // Обновить сотрудника
   update: async (id, employeeData) => {
-    const response = await api.put(`/employees/${id}`, employeeData)
+    // Удаляем старые поля статусов, если они переданы
+    const { status, statusCard, statusActive, statusSecure, ...cleanData } = employeeData
+    const response = await api.put(`/employees/${id}`, cleanData)
     return response.data
   },
 
@@ -83,4 +87,5 @@ export const employeeService = {
     return response.data
   }
 }
+
 
