@@ -85,14 +85,14 @@ const ExportPage = () => {
     {
       title: '№',
       key: 'index',
-      width: 60,
+      width: 30,
       align: 'center',
       render: (text, record, index) => index + 1,
     },
     {
       title: 'ФИО',
       key: 'fullName',
-      width: 200,
+      width: 270,
       render: (text, record) => (
         `${record.lastName || ''} ${record.firstName || ''} ${record.middleName || ''}`.trim()
       ),
@@ -106,7 +106,18 @@ const ExportPage = () => {
       title: 'Должность',
       dataIndex: ['position', 'name'],
       key: 'position',
-      width: 150,
+      render: (text) => (
+        <div
+          style={{
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+            wordWrap: 'break-word',
+            lineHeight: '1.4',
+          }}
+        >
+          {text || '-'}
+        </div>
+      ),
       filters: [...new Set(employees.map(e => e.position?.name).filter(Boolean))].map(name => ({
         text: name,
         value: name,
@@ -116,7 +127,6 @@ const ExportPage = () => {
     {
       title: 'Подразделение',
       key: 'department',
-      width: 150,
       render: (_, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
         const currentMapping = mappings[0];
@@ -125,8 +135,8 @@ const ExportPage = () => {
           <div
             style={{
               whiteSpace: 'normal',
-              wordBreak: 'keep-all',
-              overflowWrap: 'break-word',
+              wordBreak: 'break-word',
+              wordWrap: 'break-word',
               lineHeight: '1.4',
             }}
           >
@@ -189,7 +199,18 @@ const ExportPage = () => {
       title: 'Гражданство',
       dataIndex: ['citizenship', 'name'],
       key: 'citizenship',
-      width: 120,
+      render: (text) => (
+        <div
+          style={{
+            whiteSpace: 'normal',
+            wordBreak: 'break-word',
+            wordWrap: 'break-word',
+            lineHeight: '1.4',
+          }}
+        >
+          {text || '-'}
+        </div>
+      ),
       filters: [...new Set(employees.map(e => e.citizenship?.name).filter(Boolean))].map(name => ({
         text: name,
         value: name,
@@ -215,7 +236,7 @@ const ExportPage = () => {
     {
       title: 'Статус',
       key: 'status',
-      width: 120,
+      width: 80,
       render: (text, record) => {
         const status = getEmployeeStatus(record);
         return <Tag color={status.color}>{status.name}</Tag>;
