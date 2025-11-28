@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, Tabs, Typography, Space, Grid, Segmented } from 'antd';
-import { SettingOutlined, TeamOutlined, GlobalOutlined, ShopOutlined } from '@ant-design/icons';
+import { SettingOutlined, TeamOutlined, GlobalOutlined, ShopOutlined, DownloadOutlined } from '@ant-design/icons';
 import UsersPage from './UsersPage';
 import MobileUsersPage from './MobileUsersPage';
 import SettingsPage from './SettingsPage';
 import CitizenshipsPage from './CitizenshipsPage';
 import CounterpartiesPage from './CounterpartiesPage';
 import MobileCounterpartiesPage from './MobileCounterpartiesPage';
+import ExportPage from './ExportPage';
 
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
@@ -56,6 +57,16 @@ const AdministrationPage = () => {
         </span>
       ),
       children: <CitizenshipsPage />
+    },
+    {
+      key: 'export',
+      label: (
+        <span>
+          <DownloadOutlined />
+          Выгрузка
+        </span>
+      ),
+      children: <ExportPage />
     },
     {
       key: 'settings',

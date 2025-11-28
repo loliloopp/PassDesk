@@ -1,0 +1,341 @@
+import { useState } from 'react';
+import { Table, Button, Space, Tag, Tooltip } from 'antd';
+import { EyeOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
+import { useEmployees } from '@/entities/employee';
+import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
+import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
+
+/**
+ * Страница выгрузки сотрудников для администрирования
+ * Отображает таблицу со всеми данными сотрудников
+ */
+const ExportPage = () => {
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  // Загружаем данные сотрудников
+  const { employees, loading, refetch } = useEmployees();
+
+  // Обработчики действий
+  const handleView = (employee) => {
+    setSelectedEmployee(employee);
+    setIsViewModalOpen(true);
+  };
+
+  const handleEdit = (employee) => {
+    setSelectedEmployee(employee);
+    setIsEditModalOpen(true);
+  };
+
+  const handleFormSuccess = async () => {
+    await refetch();
+    setIsEditModalOpen(false);
+    setSelectedEmployee(null);
+  };
+
+  // Получение количества файлов
+  const getFilesCount = (employee) => {
+    return employee.filesCount || 0;
+  };
+
+  // Определение статуса сотрудника (та же логика, что на странице Сотрудники)
+  const getEmployeeStatus = (employee) => {
+    const statusMappings = employee.statusMappings || [];
+    
+    // Функция для получения статуса по группе
+    const getStatusByGroup = (group) => {
+      const mapping = statusMappings.find(m => {
+        const mappingGroup = m.statusGroup || m.status_group;
+        return mappingGroup === group;
+      });
+      if (!mapping) return null;
+      const statusObj = mapping.status || mapping.Status;
+      return statusObj?.name;
+    };
+
+    // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status (Черновик/Новый/Проведен ТБ/Обработан)
+    const secureStatus = getStatusByGroup('status_secure');
+    const activeStatus = getStatusByGroup('status_active');
+    const mainStatus = getStatusByGroup('status');
+
+    if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') {
+      return { name: 'Заблокирован', color: 'red' };
+    }
+
+    if (activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl') {
+      return { name: 'Уволен', color: 'red' };
+    }
+    if (activeStatus === 'status_active_inactive') {
+      return { name: 'Неактивный', color: 'blue' };
+    }
+
+    const statusMap = {
+      'status_draft': { name: 'Черновик', color: 'default' },
+      'status_new': { name: 'Новый', color: 'default' },
+      'status_tb_passed': { name: 'Проведен ТБ', color: 'green' },
+      'status_processed': { name: 'Обработан', color: 'success' },
+    };
+
+    return statusMap[mainStatus] || { name: '-', color: 'default' };
+  };
+
+  // Колонки таблицы
+  const columns = [
+    {
+      title: '№',
+      key: 'index',
+      width: 60,
+      align: 'center',
+      render: (text, record, index) => index + 1,
+    },
+    {
+      title: 'ФИО',
+      key: 'fullName',
+      width: 200,
+      render: (text, record) => (
+        `${record.lastName || ''} ${record.firstName || ''} ${record.middleName || ''}`.trim()
+      ),
+      sorter: (a, b) => {
+        const nameA = `${a.lastName} ${a.firstName}`.toLowerCase();
+        const nameB = `${b.lastName} ${b.firstName}`.toLowerCase();
+        return nameA.localeCompare(nameB);
+      },
+    },
+    {
+      title: 'Должность',
+      dataIndex: ['position', 'name'],
+      key: 'position',
+      width: 150,
+      filters: [...new Set(employees.map(e => e.position?.name).filter(Boolean))].map(name => ({
+        text: name,
+        value: name,
+      })),
+      onFilter: (value, record) => record.position?.name === value,
+    },
+    {
+      title: 'Подразделение',
+      key: 'department',
+      width: 150,
+      render: (_, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        const currentMapping = mappings[0];
+        const currentDepartmentName = currentMapping?.department?.name;
+        return (
+          <div
+            style={{
+              whiteSpace: 'normal',
+              wordBreak: 'keep-all',
+              overflowWrap: 'break-word',
+              lineHeight: '1.4',
+            }}
+          >
+            {currentDepartmentName || '-'}
+          </div>
+        );
+      },
+      filters: [...new Set(
+        employees
+          .map(e => e.employeeCounterpartyMappings?.[0]?.department?.name)
+          .filter(Boolean)
+      )].map(name => ({
+        text: name,
+        value: name,
+      })),
+      onFilter: (value, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        return mappings.some((m) => m.department?.name === value);
+      },
+    },
+    {
+      title: 'Контрагент',
+      key: 'counterparty',
+      width: 150,
+      render: (_, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        if (mappings.length === 0) return '-';
+        const counterparties = [
+          ...new Set(mappings.map((m) => m.counterparty?.name).filter(Boolean)),
+        ];
+        const text = counterparties.join(', ') || '-';
+        return (
+          <div
+            style={{
+              whiteSpace: 'normal',
+              wordBreak: 'keep-all',
+              overflowWrap: 'break-word',
+              lineHeight: '1.4',
+            }}
+          >
+            {text}
+          </div>
+        );
+      },
+      filters: [...new Set(
+        employees
+          .flatMap(e => e.employeeCounterpartyMappings || [])
+          .map(m => m.counterparty?.name)
+          .filter(Boolean)
+      )].map(name => ({
+        text: name,
+        value: name,
+      })),
+      onFilter: (value, record) => {
+        const mappings = record.employeeCounterpartyMappings || [];
+        return mappings.some((m) => m.counterparty?.name === value);
+      },
+    },
+    {
+      title: 'Гражданство',
+      dataIndex: ['citizenship', 'name'],
+      key: 'citizenship',
+      width: 120,
+      filters: [...new Set(employees.map(e => e.citizenship?.name).filter(Boolean))].map(name => ({
+        text: name,
+        value: name,
+      })),
+      onFilter: (value, record) => record.citizenship?.name === value,
+    },
+    {
+      title: 'Файлы',
+      key: 'files',
+      width: 80,
+      align: 'center',
+      render: (text, record) => {
+        const count = getFilesCount(record);
+        return count > 0 ? (
+          <Tag color="blue" icon={<FileTextOutlined />}>
+            {count}
+          </Tag>
+        ) : (
+          <Tag color="default">0</Tag>
+        );
+      },
+    },
+    {
+      title: 'Статус',
+      key: 'status',
+      width: 120,
+      render: (text, record) => {
+        const status = getEmployeeStatus(record);
+        return <Tag color={status.color}>{status.name}</Tag>;
+      },
+      filters: [
+        { text: 'Заблокирован', value: 'blocked' },
+        { text: 'Уволен', value: 'fired' },
+        { text: 'Неактивный', value: 'inactive' },
+        { text: 'Черновик', value: 'draft' },
+        { text: 'Новый', value: 'new' },
+        { text: 'Проведен ТБ', value: 'tb_passed' },
+        { text: 'Обработан', value: 'processed' },
+      ],
+      onFilter: (value, record) => {
+        const statusMappings = record.statusMappings || [];
+        const getStatusByGroup = (group) => {
+          const mapping = statusMappings.find(m => {
+            const mappingGroup = m.statusGroup || m.status_group;
+            return mappingGroup === group;
+          });
+          if (!mapping) return null;
+          const statusObj = mapping.status || mapping.Status;
+          return statusObj?.name;
+        };
+
+        const secureStatus = getStatusByGroup('status_secure');
+        const activeStatus = getStatusByGroup('status_active');
+        const mainStatus = getStatusByGroup('status');
+
+        if (value === 'blocked') {
+          return secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl';
+        }
+        if (value === 'fired') {
+          return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
+        }
+        if (value === 'inactive') {
+          return activeStatus === 'status_active_inactive';
+        }
+        
+        return (
+          secureStatus !== 'status_secure_block' && 
+          secureStatus !== 'status_secure_block_compl' &&
+          activeStatus !== 'status_active_fired' &&
+          activeStatus !== 'status_active_fired_compl' &&
+          activeStatus !== 'status_active_inactive' &&
+          mainStatus === `status_${value}`
+        );
+      },
+    },
+    {
+      title: 'Действия',
+      key: 'actions',
+      width: 100,
+      align: 'center',
+      fixed: 'right',
+      render: (text, record) => (
+        <Space>
+          <Tooltip title="Просмотр">
+            <Button 
+              type="text" 
+              icon={<EyeOutlined />} 
+              onClick={() => handleView(record)} 
+            />
+          </Tooltip>
+          <Tooltip title="Редактировать">
+            <Button 
+              type="text" 
+              icon={<EditOutlined />} 
+              onClick={() => handleEdit(record)} 
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '16px 0' }}>
+      <Table
+        columns={columns}
+        dataSource={employees}
+        rowKey="id"
+        loading={loading}
+        size="small"
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true,
+          showTotal: (total) => `Всего: ${total}`,
+          pageSizeOptions: ['10', '20', '50', '100'],
+        }}
+        scroll={{ x: 1300, y: 600 }}
+      />
+
+      {/* Модальное окно просмотра */}
+      <EmployeeViewModal
+        visible={isViewModalOpen}
+        employee={selectedEmployee}
+        onCancel={() => {
+          setIsViewModalOpen(false);
+          setSelectedEmployee(null);
+        }}
+        onEdit={() => {
+          setIsViewModalOpen(false);
+          setIsEditModalOpen(true);
+        }}
+      />
+
+      {/* Модальное окно редактирования */}
+      <EmployeeFormModal
+        visible={isEditModalOpen}
+        employee={selectedEmployee}
+        onCancel={() => {
+          setIsEditModalOpen(false);
+          setSelectedEmployee(null);
+        }}
+        onSuccess={handleFormSuccess}
+      />
+    </div>
+  );
+};
+
+export default ExportPage;
+
