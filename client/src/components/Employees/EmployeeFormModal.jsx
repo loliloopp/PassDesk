@@ -321,9 +321,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       setActiveTab('1');
       
       try {
-        // Загружаем справочники параллельно (без блокировки UI)
-        // Загружаем их напрямую, не через state
-        const [, , , ] = await Promise.all([
+        // Загружаем справочники параллельно и получаем загруженные данные напрямую
+        const [loadedCitizenships, loadedSites, loadedPositions, loadedCounterpartyId] = await Promise.all([
           fetchCitizenships(),
           fetchConstructionSites(),
           fetchPositions(),
@@ -331,7 +330,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         ]);
 
         if (employee) {
-          // Сразу устанавливаем данные сотрудника в форму (без ожидания гражданства)
+          // Сразу устанавливаем данные сотрудника в форму
           const mapping = employee.employeeCounterpartyMappings?.[0];
           
           // Определяем текущие статусы из маппинга
@@ -373,19 +372,16 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           
           form.setFieldsValue(formData);
           
-          // Теперь асинхронно проверяем гражданство
+          // Определяем гражданство используя загруженные данные напрямую
           setCheckingCitizenship(true);
           
-          // Небольшая задержка для обновления состояния citizenships  
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Определяем гражданство после загрузки справочника (используем обновленный state)
-          if (employee.citizenshipId && citizenships.length > 0) {
-            const citizenship = citizenships.find(c => c.id === employee.citizenshipId);
+          if (employee.citizenshipId && loadedCitizenships.length > 0) {
+            const citizenship = loadedCitizenships.find(c => c.id === employee.citizenshipId);
             
             if (citizenship) {
               setSelectedCitizenship(citizenship);
-              // Ждем применения изменения
+              
+              // Небольшая задержка для обновления DOM
               await new Promise(resolve => setTimeout(resolve, 50));
               
               // Запускаем валидацию с учетом гражданства
@@ -447,27 +443,36 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const fetchCitizenships = async () => {
     try {
       const { data } = await citizenshipService.getAll();
-      setCitizenships(data.data.citizenships || []);
+      const loadedCitizenships = data.data.citizenships || [];
+      setCitizenships(loadedCitizenships);
+      return loadedCitizenships;
     } catch (error) {
       console.error('Error loading citizenships:', error);
+      return [];
     }
   };
 
   const fetchConstructionSites = async () => {
     try {
       const { data } = await constructionSiteService.getAll();
-      setConstructionSites(data.data.constructionSites || []);
+      const loadedSites = data.data.constructionSites || [];
+      setConstructionSites(loadedSites);
+      return loadedSites;
     } catch (error) {
       console.error('Error loading construction sites:', error);
+      return [];
     }
   };
 
   const fetchPositions = async () => {
     try {
       const { data } = await positionService.getAll({ limit: 1000 });
-      setPositions(data.data.positions || []);
+      const loadedPositions = data.data.positions || [];
+      setPositions(loadedPositions);
+      return loadedPositions;
     } catch (error) {
       console.error('Error loading positions:', error);
+      return [];
     }
   };
 
@@ -476,8 +481,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       const response = await settingsService.getPublicSettings();
       const dcId = response.data.defaultCounterpartyId;
       setDefaultCounterpartyId(dcId);
+      return dcId;
     } catch (error) {
       console.error('Error loading default counterparty:', error);
+      return null;
     }
   };
 
