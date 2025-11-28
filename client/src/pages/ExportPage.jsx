@@ -85,7 +85,7 @@ const ExportPage = () => {
     {
       title: '№',
       key: 'index',
-      width: 30,
+      width: 40,
       align: 'center',
       render: (text, record, index) => index + 1,
     },
@@ -236,7 +236,7 @@ const ExportPage = () => {
     {
       title: 'Статус',
       key: 'status',
-      width: 80,
+      width: 95,
       render: (text, record) => {
         const status = getEmployeeStatus(record);
         return <Tag color={status.color}>{status.name}</Tag>;
@@ -315,7 +315,16 @@ const ExportPage = () => {
 
   return (
     <div style={{ padding: '16px 0' }}>
+      <style>{`
+        .export-table .ant-table-cell {
+          padding: 4px 8px !important;
+        }
+        .export-table .ant-table-row {
+          height: auto !important;
+        }
+      `}</style>
       <Table
+        className="export-table"
         columns={columns}
         dataSource={employees}
         rowKey="id"
