@@ -253,6 +253,31 @@
 					"table_name": "employees"
 				},
 				{
+					"index_definition": "CREATE UNIQUE INDEX employees_statuses_mapping_active_unique ON public.employees_statuses_mapping USING btree (employee_id, status_group) WHERE (is_active = true)",
+					"index_name": "employees_statuses_mapping_active_unique",
+					"table_name": "employees_statuses_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX employees_statuses_mapping_employee_id_idx ON public.employees_statuses_mapping USING btree (employee_id)",
+					"index_name": "employees_statuses_mapping_employee_id_idx",
+					"table_name": "employees_statuses_mapping"
+				},
+				{
+					"index_definition": "CREATE UNIQUE INDEX employees_statuses_mapping_pkey ON public.employees_statuses_mapping USING btree (id)",
+					"index_name": "employees_statuses_mapping_pkey",
+					"table_name": "employees_statuses_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX employees_statuses_mapping_status_group_idx ON public.employees_statuses_mapping USING btree (status_group)",
+					"index_name": "employees_statuses_mapping_status_group_idx",
+					"table_name": "employees_statuses_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX employees_statuses_mapping_status_id_idx ON public.employees_statuses_mapping USING btree (status_id)",
+					"index_name": "employees_statuses_mapping_status_id_idx",
+					"table_name": "employees_statuses_mapping"
+				},
+				{
 					"index_definition": "CREATE UNIQUE INDEX files_file_key ON public.files USING btree (file_key)",
 					"index_name": "files_file_key",
 					"table_name": "files"
@@ -333,6 +358,16 @@
 					"table_name": "settings"
 				},
 				{
+					"index_definition": "CREATE UNIQUE INDEX statuses_name_key ON public.statuses USING btree (name)",
+					"index_name": "statuses_name_key",
+					"table_name": "statuses"
+				},
+				{
+					"index_definition": "CREATE UNIQUE INDEX statuses_pkey ON public.statuses USING btree (id)",
+					"index_name": "statuses_pkey",
+					"table_name": "statuses"
+				},
+				{
 					"index_definition": "CREATE INDEX idx_user_employee_mapping_counterparty ON public.user_employee_mapping USING btree (counterparty_id)",
 					"index_name": "idx_user_employee_mapping_counterparty",
 					"table_name": "user_employee_mapping"
@@ -408,6 +443,22 @@
 					"maximum_value": "2147483647",
 					"minimum_value": "1",
 					"sequence_name": "citizenship_synonyms_id_seq",
+					"start_value": "1"
+				},
+				{
+					"data_type": "integer",
+					"increment": "1",
+					"maximum_value": "2147483647",
+					"minimum_value": "1",
+					"sequence_name": "employees_statuses_mapping_id_seq",
+					"start_value": "1"
+				},
+				{
+					"data_type": "integer",
+					"increment": "1",
+					"maximum_value": "2147483647",
+					"minimum_value": "1",
+					"sequence_name": "statuses_id_seq",
 					"start_value": "1"
 				}
 			],
@@ -565,16 +616,16 @@
 							"foreign_table": "applications"
 						},
 						{
-							"column_name": "file_id",
-							"constraint_name": "application_files_mapping_file_id_fkey",
-							"foreign_column": "id",
-							"foreign_table": "files"
-						},
-						{
 							"column_name": "employee_id",
 							"constraint_name": "application_files_mapping_employee_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "employees"
+						},
+						{
+							"column_name": "file_id",
+							"constraint_name": "application_files_mapping_file_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "files"
 						}
 					],
 					"primary_keys": [
@@ -614,16 +665,16 @@
 							"constraint_name": "2200_16971_19_not_null"
 						},
 						{
-							"check_clause": "created_by IS NOT NULL",
-							"constraint_name": "2200_16971_17_not_null"
+							"check_clause": "((status)::text = ANY ((ARRAY['draft'::character varying, 'submitted'::character varying, 'approved'::character varying, 'rejected'::character varying])::text[]))",
+							"constraint_name": "applications_status_check"
 						},
 						{
 							"check_clause": "((application_type)::text = ANY ((ARRAY['biometric'::character varying, 'customer'::character varying])::text[]))",
 							"constraint_name": "applications_type_check"
 						},
 						{
-							"check_clause": "((status)::text = ANY ((ARRAY['draft'::character varying, 'submitted'::character varying, 'approved'::character varying, 'rejected'::character varying])::text[]))",
-							"constraint_name": "applications_status_check"
+							"check_clause": "created_by IS NOT NULL",
+							"constraint_name": "2200_16971_17_not_null"
 						},
 						{
 							"check_clause": "id IS NOT NULL",
@@ -748,10 +799,10 @@
 							"foreign_table": "users"
 						},
 						{
-							"column_name": "counterparty_id",
-							"constraint_name": "applications_counterparty_id_fkey",
+							"column_name": "subcontract_id",
+							"constraint_name": "applications_subcontract_id_fkey",
 							"foreign_column": "id",
-							"foreign_table": "counterparties"
+							"foreign_table": "contracts"
 						},
 						{
 							"column_name": "construction_site_id",
@@ -760,10 +811,10 @@
 							"foreign_table": "construction_sites"
 						},
 						{
-							"column_name": "subcontract_id",
-							"constraint_name": "applications_subcontract_id_fkey",
+							"column_name": "counterparty_id",
+							"constraint_name": "applications_counterparty_id_fkey",
 							"foreign_column": "id",
-							"foreign_table": "contracts"
+							"foreign_table": "counterparties"
 						},
 						{
 							"column_name": "created_by",
@@ -872,16 +923,16 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "name IS NOT NULL",
+							"constraint_name": "2200_17050_2_not_null"
+						},
+						{
 							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_17050_1_not_null"
 						},
 						{
 							"check_clause": "requires_patent IS NOT NULL",
 							"constraint_name": "2200_17050_6_not_null"
-						},
-						{
-							"check_clause": "name IS NOT NULL",
-							"constraint_name": "2200_17050_2_not_null"
 						}
 					],
 					"columns": [
@@ -952,20 +1003,20 @@
 				{
 					"check_constraints": [
 						{
-							"check_clause": "id IS NOT NULL",
-							"constraint_name": "2200_16882_1_not_null"
-						},
-						{
 							"check_clause": "full_name IS NOT NULL",
 							"constraint_name": "2200_16882_3_not_null"
+						},
+						{
+							"check_clause": "short_name IS NOT NULL",
+							"constraint_name": "2200_16882_2_not_null"
 						},
 						{
 							"check_clause": "address IS NOT NULL",
 							"constraint_name": "2200_16882_4_not_null"
 						},
 						{
-							"check_clause": "short_name IS NOT NULL",
-							"constraint_name": "2200_16882_2_not_null"
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_16882_1_not_null"
 						}
 					],
 					"columns": [
@@ -1060,16 +1111,20 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "counterparty1_id IS NOT NULL",
+							"constraint_name": "2200_16904_13_not_null"
+						},
+						{
 							"check_clause": "construction_site_id IS NOT NULL",
 							"constraint_name": "2200_16904_12_not_null"
 						},
 						{
-							"check_clause": "counterparty2_id IS NOT NULL",
-							"constraint_name": "2200_16904_14_not_null"
-						},
-						{
 							"check_clause": "((type)::text = ANY ((ARRAY['subcontract'::character varying, 'general_contract'::character varying])::text[]))",
 							"constraint_name": "contracts_type_check"
+						},
+						{
+							"check_clause": "counterparty2_id IS NOT NULL",
+							"constraint_name": "2200_16904_14_not_null"
 						},
 						{
 							"check_clause": "id IS NOT NULL",
@@ -1086,10 +1141,6 @@
 						{
 							"check_clause": "type IS NOT NULL",
 							"constraint_name": "2200_16904_7_not_null"
-						},
-						{
-							"check_clause": "counterparty1_id IS NOT NULL",
-							"constraint_name": "2200_16904_13_not_null"
 						}
 					],
 					"columns": [
@@ -1184,18 +1235,6 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "counterparty2_id",
-							"constraint_name": "contracts_counterparty2_id_fkey",
-							"foreign_column": "id",
-							"foreign_table": "counterparties"
-						},
-						{
-							"column_name": "created_by",
-							"constraint_name": "contracts_created_by_fkey",
-							"foreign_column": "id",
-							"foreign_table": "users"
-						},
-						{
 							"column_name": "updated_by",
 							"constraint_name": "contracts_updated_by_fkey",
 							"foreign_column": "id",
@@ -1212,6 +1251,18 @@
 							"constraint_name": "contracts_counterparty1_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "counterparties"
+						},
+						{
+							"column_name": "counterparty2_id",
+							"constraint_name": "contracts_counterparty2_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "counterparties"
+						},
+						{
+							"column_name": "created_by",
+							"constraint_name": "contracts_created_by_fkey",
+							"foreign_column": "id",
+							"foreign_table": "users"
 						}
 					],
 					"primary_keys": [
@@ -1226,24 +1277,24 @@
 				{
 					"check_constraints": [
 						{
-							"check_clause": "inn IS NOT NULL",
-							"constraint_name": "2200_16858_3_not_null"
-						},
-						{
 							"check_clause": "((type)::text = ANY ((ARRAY['customer'::character varying, 'contractor'::character varying, 'general_contractor'::character varying])::text[]))",
 							"constraint_name": "counterparties_type_check"
-						},
-						{
-							"check_clause": "id IS NOT NULL",
-							"constraint_name": "2200_16858_1_not_null"
 						},
 						{
 							"check_clause": "name IS NOT NULL",
 							"constraint_name": "2200_16858_2_not_null"
 						},
 						{
+							"check_clause": "inn IS NOT NULL",
+							"constraint_name": "2200_16858_3_not_null"
+						},
+						{
 							"check_clause": "type IS NOT NULL",
 							"constraint_name": "2200_16858_9_not_null"
+						},
+						{
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_16858_1_not_null"
 						}
 					],
 					"columns": [
@@ -1362,14 +1413,14 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "updated_by",
-							"constraint_name": "counterparties_updated_by_fkey",
+							"column_name": "created_by",
+							"constraint_name": "counterparties_created_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						},
 						{
-							"column_name": "created_by",
-							"constraint_name": "counterparties_created_by_fkey",
+							"column_name": "updated_by",
+							"constraint_name": "counterparties_updated_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						}
@@ -1391,16 +1442,16 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "counterparty_id IS NOT NULL",
+							"constraint_name": "2200_18076_3_not_null"
+						},
+						{
 							"check_clause": "name IS NOT NULL",
 							"constraint_name": "2200_18076_2_not_null"
 						},
 						{
 							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_18076_1_not_null"
-						},
-						{
-							"check_clause": "counterparty_id IS NOT NULL",
-							"constraint_name": "2200_18076_3_not_null"
 						}
 					],
 					"columns": [
@@ -1474,16 +1525,16 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "counterparty_id IS NOT NULL",
+							"constraint_name": "2200_18092_3_not_null"
+						},
+						{
 							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_18092_1_not_null"
 						},
 						{
 							"check_clause": "employee_id IS NOT NULL",
 							"constraint_name": "2200_18092_2_not_null"
-						},
-						{
-							"check_clause": "counterparty_id IS NOT NULL",
-							"constraint_name": "2200_18092_3_not_null"
 						}
 					],
 					"columns": [
@@ -1552,16 +1603,16 @@
 							"foreign_table": "construction_sites"
 						},
 						{
-							"column_name": "employee_id",
-							"constraint_name": "fk_mapping_employee",
-							"foreign_column": "id",
-							"foreign_table": "employees"
-						},
-						{
 							"column_name": "counterparty_id",
 							"constraint_name": "fk_mapping_counterparty",
 							"foreign_column": "id",
 							"foreign_table": "counterparties"
+						},
+						{
+							"column_name": "employee_id",
+							"constraint_name": "fk_mapping_employee",
+							"foreign_column": "id",
+							"foreign_table": "employees"
 						},
 						{
 							"column_name": "department_id",
@@ -1582,6 +1633,10 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "((status_card)::text = ANY ((ARRAY['draft'::character varying, 'completed'::character varying])::text[]))",
+							"constraint_name": "employees_status_card_check"
+						},
+						{
 							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_16597_1_not_null"
 						},
@@ -1596,10 +1651,6 @@
 						{
 							"check_clause": "updated_at IS NOT NULL",
 							"constraint_name": "2200_16597_17_not_null"
-						},
-						{
-							"check_clause": "((status_card)::text = ANY ((ARRAY['draft'::character varying, 'completed'::character varying])::text[]))",
-							"constraint_name": "employees_status_card_check"
 						},
 						{
 							"check_clause": "created_by IS NOT NULL",
@@ -1842,28 +1893,28 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "created_by",
-							"constraint_name": "employees_created_by_fkey",
-							"foreign_column": "id",
-							"foreign_table": "users"
-						},
-						{
 							"column_name": "position_id",
 							"constraint_name": "employees_position_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "positions"
 						},
 						{
-							"column_name": "updated_by",
-							"constraint_name": "employees_updated_by_fkey",
-							"foreign_column": "id",
-							"foreign_table": "users"
-						},
-						{
 							"column_name": "citizenship_id",
 							"constraint_name": "employees_citizenship_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "citizenships"
+						},
+						{
+							"column_name": "created_by",
+							"constraint_name": "employees_created_by_fkey",
+							"foreign_column": "id",
+							"foreign_table": "users"
+						},
+						{
+							"column_name": "updated_by",
+							"constraint_name": "employees_updated_by_fkey",
+							"foreign_column": "id",
+							"foreign_table": "users"
 						}
 					],
 					"primary_keys": [
@@ -1873,6 +1924,138 @@
 						}
 					],
 					"table_name": "employees",
+					"unique_constraints": null
+				},
+				{
+					"check_constraints": [
+						{
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_18247_1_not_null"
+						},
+						{
+							"check_clause": "employee_id IS NOT NULL",
+							"constraint_name": "2200_18247_2_not_null"
+						},
+						{
+							"check_clause": "status_id IS NOT NULL",
+							"constraint_name": "2200_18247_3_not_null"
+						},
+						{
+							"check_clause": "status_group IS NOT NULL",
+							"constraint_name": "2200_18247_4_not_null"
+						},
+						{
+							"check_clause": "created_by IS NOT NULL",
+							"constraint_name": "2200_18247_5_not_null"
+						}
+					],
+					"columns": [
+						{
+							"character_maximum_length": null,
+							"column_default": "nextval('employees_statuses_mapping_id_seq'::regclass)",
+							"column_name": "id",
+							"data_type": "integer",
+							"is_nullable": "NO",
+							"ordinal_position": "1"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "employee_id",
+							"data_type": "uuid",
+							"is_nullable": "NO",
+							"ordinal_position": "2"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "status_id",
+							"data_type": "integer",
+							"is_nullable": "NO",
+							"ordinal_position": "3"
+						},
+						{
+							"character_maximum_length": "50",
+							"column_default": null,
+							"column_name": "status_group",
+							"data_type": "character varying",
+							"is_nullable": "NO",
+							"ordinal_position": "4"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "created_by",
+							"data_type": "uuid",
+							"is_nullable": "NO",
+							"ordinal_position": "5"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "updated_by",
+							"data_type": "uuid",
+							"is_nullable": "YES",
+							"ordinal_position": "6"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "CURRENT_TIMESTAMP",
+							"column_name": "created_at",
+							"data_type": "timestamp with time zone",
+							"is_nullable": "YES",
+							"ordinal_position": "7"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "CURRENT_TIMESTAMP",
+							"column_name": "updated_at",
+							"data_type": "timestamp with time zone",
+							"is_nullable": "YES",
+							"ordinal_position": "8"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "false",
+							"column_name": "is_active",
+							"data_type": "boolean",
+							"is_nullable": "YES",
+							"ordinal_position": "9"
+						}
+					],
+					"foreign_keys": [
+						{
+							"column_name": "status_id",
+							"constraint_name": "employees_statuses_mapping_status_fkey",
+							"foreign_column": "id",
+							"foreign_table": "statuses"
+						},
+						{
+							"column_name": "employee_id",
+							"constraint_name": "employees_statuses_mapping_employee_fkey",
+							"foreign_column": "id",
+							"foreign_table": "employees"
+						},
+						{
+							"column_name": "created_by",
+							"constraint_name": "employees_statuses_mapping_created_by_fkey",
+							"foreign_column": "id",
+							"foreign_table": "users"
+						},
+						{
+							"column_name": "updated_by",
+							"constraint_name": "employees_statuses_mapping_updated_by_fkey",
+							"foreign_column": "id",
+							"foreign_table": "users"
+						}
+					],
+					"primary_keys": [
+						{
+							"column_name": "id",
+							"constraint_name": "employees_statuses_mapping_pkey"
+						}
+					],
+					"table_name": "employees_statuses_mapping",
 					"unique_constraints": null
 				},
 				{
@@ -2083,10 +2266,6 @@
 				{
 					"check_constraints": [
 						{
-							"check_clause": "employee_id IS NOT NULL",
-							"constraint_name": "2200_16640_19_not_null"
-						},
-						{
 							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_16640_1_not_null"
 						},
@@ -2113,6 +2292,10 @@
 						{
 							"check_clause": "updated_at IS NOT NULL",
 							"constraint_name": "2200_16640_18_not_null"
+						},
+						{
+							"check_clause": "employee_id IS NOT NULL",
+							"constraint_name": "2200_16640_19_not_null"
 						}
 					],
 					"columns": [
@@ -2263,14 +2446,14 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "issued_by",
-							"constraint_name": "passes_issued_by_fkey",
+							"column_name": "revoked_by",
+							"constraint_name": "passes_revoked_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						},
 						{
-							"column_name": "revoked_by",
-							"constraint_name": "passes_revoked_by_fkey",
+							"column_name": "issued_by",
+							"constraint_name": "passes_issued_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						},
@@ -2358,14 +2541,14 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "updated_by",
-							"constraint_name": "positions_updated_by_fkey",
+							"column_name": "created_by",
+							"constraint_name": "positions_created_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						},
 						{
-							"column_name": "created_by",
-							"constraint_name": "positions_created_by_fkey",
+							"column_name": "updated_by",
+							"constraint_name": "positions_updated_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						}
@@ -2468,6 +2651,70 @@
 					"check_constraints": [
 						{
 							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_18237_1_not_null"
+						},
+						{
+							"check_clause": "name IS NOT NULL",
+							"constraint_name": "2200_18237_2_not_null"
+						},
+						{
+							"check_clause": "group IS NOT NULL",
+							"constraint_name": "2200_18237_3_not_null"
+						}
+					],
+					"columns": [
+						{
+							"character_maximum_length": null,
+							"column_default": "nextval('statuses_id_seq'::regclass)",
+							"column_name": "id",
+							"data_type": "integer",
+							"is_nullable": "NO",
+							"ordinal_position": "1"
+						},
+						{
+							"character_maximum_length": "100",
+							"column_default": null,
+							"column_name": "name",
+							"data_type": "character varying",
+							"is_nullable": "NO",
+							"ordinal_position": "2"
+						},
+						{
+							"character_maximum_length": "50",
+							"column_default": null,
+							"column_name": "group",
+							"data_type": "character varying",
+							"is_nullable": "NO",
+							"ordinal_position": "3"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "CURRENT_TIMESTAMP",
+							"column_name": "created_at",
+							"data_type": "timestamp with time zone",
+							"is_nullable": "YES",
+							"ordinal_position": "4"
+						}
+					],
+					"foreign_keys": null,
+					"primary_keys": [
+						{
+							"column_name": "id",
+							"constraint_name": "statuses_pkey"
+						}
+					],
+					"table_name": "statuses",
+					"unique_constraints": [
+						{
+							"column_name": "name",
+							"constraint_name": "statuses_name_key"
+						}
+					]
+				},
+				{
+					"check_constraints": [
+						{
+							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_17989_1_not_null"
 						},
 						{
@@ -2537,16 +2784,16 @@
 							"foreign_table": "counterparties"
 						},
 						{
-							"column_name": "user_id",
-							"constraint_name": "user_employee_mapping_user_id_fkey",
-							"foreign_column": "id",
-							"foreign_table": "users"
-						},
-						{
 							"column_name": "employee_id",
 							"constraint_name": "user_employee_mapping_employee_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "employees"
+						},
+						{
+							"column_name": "user_id",
+							"constraint_name": "user_employee_mapping_user_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "users"
 						}
 					],
 					"primary_keys": [
@@ -2714,10 +2961,6 @@
 					"unique_constraints": [
 						{
 							"column_name": "email",
-							"constraint_name": "users_email_key"
-						},
-						{
-							"column_name": "email",
 							"constraint_name": "users_email_key3"
 						},
 						{
@@ -2731,6 +2974,10 @@
 						{
 							"column_name": "email",
 							"constraint_name": "users_email_key1"
+						},
+						{
+							"column_name": "email",
+							"constraint_name": "users_email_key"
 						}
 					]
 				}

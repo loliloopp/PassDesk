@@ -1,4 +1,4 @@
-import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position, Setting } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position, Setting, Status, EmployeeStatusMapping } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import storageProvider from '../config/storage.js';
@@ -75,6 +75,16 @@ export const getAllEmployees = async (req, res, next) => {
       ];
     }
 
+    // Статусы, которые исключаем из выгрузки (is_active = true)
+    const excludedStatuses = [
+      'status_hr_fired_compl',
+      'status_hr_new_compl',
+      'status_draft',
+      'status_active_inactive',
+      'status_secure_block',
+      'status_secure_block_compl'
+    ];
+
     // Фильтрация по роли пользователя
     let employeeInclude = [
       {
@@ -112,6 +122,21 @@ export const getAllEmployees = async (req, res, next) => {
             attributes: ['id', 'shortName', 'fullName']
           }
         ]
+      },
+      // Подключаем EmployeeStatusMapping с его статусами для фильтрации
+      {
+        model: EmployeeStatusMapping,
+        as: 'statusMappings',
+        where: { isActive: true },
+        include: [
+          {
+            model: Status,
+            as: 'status',
+            attributes: ['id', 'name', 'group']
+          }
+        ],
+        attributes: ['id', 'status_id', 'is_active', 'status_group'],
+        required: false
       }
     ];
 
@@ -165,8 +190,23 @@ export const getAllEmployees = async (req, res, next) => {
       distinct: true // Важно для правильного подсчета при фильтрации через include
     });
 
+    // Фильтруем сотрудников - исключаем тех, у кого есть исключенные статусы
+    const filteredRows = rows.filter(employee => {
+      const statusMappings = employee.statusMappings || [];
+      
+      // Проверяем наличие исключенного статуса
+      const hasExcludedStatus = statusMappings.some(mapping => {
+        if (mapping.status) {
+          return excludedStatuses.includes(mapping.status.name);
+        }
+        return false;
+      });
+      
+      return !hasExcludedStatus;
+    });
+
     // Пересчитываем statusCard для каждого сотрудника
-    const employeesWithStatus = rows.map(employee => {
+    const employeesWithStatus = filteredRows.map(employee => {
       const employeeData = employee.toJSON();
       employeeData.statusCard = calculateStatusCard(employeeData);
       return employeeData;
@@ -179,8 +219,8 @@ export const getAllEmployees = async (req, res, next) => {
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total: count,
-          pages: Math.ceil(count / limit)
+          total: filteredRows.length,
+          pages: Math.ceil(filteredRows.length / limit)
         }
       }
     });
