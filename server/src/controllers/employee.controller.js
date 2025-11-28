@@ -589,6 +589,13 @@ export const updateEmployee = async (req, res, next) => {
         console.log('✓ Employee statuses updated to completed');
       }
 
+      // Проверяем, есть ли статус status_hr_new_compl - если да, присваиваем status_hr_edited
+      const currentHRStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_hr');
+      if (currentHRStatus?.status?.name === 'status_hr_new_compl') {
+        console.log('✓ Employee has status_hr_new_compl, setting status_hr_edited');
+        await EmployeeStatusService.setStatusByName(id, 'status_hr_edited', req.user.id);
+      }
+
         // Обновляем статус активности на основе чекбоксов
       console.log('=== UPDATING EMPLOYEE ACTIVE STATUS ===');
       console.log('isFired:', isFired);

@@ -54,9 +54,10 @@ const ExportPage = () => {
       return statusObj?.name;
     };
 
-    // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status (Черновик/Новый/Проведен ТБ/Обработан)
+    // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status_hr > status (Черновик/Новый/Проведен ТБ/Обработан)
     const secureStatus = getStatusByGroup('status_secure');
     const activeStatus = getStatusByGroup('status_active');
+    const hrStatus = getStatusByGroup('status_hr');
     const mainStatus = getStatusByGroup('status');
 
     if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') {
@@ -68,6 +69,16 @@ const ExportPage = () => {
     }
     if (activeStatus === 'status_active_inactive') {
       return { name: 'Неактивный', color: 'blue' };
+    }
+
+    // Статусы из группы status_hr (приоритет выше, чем статусы в группе status)
+    const hrStatusMap = {
+      'status_hr_fired_off': { name: 'Повторно принят', color: 'orange' },
+      'status_hr_edited': { name: 'Редактирован', color: 'orange' },
+    };
+
+    if (hrStatus && hrStatusMap[hrStatus]) {
+      return hrStatusMap[hrStatus];
     }
 
     const statusMap = {
