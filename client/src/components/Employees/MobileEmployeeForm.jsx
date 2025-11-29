@@ -536,7 +536,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Скролируемая область с формой */}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingBottom: 120, paddingLeft: 16, paddingRight: 16, paddingTop: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingBottom: 80, paddingLeft: 16, paddingRight: 16, paddingTop: 16 }}>
         <Form
           form={form}
           layout="vertical"
@@ -566,30 +566,32 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
           bottom: 0,
           left: 0,
           right: 0,
-          padding: '12px 16px',
+          padding: '8px 12px',
           background: '#fff',
           borderTop: '1px solid #f0f0f0',
           zIndex: 1000,
           maxWidth: '100vw',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6
         }}
       >
-        {/* Кнопка "Сохранить черновик" в отдельном ряду */}
+        {/* Кнопка "Сохранить черновик" */}
         <Button
-          size="large"
+          size="small"
           block
           icon={<FileOutlined />}
           onClick={handleSaveDraft}
           loading={loading}
-          style={{ marginBottom: 8 }}
         >
-          Сохранить черновик
+          Черновик
         </Button>
         
         {/* Кнопки "Сохранить" и "Отмена" в одном ряду */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
           <Button
             type="primary"
-            size="large"
+            size="small"
             style={{ flex: 1 }}
             icon={<SaveOutlined />}
             onClick={handleSave}
@@ -598,7 +600,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             Сохранить
           </Button>
           <Button 
-            size="large" 
+            size="small" 
             style={{ 
               flex: 1,
               borderColor: '#ff4d4f',

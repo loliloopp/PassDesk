@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Badge, Avatar, Dropdown, Space, Typography, Grid, Tag, Tooltip, Button } from 'antd'
-import { BellOutlined, UserOutlined, DownOutlined, IdcardOutlined, MenuOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons'
+import { Layout as AntLayout, Badge, Avatar, Dropdown, Space, Typography, Grid, Button } from 'antd'
+import { BellOutlined, UserOutlined, DownOutlined, MenuOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
+import { usePageTitleStore } from '@/store/pageTitleStore'
 import { useNavigate } from 'react-router-dom'
 import MobileDrawerMenu from './MobileDrawerMenu'
 
@@ -11,6 +12,7 @@ const { useBreakpoint } = Grid
 
 const Header = () => {
   const { user, logout } = useAuthStore()
+  const { pageTitle } = usePageTitleStore()
   const navigate = useNavigate()
   const screens = useBreakpoint()
   const isMobile = !screens.md
@@ -69,12 +71,6 @@ const Header = () => {
     return roles[role] || role
   }
 
-  // Форматирование УИН в формат XXX-XXX
-  const formatUIN = (uin) => {
-    if (!uin || uin.length !== 6) return uin;
-    return `${uin.slice(0, 3)}-${uin.slice(3)}`;
-  }
-
   return (
     <>
       <AntHeader
@@ -97,30 +93,21 @@ const Header = () => {
             type="text"
             icon={<MenuOutlined style={{ fontSize: 20 }} />}
             onClick={() => setDrawerVisible(true)}
+            style={{ padding: '8px 4px' }}
           />
         ) : (
           <div />
         )}
 
-        {/* Правая часть */}
-        <Space size={isMobile ? 'middle' : 'large'}>
-          {/* УИН - показываем всегда если есть */}
-          {user?.identificationNumber && (
-            <Tooltip title="Уникальный идентификационный номер">
-              <Tag 
-                icon={<IdcardOutlined />} 
-                color="blue"
-                style={{ 
-                  fontSize: isMobile ? 12 : 14, 
-                  padding: isMobile ? '2px 8px' : '4px 12px',
-                  fontWeight: 'bold'
-                }}
-              >
-                {formatUIN(user.identificationNumber)}
-              </Tag>
-            </Tooltip>
-          )}
+        {/* Центральная часть - название страницы на мобильных */}
+        {isMobile && pageTitle && (
+          <div style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 600 }}>
+            {pageTitle}
+          </div>
+        )}
 
+        {/* Правая часть */}
+        <Space size={isMobile ? 'small' : 'large'}>
           {/* Уведомления скрываем на мобильных */}
           {!isMobile && (
             <Badge count={0} showZero={false}>

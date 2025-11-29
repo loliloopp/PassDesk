@@ -6,6 +6,7 @@ import { useEmployeeActions } from '@/entities/employee';
 import { employeeService } from '@/services/employeeService';
 import MobileEmployeeForm from '@/components/Employees/MobileEmployeeForm';
 import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
@@ -91,25 +92,23 @@ const AddEmployeePage = () => {
     navigate('/employees');
   };
 
+  // Устанавливаем название страницы для мобильной версии
+  usePageTitle(id ? 'Редактирование' : 'Добавление', isMobile);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Шапка с кнопкой назад */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: isMobile ? 0 : 24,
-          gap: 16,
-          position: 'sticky',
-          top: 0,
-          background: '#fff',
-          zIndex: 100,
-          padding: '16px 24',
-          borderBottom: '1px solid #f0f0f0',
-          flexShrink: 0
-        }}
-      >
-        {!isMobile && (
+      {/* Шапка с кнопкой назад для десктопной версии */}
+      {!isMobile && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: 24,
+            gap: 16,
+            padding: '16px 24',
+            flexShrink: 0
+          }}
+        >
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate('/employees')}
@@ -117,11 +116,11 @@ const AddEmployeePage = () => {
           >
             Назад
           </Button>
-        )}
-        <Title level={isMobile ? 4 : 2} style={{ margin: 0 }}>
-          {id ? 'Редактирование сотрудника' : 'Добавление сотрудника'}
-        </Title>
-      </div>
+          <Title level={2} style={{ margin: 0 }}>
+            {id ? 'Редактирование сотрудника' : 'Добавление сотрудника'}
+          </Title>
+        </div>
+      )}
 
       {/* Форма - мобильная или десктопная */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
