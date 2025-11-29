@@ -81,6 +81,8 @@ router.put('/:id/draft', updateEmployeeDraftValidation, validate, employeeContro
 router.put('/:id', updateEmployeeValidation, validate, employeeController.updateEmployee); // Полное обновление - строгая валидация
 router.put('/:id/construction-sites', employeeController.updateEmployeeConstructionSites); // Убрали authorize('admin')
 router.put('/:id/department', employeeController.updateEmployeeDepartment); // Убрали authorize('admin')
+router.put('/:employeeId/status/:statusMappingId/upload', employeeController.updateStatusUploadFlag); // Обновить флаг is_upload для статуса
+router.put('/:employeeId/statuses/upload', employeeController.updateAllStatusesUploadFlag); // Обновить флаг is_upload для всех активных статусов
 router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере
 router.get('/search', employeeController.searchEmployees);
 

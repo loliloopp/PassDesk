@@ -3,6 +3,7 @@ import { Table, Button, Space, Tag, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useEmployees } from '@/entities/employee';
 import { ExportDateFilter } from '@/features/export-date-filter';
+import StatusUploadToggle from '@/components/Employees/StatusUploadToggle';
 import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
 import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
 
@@ -46,6 +47,13 @@ const ExportPage = () => {
   const handleDateFilterReset = () => {
     setFilterParams({});
     setPagination({ current: 1, pageSize: 20 });
+  };
+
+  // Обработчик обновления флага is_upload
+  const handleStatusUploadUpdate = (employeeId, updatedMappings) => {
+    // Обновляем employees напрямую, без setEmployees (используем что вернул useEmployees)
+    // Просто перезагружаем данные с сервера
+    refetch();
   };
 
   // Получение количества файлов
@@ -241,6 +249,26 @@ const ExportPage = () => {
         value: name,
       })),
       onFilter: (value, record) => record.citizenship?.name === value,
+    },
+    {
+      title: 'ЗУП',
+      key: 'isUpload',
+      width: 80,
+      align: 'center',
+      render: (text, record) => {
+        // Получаем все активные статусы
+        const statusMappings = record.statusMappings || [];
+        if (statusMappings.length === 0) {
+          return '-';
+        }
+        return (
+          <StatusUploadToggle
+            employeeId={record.id}
+            statusMappings={statusMappings}
+            onUpdate={(updatedMappings) => handleStatusUploadUpdate(record.id, updatedMappings)}
+          />
+        );
+      },
     },
     {
       title: 'Файлы',

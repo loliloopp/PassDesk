@@ -92,9 +92,15 @@ export const employeeApi = {
     return response.data;
   },
 
-  // Обновить подразделение сотрудника
-  updateDepartment: async (employeeId, departmentId) => {
-    const response = await api.put(`/employees/${employeeId}/department`, { departmentId });
+  // Обновить флаг is_upload для одного статуса сотрудника
+  updateStatusUploadFlag: async (employeeId, statusMappingId, isUpload) => {
+    const response = await api.put(`/employees/${employeeId}/status/${statusMappingId}/upload`, { isUpload });
+    return response.data;
+  },
+
+  // Обновить флаг is_upload для всех активных статусов сотрудника
+  updateAllStatusesUploadFlag: async (employeeId, isUpload) => {
+    const response = await api.put(`/employees/${employeeId}/statuses/upload`, { isUpload });
     return response.data;
   },
 };

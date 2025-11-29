@@ -149,7 +149,7 @@ export const getAllEmployees = async (req, res, next) => {
             attributes: ['id', 'name', 'group']
           }
         ],
-        attributes: ['id', 'statusId', 'isActive', 'statusGroup', 'createdAt', 'updatedAt'],
+        attributes: ['id', 'statusId', 'isActive', 'isUpload', 'statusGroup', 'createdAt', 'updatedAt'],
         required: false
       }
     ];
@@ -1019,6 +1019,88 @@ export const deleteEmployee = async (req, res, next) => {
   } catch (error) {
     await transaction.rollback();
     console.error('Error deleting employee:', error);
+    next(error);
+  }
+};
+
+/**
+ * Обновить флаг is_upload для всех активных статусов сотрудника
+ */
+export const updateAllStatusesUploadFlag = async (req, res, next) => {
+  try {
+    const { employeeId } = req.params;
+    const { isUpload } = req.body;
+    const userId = req.user.id;
+
+    // Обновляем все активные статусы сотрудника
+    const [updatedCount] = await EmployeeStatusMapping.update(
+      {
+        isUpload: isUpload,
+        updatedBy: userId
+      },
+      {
+        where: {
+          employeeId: employeeId,
+          isActive: true
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      message: `Обновлено ${updatedCount} статусов`,
+      data: {
+        updatedCount: updatedCount
+      }
+    });
+  } catch (error) {
+    console.error('Error updating all statuses upload flag:', error);
+    next(error);
+  }
+};
+
+/**
+ * Обновить флаг is_upload для одного статуса сотрудника
+ */
+export const updateStatusUploadFlag = async (req, res, next) => {
+  try {
+    const { employeeId, statusMappingId } = req.params;
+    const { isUpload } = req.body;
+    const userId = req.user.id;
+
+    // Проверяем наличие статуса
+    const statusMapping = await EmployeeStatusMapping.findByPk(statusMappingId);
+    if (!statusMapping) {
+      return res.status(404).json({
+        success: false,
+        message: 'Статус не найден'
+      });
+    }
+
+    // Проверяем что статус принадлежит этому сотруднику
+    if (statusMapping.employeeId !== employeeId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Доступ запрещен'
+      });
+    }
+
+    // Обновляем флаг
+    await statusMapping.update({
+      isUpload: isUpload,
+      updatedBy: userId
+    });
+
+    res.json({
+      success: true,
+      message: 'Флаг обновлен',
+      data: {
+        id: statusMapping.id,
+        isUpload: statusMapping.isUpload
+      }
+    });
+  } catch (error) {
+    console.error('Error updating status upload flag:', error);
     next(error);
   }
 };
