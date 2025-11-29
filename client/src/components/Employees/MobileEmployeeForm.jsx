@@ -68,11 +68,32 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   const canEditConstructionSite = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
 
   // Формируем items для Collapse
-  const collapseItems = [
-    {
-      key: 'personal',
-      label: <Title level={5} style={{ margin: 0 }}>📋 Личная информация</Title>,
+  const collapseItems = [];
+
+  // Блок 0: Статусы (если редактирование) - ДО Личной информации
+  if (employee?.id) {
+    collapseItems.push({
+      key: 'statuses',
+      label: <Title level={5} style={{ margin: 0 }}>⚙️ Статусы</Title>,
       children: (
+        <>
+          <Form.Item name="isFired" valuePropName="checked">
+            <Checkbox>Уволен</Checkbox>
+          </Form.Item>
+
+          <Form.Item name="isInactive" valuePropName="checked">
+            <Checkbox>Неактивен (временно)</Checkbox>
+          </Form.Item>
+        </>
+      ),
+    });
+  }
+
+  // Блок 1: Личная информация
+  collapseItems.push({
+    key: 'personal',
+    label: <Title level={5} style={{ margin: 0 }}>📋 Личная информация</Title>,
+    children: (
         <>
             <Form.Item
               label="Фамилия"
@@ -223,11 +244,13 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             </Form.Item>
         </>
       ),
-    },
-    {
-      key: 'documents',
-      label: <Title level={5} style={{ margin: 0 }}>📄 Документы</Title>,
-      children: (
+    });
+
+  // Блок 2: Документы
+  collapseItems.push({
+    key: 'documents',
+    label: <Title level={5} style={{ margin: 0 }}>📄 Документы</Title>,
+    children: (
         <>
             <Form.Item
               label="ИНН"
@@ -337,8 +360,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             </Form.Item>
         </>
       ),
-    },
-  ];
+    });
 
   // Блок 3: Патент (если требуется)
   if (requiresPatent) {
@@ -510,25 +532,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
       </>
     ),
   });
-
-  // Блок 6: Статусы (если редактирование)
-  if (employee?.id && canEditConstructionSite) {
-    collapseItems.push({
-      key: 'statuses',
-      label: <Title level={5} style={{ margin: 0 }}>⚙️ Статусы</Title>,
-      children: (
-        <>
-          <Form.Item name="isFired" valuePropName="checked">
-            <Checkbox>Уволен</Checkbox>
-          </Form.Item>
-
-          <Form.Item name="isInactive" valuePropName="checked">
-            <Checkbox>Неактивен (временно)</Checkbox>
-          </Form.Item>
-        </>
-      ),
-    });
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
