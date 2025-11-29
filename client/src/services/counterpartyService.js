@@ -7,6 +7,8 @@ export const counterpartyService = {
   update: (id, data) => api.put(`/counterparties/${id}`, data),
   delete: (id) => api.delete(`/counterparties/${id}`),
   getStats: () => api.get('/counterparties/stats'),
-  generateRegistrationCode: (id) => api.post(`/counterparties/${id}/generate-registration-code`)
+  generateRegistrationCode: (id) => api.post(`/counterparties/${id}/generate-registration-code`),
+  getConstructionSites: (counterpartyId) => api.get(`/counterparties/${counterpartyId}/construction-sites`),
+  saveConstructionSites: (counterpartyId, constructionSiteIds) => api.post(`/counterparties/${counterpartyId}/construction-sites`, { constructionSiteIds })
 };
 

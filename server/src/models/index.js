@@ -18,6 +18,7 @@ import EmployeeCounterpartyMapping from './EmployeeCounterpartyMapping.js';
 import Position from './Position.js';
 import Status from './Status.js';
 import EmployeeStatusMapping from './EmployeeStatusMapping.js';
+import CounterpartyConstructionSiteMapping from './CounterpartyConstructionSiteMapping.js';
 
 // Define associations
 
@@ -243,6 +244,28 @@ User.hasMany(EmployeeStatusMapping, { foreignKey: 'updated_by', as: 'updatedStat
 EmployeeStatusMapping.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 EmployeeStatusMapping.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 
+// Counterparty <-> ConstructionSite (many-to-many через CounterpartyConstructionSiteMapping)
+Counterparty.belongsToMany(ConstructionSite, {
+  through: CounterpartyConstructionSiteMapping,
+  foreignKey: 'counterparty_id',
+  otherKey: 'construction_site_id',
+  as: 'constructionSites'
+});
+
+ConstructionSite.belongsToMany(Counterparty, {
+  through: CounterpartyConstructionSiteMapping,
+  foreignKey: 'construction_site_id',
+  otherKey: 'counterparty_id',
+  as: 'counterparties'
+});
+
+// Прямые связи для CounterpartyConstructionSiteMapping
+Counterparty.hasMany(CounterpartyConstructionSiteMapping, { foreignKey: 'counterparty_id', as: 'constructionSiteMappings' });
+CounterpartyConstructionSiteMapping.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
+
+ConstructionSite.hasMany(CounterpartyConstructionSiteMapping, { foreignKey: 'construction_site_id', as: 'counterpartyMappings' });
+CounterpartyConstructionSiteMapping.belongsTo(ConstructionSite, { foreignKey: 'construction_site_id', as: 'constructionSite' });
+
 export {
   sequelize,
   User,
@@ -263,7 +286,8 @@ export {
   EmployeeCounterpartyMapping,
   Position,
   Status,
-  EmployeeStatusMapping
+  EmployeeStatusMapping,
+  CounterpartyConstructionSiteMapping
 };
 
 

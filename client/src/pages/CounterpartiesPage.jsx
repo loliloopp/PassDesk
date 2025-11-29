@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
+import { constructionSiteService } from '../services/constructionSiteService';
+import { CounterpartyObjectsModal } from './CounterpartiesPage/CounterpartyObjectsModal';
+import { useAuthStore } from '../store/authStore';
 
 const { Title } = Typography;
 
@@ -13,13 +16,17 @@ const typeMap = {
 
 const CounterpartiesPage = () => {
   const { message, modal } = App.useApp();
+  const { user } = useAuthStore();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [objectsModalVisible, setObjectsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [selectedCounterpartyId, setSelectedCounterpartyId] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState({});
   const [form] = Form.useForm();
+  const [counterpartyObjects, setCounterpartyObjects] = useState({});
 
   useEffect(() => {
     fetchData();
@@ -35,11 +42,27 @@ const CounterpartiesPage = () => {
       });
       setData(response.data.counterparties);
       setPagination(prev => ({ ...prev, total: response.data.pagination.total }));
+      
+      // Загружаем объекты для каждого контрагента
+      loadCounterpartyObjects(response.data.counterparties);
     } catch (error) {
       message.error('Ошибка при загрузке данных');
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCounterpartyObjects = async (counterparties) => {
+    const objectsMap = {};
+    for (const cp of counterparties) {
+      try {
+        const { data: response } = await counterpartyService.getConstructionSites(cp.id);
+        objectsMap[cp.id] = response.data || [];
+      } catch (error) {
+        objectsMap[cp.id] = [];
+      }
+    }
+    setCounterpartyObjects(objectsMap);
   };
 
   const handleAdd = () => {
@@ -106,6 +129,30 @@ const CounterpartiesPage = () => {
     }
   };
 
+  const handleOpenObjectsModal = (counterpartyId) => {
+    if (user?.role !== 'admin') {
+      message.error('Только администратор может редактировать объекты');
+      return;
+    }
+    setSelectedCounterpartyId(counterpartyId);
+    setObjectsModalVisible(true);
+  };
+
+  const handleSaveObjects = async (selectedIds) => {
+    try {
+      await counterpartyService.saveConstructionSites(selectedCounterpartyId, selectedIds);
+      // Обновляем локальные данные
+      const { data: response } = await counterpartyService.getConstructionSites(selectedCounterpartyId);
+      setCounterpartyObjects(prev => ({
+        ...prev,
+        [selectedCounterpartyId]: response.data || []
+      }));
+      message.success('Объекты сохранены');
+    } catch (error) {
+      message.error('Ошибка при сохранении объектов');
+    }
+  };
+
   const handleSubmit = async (values) => {
     try {
       if (editingId) {
@@ -144,6 +191,39 @@ const CounterpartiesPage = () => {
     { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
     { title: 'Email', dataIndex: 'email', key: 'email' },
     {
+      title: 'Объекты',
+      key: 'objects',
+      render: (_, record) => {
+        const objects = counterpartyObjects[record.id] || [];
+        return (
+      <div
+        onClick={() => handleOpenObjectsModal(record.id)}
+        style={{ 
+          cursor: user?.role === 'admin' ? 'pointer' : 'default',
+          padding: '4px',
+          borderRadius: '4px',
+          minHeight: '32px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center'
+        }}
+      >
+            {objects.length === 0 ? (
+              <span style={{ color: '#999', fontSize: '12px' }}>-</span>
+            ) : (
+              <Space direction="vertical" size={0}>
+                {objects.map(obj => (
+                  <span key={obj.id} style={{ fontSize: '12px' }}>
+                    {obj.shortName}
+                  </span>
+                ))}
+              </Space>
+            )}
+          </div>
+        );
+      }
+    },
+    {
       title: 'Действия',
       key: 'actions',
       render: (_, record) => (
@@ -152,10 +232,24 @@ const CounterpartiesPage = () => {
             <Button 
               icon={<LinkOutlined />} 
               onClick={() => handleCopyRegistrationLink(record)}
+              size="small"
             />
           </Tooltip>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Button icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.id)} />
+          {user?.role === 'admin' && (
+            <>
+              <Button 
+                icon={<EditOutlined />} 
+                onClick={() => handleEdit(record)}
+                size="small"
+              />
+              <Button 
+                icon={<DeleteOutlined />} 
+                danger 
+                onClick={() => handleDelete(record.id)}
+                size="small"
+              />
+            </>
+          )}
         </Space>
       )
     }
@@ -189,9 +283,11 @@ const CounterpartiesPage = () => {
             <Select.Option value="contractor">Подрядчик</Select.Option>
             <Select.Option value="general_contractor">Генподрядчик</Select.Option>
           </Select>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} style={{ marginLeft: 'auto' }}>
-            Добавить
-          </Button>
+          {user?.role === 'admin' && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} style={{ marginLeft: 'auto' }}>
+              Добавить
+            </Button>
+          )}
         </div>
 
         <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '0 24px 24px 24px' }}>
@@ -213,96 +309,104 @@ const CounterpartiesPage = () => {
         </div>
       </Card>
 
-      <Modal
-        title={editingId ? 'Редактировать контрагента' : 'Добавить контрагента'}
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        onOk={() => form.submit()}
-        width={800}
-      >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="name" label="Название" rules={[{ required: true, message: 'Введите название' }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
+      {user?.role === 'admin' && (
+        <Modal
+          title={editingId ? 'Редактировать контрагента' : 'Добавить контрагента'}
+          open={modalVisible}
+          onCancel={() => setModalVisible(false)}
+          onOk={() => form.submit()}
+          width={800}
+        >
+          <Form form={form} layout="vertical" onFinish={handleSubmit}>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="name" label="Название" rules={[{ required: true, message: 'Введите название' }]}>
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item 
-                name="inn" 
-                label="ИНН" 
-                rules={[
-                  { required: true, message: 'Введите ИНН' },
-                  { pattern: /^\d{10}$|^\d{12}$/, message: 'ИНН должен содержать 10 или 12 цифр' }
-                ]}
-              >
-                <Input maxLength={12} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item 
-                name="kpp" 
-                label="КПП"
-                rules={[
-                  { pattern: /^\d{9}$/, message: 'КПП должен содержать 9 цифр' }
-                ]}
-              >
-                <Input maxLength={9} />
-              </Form.Item>
-            </Col>
-          </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item 
+                  name="inn" 
+                  label="ИНН" 
+                  rules={[
+                    { required: true, message: 'Введите ИНН' },
+                    { pattern: /^\d{10}$|^\d{12}$/, message: 'ИНН должен содержать 10 или 12 цифр' }
+                  ]}
+                >
+                  <Input maxLength={12} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item 
+                  name="kpp" 
+                  label="КПП"
+                  rules={[
+                    { pattern: /^\d{9}$/, message: 'КПП должен содержать 9 цифр' }
+                  ]}
+                >
+                  <Input maxLength={9} />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item 
-                name="ogrn" 
-                label="ОГРН"
-                rules={[
-                  { pattern: /^\d{13}$|^\d{15}$/, message: 'ОГРН должен содержать 13 или 15 цифр' }
-                ]}
-              >
-                <Input maxLength={15} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="type" label="Тип" rules={[{ required: true }]}>
-                <Select>
-                  <Select.Option value="customer">Заказчик</Select.Option>
-                  <Select.Option value="contractor">Подрядчик</Select.Option>
-                  <Select.Option value="general_contractor">Генподрядчик</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item 
+                  name="ogrn" 
+                  label="ОГРН"
+                  rules={[
+                    { pattern: /^\d{13}$|^\d{15}$/, message: 'ОГРН должен содержать 13 или 15 цифр' }
+                  ]}
+                >
+                  <Input maxLength={15} />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="type" label="Тип" rules={[{ required: true }]}>
+                  <Select>
+                    <Select.Option value="customer">Заказчик</Select.Option>
+                    <Select.Option value="contractor">Подрядчик</Select.Option>
+                    <Select.Option value="general_contractor">Генподрядчик</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="phone" label="Телефон">
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="email" label="Email">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="phone" label="Телефон">
+                  <Input />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="email" label="Email">
+                  <Input />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item name="legalAddress" label="Юридический адрес">
-                <Input.TextArea rows={2} />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="legalAddress" label="Юридический адрес">
+                  <Input.TextArea rows={2} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+        </Modal>
+      )}
+
+      <CounterpartyObjectsModal
+        visible={objectsModalVisible}
+        counterpartyId={selectedCounterpartyId}
+        onCancel={() => setObjectsModalVisible(false)}
+        onSave={handleSaveObjects}
+      />
     </div>
   );
 };
 
 export default CounterpartiesPage;
-

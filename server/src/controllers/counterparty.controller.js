@@ -1,4 +1,4 @@
-import { Counterparty, Employee, Position, sequelize } from '../models/index.js';
+import { Counterparty, Employee, Position, ConstructionSite, CounterpartyConstructionSiteMapping, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Получить все контрагенты
@@ -343,6 +343,82 @@ export const generateRegistrationCode = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при генерации кода регистрации',
+      error: error.message
+    });
+  }
+};
+
+// Получить объекты контрагента
+export const getCounterpartyConstructionSites = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const counterparty = await Counterparty.findByPk(id);
+    
+    if (!counterparty) {
+      return res.status(404).json({
+        success: false,
+        message: 'Контрагент не найден'
+      });
+    }
+
+    const constructionSites = await counterparty.getConstructionSites({
+      attributes: ['id', 'shortName', 'fullName'],
+      joinTableAttributes: ['id']
+    });
+
+    res.json({
+      success: true,
+      data: constructionSites
+    });
+  } catch (error) {
+    console.error('Error fetching counterparty construction sites:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении объектов контрагента',
+      error: error.message
+    });
+  }
+};
+
+// Сохранить объекты контрагента
+export const saveCounterpartyConstructionSites = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { constructionSiteIds } = req.body;
+
+    const counterparty = await Counterparty.findByPk(id);
+    
+    if (!counterparty) {
+      return res.status(404).json({
+        success: false,
+        message: 'Контрагент не найден'
+      });
+    }
+
+    // Очищаем старые связи и создаем новые
+    await CounterpartyConstructionSiteMapping.destroy({
+      where: { counterpartyId: id }
+    });
+
+    if (constructionSiteIds && constructionSiteIds.length > 0) {
+      const mappings = constructionSiteIds.map(siteId => ({
+        counterpartyId: id,
+        constructionSiteId: siteId
+      }));
+
+      await CounterpartyConstructionSiteMapping.bulkCreate(mappings);
+    }
+
+    res.json({
+      success: true,
+      message: 'Объекты контрагента успешно сохранены'
+    });
+  } catch (error) {
+    console.error('Error saving counterparty construction sites:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при сохранении объектов контрагента',
       error: error.message
     });
   }
