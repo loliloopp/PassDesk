@@ -3,6 +3,7 @@ import { Typography, App, Grid, Button } from 'antd';
 import { PlusOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees, useEmployeeActions, getUniqueFilterValues } from '@/entities/employee';
+import { employeeApi } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
 import { useSettings } from '@/entities/settings';
 import { useAuthStore } from '@/store/authStore';
@@ -182,6 +183,22 @@ const EmployeesPage = () => {
         // Обновление существующего сотрудника
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
+        
+        // Проверяем есть ли у сотрудника статусы с is_upload = true
+        // Если есть - устанавливаем статус "Редактирован" с is_upload = true
+        if (editingEmployee.statusMappings && editingEmployee.statusMappings.length > 0) {
+          const hasUploadedStatus = editingEmployee.statusMappings.some(mapping => mapping.isUpload);
+          
+          if (hasUploadedStatus) {
+            try {
+              // Устанавливаем статус "Редактирован" с is_upload = true
+              await employeeApi.setEditedStatus(editingEmployee.id, true);
+            } catch (error) {
+              console.warn('Error setting edited status:', error);
+              // Не прерываем процесс сохранения если ошибка при установке статуса
+            }
+          }
+        }
       } else {
         // Создание нового сотрудника
         const newEmployee = await createEmployee(values);

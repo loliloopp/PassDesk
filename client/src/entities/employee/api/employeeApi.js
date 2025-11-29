@@ -103,5 +103,11 @@ export const employeeApi = {
     const response = await api.put(`/employees/${employeeId}/statuses/upload`, { isUpload });
     return response.data;
   },
+
+  // Установить статус "Редактирован" с флагом is_upload
+  setEditedStatus: async (employeeId, isUpload = true) => {
+    const response = await api.post(`/employees/${employeeId}/status/edited`, { isUpload });
+    return response.data;
+  },
 };
 

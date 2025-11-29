@@ -83,6 +83,7 @@ router.put('/:id/construction-sites', employeeController.updateEmployeeConstruct
 router.put('/:id/department', employeeController.updateEmployeeDepartment); // Убрали authorize('admin')
 router.put('/:employeeId/status/:statusMappingId/upload', employeeController.updateStatusUploadFlag); // Обновить флаг is_upload для статуса
 router.put('/:employeeId/statuses/upload', employeeController.updateAllStatusesUploadFlag); // Обновить флаг is_upload для всех активных статусов
+router.post('/:employeeId/status/edited', employeeController.setEditedStatus); // Установить статус "Редактирован" с is_upload
 router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере
 router.get('/search', employeeController.searchEmployees);
 

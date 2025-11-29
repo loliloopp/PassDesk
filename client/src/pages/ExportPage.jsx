@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Space, Tag, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
-import { useEmployees } from '@/entities/employee';
+import { useEmployees, useEmployeeActions } from '@/entities/employee';
+import { employeeApi } from '@/entities/employee';
 import { ExportDateFilter } from '@/features/export-date-filter';
 import StatusUploadToggle from '@/components/Employees/StatusUploadToggle';
 import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
@@ -34,6 +35,11 @@ const ExportPage = () => {
   // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам и датам)
   const { employees, loading, refetch } = useEmployees(true, filterParams);
 
+  // Инициализируем действия с сотрудниками
+  const { updateEmployee } = useEmployeeActions(() => {
+    refetch();
+  });
+
   // Обработчики действий
   const handleView = (employee) => {
     setSelectedEmployee(employee);
@@ -45,10 +51,35 @@ const ExportPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleFormSuccess = async () => {
-    await refetch();
-    setIsEditModalOpen(false);
-    setSelectedEmployee(null);
+  const handleFormSuccess = async (values) => {
+    try {
+      if (selectedEmployee) {
+        // Обновление существующего сотрудника
+        const updated = await updateEmployee(selectedEmployee.id, values);
+        setSelectedEmployee(updated);
+        
+        // Проверяем есть ли у сотрудника статусы с is_upload = true
+        // Если есть - устанавливаем статус "Редактирован" с is_upload = true
+        if (selectedEmployee.statusMappings && selectedEmployee.statusMappings.length > 0) {
+          const hasUploadedStatus = selectedEmployee.statusMappings.some(mapping => mapping.isUpload);
+          
+          if (hasUploadedStatus) {
+            try {
+              // Устанавливаем статус "Редактирован" с is_upload = true
+              await employeeApi.setEditedStatus(selectedEmployee.id, true);
+            } catch (error) {
+              console.warn('Error setting edited status:', error);
+            }
+          }
+        }
+      }
+      await refetch();
+      setIsEditModalOpen(false);
+      setSelectedEmployee(null);
+    } catch (error) {
+      // Ошибка уже обработана в хуке
+      throw error;
+    }
   };
 
   // Обработчики фильтра по дате

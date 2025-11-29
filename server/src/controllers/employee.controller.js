@@ -1105,6 +1105,71 @@ export const updateStatusUploadFlag = async (req, res, next) => {
   }
 };
 
+/**
+ * Установить статус "Редактирован" с флагом is_upload
+ */
+export const setEditedStatus = async (req, res, next) => {
+  try {
+    const { employeeId } = req.params;
+    const { isUpload = true } = req.body;
+    const userId = req.user.id;
+
+    // Найти ID статуса "status_hr_edited"
+    const editedStatusRecord = await Status.findOne({
+      where: {
+        name: 'status_hr_edited'
+      }
+    });
+
+    if (!editedStatusRecord) {
+      return res.status(400).json({
+        success: false,
+        message: 'Статус "status_hr_edited" не найден'
+      });
+    }
+
+    // Проверяем есть ли уже такой статус у сотрудника
+    const existingMapping = await EmployeeStatusMapping.findOne({
+      where: {
+        employeeId: employeeId,
+        statusId: editedStatusRecord.id,
+        statusGroup: 'status_hr',
+        isActive: true
+      }
+    });
+
+    if (existingMapping) {
+      // Обновляем существующий
+      existingMapping.isUpload = isUpload;
+      existingMapping.updatedBy = userId;
+      existingMapping.updatedAt = new Date();
+      await existingMapping.save();
+    } else {
+      // Создаём новый статус для сотрудника
+      await EmployeeStatusMapping.create({
+        employeeId: employeeId,
+        statusId: editedStatusRecord.id,
+        statusGroup: 'status_hr',
+        isUpload: isUpload,
+        isActive: true,
+        createdBy: userId,
+        updatedBy: userId
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Статус "Редактирован" установлен',
+      data: {
+        statusUpdated: true
+      }
+    });
+  } catch (error) {
+    console.error('Error setting edited status:', error);
+    next(error);
+  }
+};
+
 export const searchEmployees = async (req, res, next) => {
   try {
     const { query, counterpartyId, position } = req.query;
