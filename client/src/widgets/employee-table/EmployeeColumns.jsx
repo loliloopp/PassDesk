@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Button, Tag, Tooltip, Space, Popconfirm, Select, Badge } from 'antd';
+import { useMemo, useState } from 'react';
+import { Button, Tag, Tooltip, Space, Popconfirm, Select, Badge, Input, Checkbox } from 'antd';
 import {
   EditOutlined,
   DeleteOutlined,
@@ -9,6 +9,7 @@ import {
   CloseCircleFilled,
 } from '@ant-design/icons';
 import { getStatusPriority } from '@/entities/employee';
+import { PositionFilterDropdown } from './PositionFilterDropdown';
 
 /**
  * Создание конфигурации колонок для таблицы сотрудников
@@ -28,6 +29,7 @@ export const useEmployeeColumns = ({
   defaultCounterpartyId,
   userCounterpartyId,
   onConstructionSitesEdit, // Новый callback для редактирования объектов
+  resetTrigger = 0, // Триггер для сброса фильтров
 }) => {
   // Определяем, должен ли быть виден столбец Подразделение
   // Видно ТОЛЬКО для пользователей контрагента по умолчанию
@@ -76,9 +78,23 @@ export const useEmployeeColumns = ({
           const bPos = b.position?.name || '';
           return aPos.localeCompare(bPos);
         },
-        filters: uniqueFilters.positions.map((pos) => ({ text: pos, value: pos })),
+        filterDropdown: (props) => (
+          <PositionFilterDropdown
+            {...props}
+            uniqueFilterPositions={uniqueFilters.positions}
+            resetTrigger={resetTrigger}
+          />
+        ),
+        filterIcon: (filtered) => (
+          <div style={{ color: filtered ? '#1890ff' : undefined }}>
+            ☰
+          </div>
+        ),
         filteredValue: filters.position || [],
-        onFilter: (value, record) => record.position?.name === value,
+        onFilter: (value, record) => {
+          const positionName = record.position?.name || '';
+          return positionName === value;
+        },
       },
       // Столбец "Подразделение" видно ТОЛЬКО для пользователей контрагента по умолчанию
       ...(showDepartmentColumn
@@ -488,6 +504,7 @@ export const useEmployeeColumns = ({
     filters,
     showDepartmentColumn,
     onConstructionSitesEdit,
+    resetTrigger,
   ]);
 };
 

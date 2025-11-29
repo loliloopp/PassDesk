@@ -94,6 +94,7 @@ export const EmployeeTable = ({
     defaultCounterpartyId,
     userCounterpartyId,
     onConstructionSitesEdit, // Передаем новый callback
+    resetTrigger, // Передаем триггер сброса
   });
 
   // Сбрасываем фильтры когда меняется resetTrigger
