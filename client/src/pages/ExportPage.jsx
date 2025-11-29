@@ -2,21 +2,23 @@ import { useState } from 'react';
 import { Table, Button, Space, Tag, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useEmployees } from '@/entities/employee';
+import { ExportDateFilter } from '@/features/export-date-filter';
 import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
 import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
 
 /**
  * Страница выгрузки сотрудников для администрирования
- * Отображает таблицу со всеми данными сотрудников
+ * Отображает таблицу со всеми данными сотрудников с фильтрацией по дате
  */
 const ExportPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [filterParams, setFilterParams] = useState({});
 
-  // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам)
-  const { employees, loading, refetch } = useEmployees(true);
+  // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам и датам)
+  const { employees, loading, refetch } = useEmployees(true, filterParams);
 
   // Обработчики действий
   const handleView = (employee) => {
@@ -33,6 +35,17 @@ const ExportPage = () => {
     await refetch();
     setIsEditModalOpen(false);
     setSelectedEmployee(null);
+  };
+
+  // Обработчики фильтра по дате
+  const handleDateFilterApply = (params) => {
+    setFilterParams(params);
+    setPagination({ current: 1, pageSize: 20 }); // Сбросить пагинацию
+  };
+
+  const handleDateFilterReset = () => {
+    setFilterParams({});
+    setPagination({ current: 1, pageSize: 20 });
   };
 
   // Получение количества файлов
@@ -335,6 +348,13 @@ const ExportPage = () => {
           height: auto !important;
         }
       `}</style>
+
+      {/* Блок фильтра по дате */}
+      <ExportDateFilter 
+        onFilter={handleDateFilterApply}
+        onReset={handleDateFilterReset}
+      />
+
       <Table
         className="export-table"
         columns={columns}

@@ -7,8 +7,9 @@ import { employeeStatusService } from '@/services/employeeStatusService';
  * Хук для работы с сотрудниками
  * Оптимизированная загрузка с параллельными запросами
  * @param {boolean} activeOnly - показывать только активных сотрудников (фильтровать исключенные статусы). По умолчанию false
+ * @param {object} filterParams - дополнительные параметры фильтрации (dateFrom, dateTo и т.д.)
  */
-export const useEmployees = (activeOnly = false) => {
+export const useEmployees = (activeOnly = false, filterParams = {}) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,7 +18,7 @@ export const useEmployees = (activeOnly = false) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await employeeApi.getAll({ activeOnly });
+      const response = await employeeApi.getAll({ activeOnly, ...filterParams });
       // employeeApi возвращает response.data, структура: { success: true, data: { employees: [], pagination: {} } }
       let employeesData = response?.data?.employees || [];
       
@@ -52,7 +53,7 @@ export const useEmployees = (activeOnly = false) => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [activeOnly]);
+  }, [activeOnly, JSON.stringify(filterParams)]);
 
   return {
     employees,

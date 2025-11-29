@@ -5,7 +5,7 @@ import api from '@/services/api';
  */
 export const employeeApi = {
   // Получить всех сотрудников
-  // @param {object} params - параметры запроса (page, limit, search, activeOnly)
+  // @param {object} params - параметры запроса (page, limit, search, activeOnly, dateFrom, dateTo)
   getAll: async (params = {}) => {
     // Преобразуем activeOnly в строку если это boolean
     const queryParams = {

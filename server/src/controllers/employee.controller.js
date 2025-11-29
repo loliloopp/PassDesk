@@ -56,7 +56,7 @@ const calculateStatusCard = (employee) => {
 
 export const getAllEmployees = async (req, res, next) => {
   try {
-    const { page = 1, limit = 100, search = '', activeOnly = 'false' } = req.query;
+    const { page = 1, limit = 100, search = '', activeOnly = 'false', dateFrom, dateTo } = req.query;
     const offset = (page - 1) * limit;
     const userId = req.user.id;
     const userRole = req.user.role;
@@ -84,6 +84,19 @@ export const getAllEmployees = async (req, res, next) => {
       'status_active_inactive',
       'status_secure_block',
       'status_secure_block_compl'
+    ];
+
+    // Статусы для фильтрации по дате (если указан фильтр)
+    const dateFilterStatuses = [
+      'status_new',
+      'status_tb_passed',
+      'status_processed',
+      'status_active_fired',
+      'status_hr_fired_compl',
+      'status_hr_new_compl',
+      'status_hr_edited',
+      'status_hr_edited_compl',
+      'status_hr_fired_off'
     ];
 
     // Фильтрация по роли пользователя
@@ -136,7 +149,7 @@ export const getAllEmployees = async (req, res, next) => {
             attributes: ['id', 'name', 'group']
           }
         ],
-        attributes: ['id', 'status_id', 'is_active', 'status_group'],
+        attributes: ['id', 'statusId', 'isActive', 'statusGroup', 'createdAt', 'updatedAt'],
         required: false
       }
     ];
@@ -192,7 +205,7 @@ export const getAllEmployees = async (req, res, next) => {
     });
 
     // Фильтруем сотрудников - исключаем тех, у кого есть исключенные статусы (если activeOnly = true)
-    const filteredRows = isActiveOnly ? rows.filter(employee => {
+    let filteredRows = isActiveOnly ? rows.filter(employee => {
       const statusMappings = employee.statusMappings || [];
       
       // Проверяем наличие исключенного статуса
@@ -205,6 +218,88 @@ export const getAllEmployees = async (req, res, next) => {
       
       return !hasExcludedStatus;
     }) : rows;
+
+    // Фильтруем по дате, если указаны параметры
+    if (dateFrom || dateTo) {
+      const startDate = dateFrom ? new Date(dateFrom) : null;
+      const endDate = dateTo ? new Date(dateTo) : null;
+      
+      // Устанавливаем время для startDate на начало дня
+      if (startDate) {
+        startDate.setHours(0, 0, 0, 0);
+      }
+
+      // Устанавливаем время для endDate на конец дня
+      if (endDate) {
+        endDate.setHours(23, 59, 59, 999);
+      }
+
+      console.log('🔍 Date filter params:', { dateFrom, dateTo, startDate, endDate });
+      console.log('📊 Total rows before date filter:', filteredRows.length);
+      console.log('📋 Allowed status names:', dateFilterStatuses);
+
+      filteredRows = filteredRows.filter(employee => {
+        const statusMappings = employee.statusMappings || [];
+        
+        if (statusMappings.length === 0) {
+          console.log(`❌ Employee ${employee.id} has no status mappings`);
+          return false;
+        }
+
+        // Логируем все статусы сотрудника
+        console.log(`📋 Employee ${employee.id} statuses:`, statusMappings.map(m => ({ 
+          statusGroup: m.statusGroup,
+          statusName: m.status?.name,
+          createdAt: m.createdAt, 
+          updatedAt: m.updatedAt 
+        })));
+
+        // Проверяем, есть ли статусы из списка, которые попадают в диапазон дат
+        const hasMatchingStatus = statusMappings.some(mapping => {
+          // Получаем имя статуса
+          const statusName = mapping.status?.name;
+          
+          // Проверяем, что статус в списке для фильтрации
+          const isAllowedStatus = dateFilterStatuses.includes(statusName);
+          if (!isAllowedStatus) {
+            console.log(`   ⏭️  Status ${statusName} not in allowed list`);
+            return false;
+          }
+          
+          // Проверяем createdAt
+          if (mapping.createdAt) {
+            const createdDate = new Date(mapping.createdAt);
+            const isInRange = startDate && createdDate >= startDate && (!endDate || createdDate <= endDate);
+            console.log(`   📅 createdAt: ${mapping.createdAt} (parsed: ${createdDate.toISOString()}) - in range: ${isInRange}`);
+            if (isInRange) {
+              console.log(`✅ Employee ${employee.id} matched by createdAt (status: ${statusName})`);
+              return true;
+            }
+          }
+          
+          // Проверяем updatedAt
+          if (mapping.updatedAt) {
+            const updatedDate = new Date(mapping.updatedAt);
+            const isInRange = startDate && updatedDate >= startDate && (!endDate || updatedDate <= endDate);
+            console.log(`   📅 updatedAt: ${mapping.updatedAt} (parsed: ${updatedDate.toISOString()}) - in range: ${isInRange}`);
+            if (isInRange) {
+              console.log(`✅ Employee ${employee.id} matched by updatedAt (status: ${statusName})`);
+              return true;
+            }
+          }
+          
+          return false;
+        });
+
+        if (!hasMatchingStatus) {
+          console.log(`❌ Employee ${employee.id} not matched any criteria`);
+        }
+
+        return hasMatchingStatus;
+      });
+
+      console.log('📊 Total rows after date filter:', filteredRows.length);
+    }
 
     // Пересчитываем statusCard для каждого сотрудника
     const employeesWithStatus = filteredRows.map(employee => {
