@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Table, Button, Space, Tag, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useEmployees } from '@/entities/employee';
@@ -16,7 +16,17 @@ const ExportPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
-  const [filterParams, setFilterParams] = useState({});
+  
+  // Инициализируем фильтр из localStorage
+  const [filterParams, setFilterParams] = useState(() => {
+    const saved = localStorage.getItem('exportPageDateFilter');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Сохраняем фильтр при изменении
+  useEffect(() => {
+    localStorage.setItem('exportPageDateFilter', JSON.stringify(filterParams));
+  }, [filterParams]);
 
   // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам и датам)
   const { employees, loading, refetch } = useEmployees(true, filterParams);
@@ -379,6 +389,7 @@ const ExportPage = () => {
 
       {/* Блок фильтра по дате */}
       <ExportDateFilter 
+        initialFilter={filterParams}
         onFilter={handleDateFilterApply}
         onReset={handleDateFilterReset}
       />

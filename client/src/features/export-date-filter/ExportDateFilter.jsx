@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DatePicker, Button } from 'antd';
 import dayjs from 'dayjs';
 
@@ -6,9 +6,17 @@ import dayjs from 'dayjs';
  * Компонент для фильтрации сотрудников по диапазону дат
  * Фильтрует по дате создания или обновления статуса
  */
-const ExportDateFilter = ({ onFilter, onReset }) => {
+const ExportDateFilter = ({ onFilter, onReset, initialFilter = {} }) => {
   const [dateRange, setDateRange] = useState(null);
-  const [isActive, setIsActive] = useState(false);
+
+  // Инициализируем дату при загрузке, если есть сохраненные значения
+  useEffect(() => {
+    if (initialFilter?.dateFrom && initialFilter?.dateTo) {
+      const from = dayjs(initialFilter.dateFrom);
+      const to = dayjs(initialFilter.dateTo);
+      setDateRange([from, to]);
+    }
+  }, [initialFilter]);
 
   const handleDateRangeChange = (dates) => {
     setDateRange(dates);
@@ -26,12 +34,10 @@ const ExportDateFilter = ({ onFilter, onReset }) => {
       dateFrom,
       dateTo
     });
-    setIsActive(true);
   };
 
   const handleResetFilter = () => {
     setDateRange(null);
-    setIsActive(false);
     onReset();
   };
 
