@@ -391,8 +391,8 @@ const ExportPage = () => {
         );
       },
       filters: [
-        { text: 'ДА (обработан)', value: 'uploaded' },
-        { text: 'НЕТ (необработан)', value: 'not_uploaded' },
+        { text: 'ДА (выгружен)', value: 'uploaded' },
+        { text: 'НЕТ (не выгружен)', value: 'not_uploaded' },
       ],
       filteredValue: tableFilters.isUpload || [],
       onFilter: (value, record) => {
