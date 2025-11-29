@@ -313,6 +313,8 @@ const EmployeesPage = () => {
             canDeleteEmployee={canDeleteEmployee}
             uniqueFilters={uniqueFilters}
             onFiltersChange={setTableFilters}
+            defaultCounterpartyId={defaultCounterpartyId}
+            userCounterpartyId={user?.counterpartyId}
           />
         </div>
       )}

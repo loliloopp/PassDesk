@@ -72,6 +72,8 @@ export const EmployeeTable = ({
   canDeleteEmployee,
   uniqueFilters,
   onFiltersChange,
+  defaultCounterpartyId,
+  userCounterpartyId,
 }) => {
   const { filters, onFiltersChange: handleLocalFiltersChange } = useTableFilters();
   const [sortOrder, setSortOrder] = useState({});
@@ -87,6 +89,8 @@ export const EmployeeTable = ({
     canDeleteEmployee,
     uniqueFilters,
     filters, // Передаем фильтры в хук колонок
+    defaultCounterpartyId,
+    userCounterpartyId,
   });
 
   // Обработчик изменения фильтров

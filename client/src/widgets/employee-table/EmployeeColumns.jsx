@@ -25,7 +25,13 @@ export const useEmployeeColumns = ({
   canDeleteEmployee,
   uniqueFilters,
   filters = {}, // Состояние фильтров из localStorage
+  defaultCounterpartyId,
+  userCounterpartyId,
 }) => {
+  // Определяем, должен ли быть виден столбец Подразделение
+  // Видно ТОЛЬКО для пользователей контрагента по умолчанию
+  const showDepartmentColumn = defaultCounterpartyId && userCounterpartyId === defaultCounterpartyId;
+  
   return useMemo(() => {
     const columns = [
       {
@@ -73,61 +79,66 @@ export const useEmployeeColumns = ({
         filteredValue: filters.position || [],
         onFilter: (value, record) => record.position?.name === value,
       },
-      {
-        title: 'Подразделение',
-        key: 'department',
-        width: 180,
-        ellipsis: false,
-        render: (_, record) => {
-          const mappings = record.employeeCounterpartyMappings || [];
-          const currentMapping = mappings[0];
-          const currentDepartmentId = currentMapping?.departmentId;
-          const currentDepartmentName = currentMapping?.department?.name;
+      // Столбец "Подразделение" видно ТОЛЬКО для пользователей контрагента по умолчанию
+      ...(showDepartmentColumn
+        ? [
+            {
+              title: 'Подразделение',
+              key: 'department',
+              width: 180,
+              ellipsis: false,
+              render: (_, record) => {
+                const mappings = record.employeeCounterpartyMappings || [];
+                const currentMapping = mappings[0];
+                const currentDepartmentId = currentMapping?.departmentId;
+                const currentDepartmentName = currentMapping?.department?.name;
 
-          return (
-            <Select
-              value={
-                currentDepartmentId
-                  ? { label: currentDepartmentName, value: currentDepartmentId }
-                  : undefined
-              }
-              placeholder="Выберите подразделение"
-              style={{ width: '100%' }}
-              className="department-select"
-              popupMatchSelectWidth={false}
-              onChange={(option) => onDepartmentChange(record.id, option.value)}
-              allowClear
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-              labelInValue
-            >
-              {departments.map((dept) => (
-                <Select.Option 
-                  key={dept.id} 
-                  value={dept.id}
-                  label={dept.name}
-                >
-                  {dept.name}
-                </Select.Option>
-              ))}
-            </Select>
-          );
-        },
-        sorter: (a, b) => {
-          const aDept = a.employeeCounterpartyMappings?.[0]?.department?.name || '';
-          const bDept = b.employeeCounterpartyMappings?.[0]?.department?.name || '';
-          return aDept.localeCompare(bDept);
-        },
-        filters: uniqueFilters.departments.map((dept) => ({ text: dept, value: dept })),
-        filteredValue: filters.department || [],
-        onFilter: (value, record) => {
-          const mappings = record.employeeCounterpartyMappings || [];
-          return mappings.some((m) => m.department?.name === value);
-        },
-      },
+                return (
+                  <Select
+                    value={
+                      currentDepartmentId
+                        ? { label: currentDepartmentName, value: currentDepartmentId }
+                        : undefined
+                    }
+                    placeholder="Выберите подразделение"
+                    style={{ width: '100%' }}
+                    className="department-select"
+                    popupMatchSelectWidth={false}
+                    onChange={(option) => onDepartmentChange(record.id, option.value)}
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    filterOption={(input, option) =>
+                      option.children.toLowerCase().includes(input.toLowerCase())
+                    }
+                    labelInValue
+                  >
+                    {departments.map((dept) => (
+                      <Select.Option 
+                        key={dept.id} 
+                        value={dept.id}
+                        label={dept.name}
+                      >
+                        {dept.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                );
+              },
+              sorter: (a, b) => {
+                const aDept = a.employeeCounterpartyMappings?.[0]?.department?.name || '';
+                const bDept = b.employeeCounterpartyMappings?.[0]?.department?.name || '';
+                return aDept.localeCompare(bDept);
+              },
+              filters: uniqueFilters.departments.map((dept) => ({ text: dept, value: dept })),
+              filteredValue: filters.department || [],
+              onFilter: (value, record) => {
+                const mappings = record.employeeCounterpartyMappings || [];
+                return mappings.some((m) => m.department?.name === value);
+              },
+            },
+          ]
+        : []),
       // Столбец "Контрагент" виден только для пользователей контрагента по умолчанию
       ...(canExport
         ? [
@@ -452,6 +463,7 @@ export const useEmployeeColumns = ({
     canDeleteEmployee,
     uniqueFilters,
     filters,
+    showDepartmentColumn,
   ]);
 };
 
