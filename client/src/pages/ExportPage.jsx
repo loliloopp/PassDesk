@@ -443,7 +443,7 @@ const ExportPage = () => {
     {
       title: 'Статус',
       key: 'status',
-      width: 95,
+      width: 115,
       render: (text, record) => {
         const status = getEmployeeStatus(record);
         return <Tag color={status.color}>{status.name}</Tag>;
