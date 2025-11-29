@@ -86,6 +86,11 @@ const UsersPage = () => {
     user: { text: 'Пользователь', color: 'default' },
   }
 
+  // Роли для селекта при создании/редактировании (исключаем админа и менеджера, оставляем только user)
+  const selectableRoles = {
+    user: { text: 'Пользователь', color: 'default' },
+  }
+
   const columns = [
     {
       title: 'Email',
@@ -466,14 +471,15 @@ const UsersPage = () => {
             name="role"
             label="Роль"
             rules={[{ required: true, message: 'Выберите роль' }]}
-            initialValue="user"
+            initialValue={editingUser?.role || 'user'}
           >
             <Select>
-              {Object.entries(roleLabels).map(([key, value]) => (
+              {Object.entries(selectableRoles).map(([key, value]) => (
                 <Select.Option key={key} value={key}>
                   {value.text}
                 </Select.Option>
               ))}
+              <Select.Option value="admin">Администратор</Select.Option>
             </Select>
           </Form.Item>
 

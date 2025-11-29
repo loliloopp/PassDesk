@@ -25,8 +25,8 @@ router.get('/employees/:employeeId/with-statuses', authenticate, employeeStatusC
 // Список сотрудников со статусами
 router.get('/employees/with-statuses', authenticate, employeeStatusController.getEmployeesWithStatuses);
 
-// Установить новый статус (требует прав admin/manager)
-router.post('/employees/:employeeId/status', authenticate, authorize('admin', 'manager'), employeeStatusController.setEmployeeStatus);
+// Установить новый статус (требует прав admin)
+router.post('/employees/:employeeId/status', authenticate, authorize('admin'), employeeStatusController.setEmployeeStatus);
 
 export default router;
 
