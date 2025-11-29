@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Typography, App, Grid, Button } from 'antd';
 import { PlusOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useEmployees, useEmployeeActions, filterEmployees, getUniqueFilterValues } from '@/entities/employee';
+import { useEmployees, useEmployeeActions, getUniqueFilterValues } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
 import { useSettings } from '@/entities/settings';
 import { useAuthStore } from '@/store/authStore';
@@ -32,7 +32,6 @@ const EmployeesPage = () => {
   const isMobile = !screens.md;
 
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -45,8 +44,8 @@ const EmployeesPage = () => {
 
   const { user } = useAuthStore();
 
-  // Параллельная загрузка всех данных для быстрого старта
-  const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees();
+  // Загружаем ВСЕ сотрудников без фильтрации по статусам (activeOnly = false)
+  const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees(false);
   const { departments, loading: departmentsLoading } = useDepartments();
   const { defaultCounterpartyId, loading: settingsLoading } = useSettings();
 
@@ -78,10 +77,27 @@ const EmployeesPage = () => {
   const { createEmployee, updateEmployee, deleteEmployee, updateDepartment } =
     useEmployeeActions(refetchEmployees);
 
-  // Мемоизированная фильтрация
+  // Мемоизированная фильтрация (БЕЗ фильтра по статусам - только поиск)
   const filteredEmployees = useMemo(
-    () => filterEmployees(employees, searchText, statusFilter),
-    [employees, searchText, statusFilter]
+    () => {
+      let filtered = employees;
+      
+      // Фильтр по поисковому запросу (без фильтра по статусам)
+      if (!searchText) return filtered;
+
+      const searchLower = searchText.toLowerCase();
+      return filtered.filter((employee) => {
+        return (
+          employee.firstName?.toLowerCase().includes(searchLower) ||
+          employee.lastName?.toLowerCase().includes(searchLower) ||
+          employee.middleName?.toLowerCase().includes(searchLower) ||
+          employee.position?.name?.toLowerCase().includes(searchLower) ||
+          employee.inn?.toLowerCase().includes(searchLower) ||
+          employee.snils?.toLowerCase().includes(searchLower)
+        );
+      });
+    },
+    [employees, searchText]
   );
 
   // Мемоизированные уникальные значения для фильтров
@@ -211,8 +227,6 @@ const EmployeesPage = () => {
             <EmployeeSearchFilter 
               searchText={searchText} 
               onSearchChange={setSearchText}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
             />
             <EmployeeActions
               onAdd={handleAdd}
@@ -230,8 +244,6 @@ const EmployeesPage = () => {
           <EmployeeSearchFilter 
             searchText={searchText} 
             onSearchChange={setSearchText}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
           />
           <div style={{ display: 'flex', gap: 12 }}>
             <Button

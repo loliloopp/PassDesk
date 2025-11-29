@@ -14,8 +14,8 @@ const ExportPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
-  // Загружаем данные сотрудников
-  const { employees, loading, refetch } = useEmployees();
+  // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам)
+  const { employees, loading, refetch } = useEmployees(true);
 
   // Обработчики действий
   const handleView = (employee) => {

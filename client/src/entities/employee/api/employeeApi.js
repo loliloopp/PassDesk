@@ -5,8 +5,14 @@ import api from '@/services/api';
  */
 export const employeeApi = {
   // Получить всех сотрудников
+  // @param {object} params - параметры запроса (page, limit, search, activeOnly)
   getAll: async (params = {}) => {
-    const response = await api.get('/employees', { params });
+    // Преобразуем activeOnly в строку если это boolean
+    const queryParams = {
+      ...params,
+      activeOnly: params.activeOnly !== undefined ? String(params.activeOnly) : 'false'
+    };
+    const response = await api.get('/employees', { params: queryParams });
     return response.data;
   },
 

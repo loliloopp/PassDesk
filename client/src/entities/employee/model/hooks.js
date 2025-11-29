@@ -6,8 +6,9 @@ import { employeeStatusService } from '@/services/employeeStatusService';
 /**
  * Хук для работы с сотрудниками
  * Оптимизированная загрузка с параллельными запросами
+ * @param {boolean} activeOnly - показывать только активных сотрудников (фильтровать исключенные статусы). По умолчанию false
  */
-export const useEmployees = () => {
+export const useEmployees = (activeOnly = false) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,7 +17,7 @@ export const useEmployees = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await employeeApi.getAll();
+      const response = await employeeApi.getAll({ activeOnly });
       // employeeApi возвращает response.data, структура: { success: true, data: { employees: [], pagination: {} } }
       let employeesData = response?.data?.employees || [];
       
@@ -51,7 +52,7 @@ export const useEmployees = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [activeOnly]);
 
   return {
     employees,

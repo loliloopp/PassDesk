@@ -56,7 +56,7 @@ const calculateStatusCard = (employee) => {
 
 export const getAllEmployees = async (req, res, next) => {
   try {
-    const { page = 1, limit = 100, search = '' } = req.query;
+    const { page = 1, limit = 100, search = '', activeOnly = 'false' } = req.query;
     const offset = (page - 1) * limit;
     const userId = req.user.id;
     const userRole = req.user.role;
@@ -75,7 +75,8 @@ export const getAllEmployees = async (req, res, next) => {
       ];
     }
 
-    // Статусы, которые исключаем из выгрузки (is_active = true)
+    // Статусы, которые исключаем из выгрузки (только если activeOnly = true)
+    const isActiveOnly = activeOnly === 'true';
     const excludedStatuses = [
       'status_hr_fired_compl',
       'status_hr_new_compl',
@@ -190,8 +191,8 @@ export const getAllEmployees = async (req, res, next) => {
       distinct: true // Важно для правильного подсчета при фильтрации через include
     });
 
-    // Фильтруем сотрудников - исключаем тех, у кого есть исключенные статусы
-    const filteredRows = rows.filter(employee => {
+    // Фильтруем сотрудников - исключаем тех, у кого есть исключенные статусы (если activeOnly = true)
+    const filteredRows = isActiveOnly ? rows.filter(employee => {
       const statusMappings = employee.statusMappings || [];
       
       // Проверяем наличие исключенного статуса
@@ -203,7 +204,7 @@ export const getAllEmployees = async (req, res, next) => {
       });
       
       return !hasExcludedStatus;
-    });
+    }) : rows;
 
     // Пересчитываем statusCard для каждого сотрудника
     const employeesWithStatus = filteredRows.map(employee => {
