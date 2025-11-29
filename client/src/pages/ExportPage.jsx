@@ -6,6 +6,7 @@ import { ExportDateFilter } from '@/features/export-date-filter';
 import StatusUploadToggle from '@/components/Employees/StatusUploadToggle';
 import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
 import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
+import ExcelExportModal from '@/components/Employees/ExcelExportModal';
 
 /**
  * Страница выгрузки сотрудников для администрирования
@@ -14,8 +15,10 @@ import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
 const ExportPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isExcelExportModalOpen, setIsExcelExportModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
+  const [tableFilters, setTableFilters] = useState({});
   
   // Инициализируем фильтр из localStorage
   const [filterParams, setFilterParams] = useState(() => {
@@ -64,6 +67,108 @@ const ExportPage = () => {
     // Обновляем employees напрямую, без setEmployees (используем что вернул useEmployees)
     // Просто перезагружаем данные с сервера
     refetch();
+  };
+
+  // Обработчик открытия модала выгрузки
+  const handleOpenExcelExportModal = () => {
+    setIsExcelExportModalOpen(true);
+  };
+
+  // Обработчик закрытия модала выгрузки
+  const handleCloseExcelExportModal = () => {
+    setIsExcelExportModalOpen(false);
+  };
+
+  // Обработчик успешной выгрузки
+  const handleExcelExportSuccess = () => {
+    refetch();
+  };
+
+  // Функция для применения табличных фильтров к employees
+  // Фильтры работают так же как в таблице
+  const getFilteredEmployees = () => {
+    let filtered = [...employees];
+
+    // Применяем фильтры из таблицы (position, department, counterparty, citizenship, isUpload, status)
+    if (tableFilters.position && tableFilters.position.length > 0) {
+      filtered = filtered.filter(emp => tableFilters.position.includes(emp.position?.name));
+    }
+
+    if (tableFilters.department && tableFilters.department.length > 0) {
+      filtered = filtered.filter(emp => {
+        const mappings = emp.employeeCounterpartyMappings || [];
+        return mappings.some(m => tableFilters.department.includes(m.department?.name));
+      });
+    }
+
+    if (tableFilters.counterparty && tableFilters.counterparty.length > 0) {
+      filtered = filtered.filter(emp => {
+        const mappings = emp.employeeCounterpartyMappings || [];
+        return mappings.some(m => tableFilters.counterparty.includes(m.counterparty?.name));
+      });
+    }
+
+    if (tableFilters.citizenship && tableFilters.citizenship.length > 0) {
+      filtered = filtered.filter(emp => tableFilters.citizenship.includes(emp.citizenship?.name));
+    }
+
+    if (tableFilters.isUpload && tableFilters.isUpload.length > 0) {
+      filtered = filtered.filter(emp => {
+        const statusMappings = emp.statusMappings || [];
+        if (statusMappings.length === 0) return false;
+        const allUploaded = statusMappings.every(sm => sm.isUpload);
+        
+        if (tableFilters.isUpload.includes('uploaded')) {
+          return allUploaded;
+        }
+        if (tableFilters.isUpload.includes('not_uploaded')) {
+          return !allUploaded;
+        }
+        return true;
+      });
+    }
+
+    if (tableFilters.status && tableFilters.status.length > 0) {
+      filtered = filtered.filter(emp => {
+        const statusMappings = emp.statusMappings || [];
+        const getStatusByGroup = (group) => {
+          const mapping = statusMappings.find(m => {
+            const mappingGroup = m.statusGroup || m.status_group;
+            return mappingGroup === group;
+          });
+          if (!mapping) return null;
+          const statusObj = mapping.status || mapping.Status;
+          return statusObj?.name;
+        };
+
+        const secureStatus = getStatusByGroup('status_secure');
+        const activeStatus = getStatusByGroup('status_active');
+        const mainStatus = getStatusByGroup('status');
+
+        return tableFilters.status.some(value => {
+          if (value === 'blocked') {
+            return secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl';
+          }
+          if (value === 'fired') {
+            return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
+          }
+          if (value === 'inactive') {
+            return activeStatus === 'status_active_inactive';
+          }
+          
+          return (
+            secureStatus !== 'status_secure_block' && 
+            secureStatus !== 'status_secure_block_compl' &&
+            activeStatus !== 'status_active_fired' &&
+            activeStatus !== 'status_active_fired_compl' &&
+            activeStatus !== 'status_active_inactive' &&
+            mainStatus === `status_${value}`
+          );
+        });
+      });
+    }
+
+    return filtered;
   };
 
   // Получение количества файлов
@@ -410,6 +515,7 @@ const ExportPage = () => {
         initialFilter={filterParams}
         onFilter={handleDateFilterApply}
         onReset={handleDateFilterReset}
+        onExcelExport={handleOpenExcelExportModal}
       />
 
       <Table
@@ -419,6 +525,10 @@ const ExportPage = () => {
         rowKey="id"
         loading={loading}
         size="small"
+        onChange={(pag, filters, sorter) => {
+          // Сохраняем фильтры при изменении
+          setTableFilters(filters);
+        }}
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,
@@ -459,6 +569,14 @@ const ExportPage = () => {
           setSelectedEmployee(null);
         }}
         onSuccess={handleFormSuccess}
+      />
+
+      {/* Модальное окно выгрузки в Excel */}
+      <ExcelExportModal
+        visible={isExcelExportModalOpen}
+        employees={getFilteredEmployees()}
+        onCancel={handleCloseExcelExportModal}
+        onSuccess={handleExcelExportSuccess}
       />
     </div>
   );

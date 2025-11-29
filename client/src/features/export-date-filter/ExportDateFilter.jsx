@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { DatePicker, Button } from 'antd';
+import { FileExcelOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 /**
  * Компонент для фильтрации сотрудников по диапазону дат
  * Фильтрует по дате создания или обновления статуса
  */
-const ExportDateFilter = ({ onFilter, onReset, initialFilter = {} }) => {
+const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport }) => {
   const [dateRange, setDateRange] = useState(null);
 
   // Инициализируем дату при загрузке, если есть сохраненные значения
@@ -51,27 +52,40 @@ const ExportDateFilter = ({ onFilter, onReset, initialFilter = {} }) => {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
-      flexWrap: 'wrap'
+      flexWrap: 'wrap',
+      justifyContent: 'space-between'
     }}>
-      <span style={{ fontSize: '14px', fontWeight: '500' }}>
-        Фильтр по дате:
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '14px', fontWeight: '500' }}>
+          Фильтр по дате:
+        </span>
 
-      <DatePicker.RangePicker
-        value={dateRange}
-        onChange={handleDateRangeChange}
-        format="DD.MM.YYYY"
-        placeholder={['Дата с', 'Дата по']}
-        style={{ width: '280px' }}
-      />
+        <DatePicker.RangePicker
+          value={dateRange}
+          onChange={handleDateRangeChange}
+          format="DD.MM.YYYY"
+          placeholder={['Дата с', 'Дата по']}
+          style={{ width: '280px' }}
+        />
 
-      <Button
-        type="primary"
-        onClick={handleApplyFilter}
-        disabled={!dateRange || !dateRange[0] || !dateRange[1]}
-      >
-        Применить фильтр
-      </Button>
+        <Button
+          type="primary"
+          onClick={handleApplyFilter}
+          disabled={!dateRange || !dateRange[0] || !dateRange[1]}
+        >
+          Применить фильтр
+        </Button>
+      </div>
+
+      {onExcelExport && (
+        <Button
+          type="default"
+          icon={<FileExcelOutlined />}
+          onClick={onExcelExport}
+        >
+          Выгрузка в Excel
+        </Button>
+      )}
     </div>
   );
 };
