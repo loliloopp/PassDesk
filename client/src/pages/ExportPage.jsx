@@ -60,6 +60,8 @@ const ExportPage = () => {
   const handleDateFilterReset = () => {
     setFilterParams({});
     setPagination({ current: 1, pageSize: 20 });
+    // Сбрасываем также фильтры таблицы
+    setTableFilters({});
   };
 
   // Обработчик обновления флага is_upload
@@ -270,6 +272,7 @@ const ExportPage = () => {
         text: name,
         value: name,
       })),
+      filteredValue: tableFilters.position || [],
       onFilter: (value, record) => record.position?.name === value,
     },
     {
@@ -300,6 +303,7 @@ const ExportPage = () => {
         text: name,
         value: name,
       })),
+      filteredValue: tableFilters.department || [],
       onFilter: (value, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
         return mappings.some((m) => m.department?.name === value);
@@ -338,6 +342,7 @@ const ExportPage = () => {
         text: name,
         value: name,
       })),
+      filteredValue: tableFilters.counterparty || [],
       onFilter: (value, record) => {
         const mappings = record.employeeCounterpartyMappings || [];
         return mappings.some((m) => m.counterparty?.name === value);
@@ -363,6 +368,7 @@ const ExportPage = () => {
         text: name,
         value: name,
       })),
+      filteredValue: tableFilters.citizenship || [],
       onFilter: (value, record) => record.citizenship?.name === value,
     },
     {
@@ -388,6 +394,7 @@ const ExportPage = () => {
         { text: 'ДА (обработан)', value: 'uploaded' },
         { text: 'НЕТ (необработан)', value: 'not_uploaded' },
       ],
+      filteredValue: tableFilters.isUpload || [],
       onFilter: (value, record) => {
         const statusMappings = record.statusMappings || [];
         if (statusMappings.length === 0) return false;
@@ -436,6 +443,7 @@ const ExportPage = () => {
         { text: 'Проведен ТБ', value: 'tb_passed' },
         { text: 'Обработан', value: 'processed' },
       ],
+      filteredValue: tableFilters.status || [],
       onFilter: (value, record) => {
         const statusMappings = record.statusMappings || [];
         const getStatusByGroup = (group) => {

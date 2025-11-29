@@ -75,6 +75,12 @@ const ExportDateFilter = ({ onFilter, onReset, initialFilter = {}, onExcelExport
         >
           Применить фильтр
         </Button>
+
+        <Button
+          onClick={handleResetFilter}
+        >
+          Сбросить фильтры
+        </Button>
       </div>
 
       {onExcelExport && (

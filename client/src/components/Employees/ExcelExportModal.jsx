@@ -185,12 +185,6 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
       footer={
         <Space>
           <Button onClick={onCancel}>Отмена</Button>
-          <Button onClick={handleSelectAll} disabled={filteredEmployees.length === 0}>
-            Выделить все
-          </Button>
-          <Button onClick={handleDeselectAll}>
-            Снять все
-          </Button>
           <Button
             type="primary"
             icon={<FileExcelOutlined />}
