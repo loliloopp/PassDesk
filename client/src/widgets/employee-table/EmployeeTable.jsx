@@ -1,5 +1,5 @@
 import { Table } from 'antd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEmployeeColumns } from './EmployeeColumns';
 import { useTableFilters } from './useTableFilters';
 
@@ -75,8 +75,9 @@ export const EmployeeTable = ({
   defaultCounterpartyId,
   userCounterpartyId,
   onConstructionSitesEdit, // Новый prop для редактирования объектов
+  resetTrigger, // Триггер для сброса фильтров
 }) => {
-  const { filters, onFiltersChange: handleLocalFiltersChange } = useTableFilters();
+  const { filters, onFiltersChange: handleLocalFiltersChange, clearFilters } = useTableFilters();
   const [sortOrder, setSortOrder] = useState({});
 
   const columns = useEmployeeColumns({
@@ -94,6 +95,13 @@ export const EmployeeTable = ({
     userCounterpartyId,
     onConstructionSitesEdit, // Передаем новый callback
   });
+
+  // Сбрасываем фильтры когда меняется resetTrigger
+  useEffect(() => {
+    if (resetTrigger > 0) {
+      clearFilters();
+    }
+  }, [resetTrigger]);
 
   // Обработчик изменения фильтров
   const handleTableChange = (pagination, filters, sorter) => {

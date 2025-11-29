@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Typography, App, Grid, Button } from 'antd';
-import { PlusOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { PlusOutlined, FileExcelOutlined, ClearOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees, useEmployeeActions, getUniqueFilterValues } from '@/entities/employee';
 import { employeeApi } from '@/entities/employee';
@@ -35,6 +35,7 @@ const EmployeesPage = () => {
 
   const [searchText, setSearchText] = useState('');
   const [tableFilters, setTableFilters] = useState({});
+  const [resetTrigger, setResetTrigger] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -230,6 +231,14 @@ const EmployeesPage = () => {
     }
   };
 
+  // Сброс фильтров таблицы
+  const handleResetFilters = () => {
+    setSearchText('');
+    setTableFilters({});
+    // Инкрементируем триггер для сброса фильтров в таблице
+    setResetTrigger(prev => prev + 1);
+  };
+
   return (
     <div style={{ 
       height: '100%', // Занимает всю высоту Content
@@ -253,24 +262,41 @@ const EmployeesPage = () => {
           marginBottom: 0 // БЕЗ отступа снизу
         }}
       >
-        <Title level={isMobile ? 3 : 2} style={{ margin: 0 }}>
-          Сотрудники
-        </Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+          <Title level={isMobile ? 3 : 2} style={{ margin: 0, flexShrink: 0 }}>
+            Сотрудники
+          </Title>
 
-        {/* На десктопе показываем поиск и действия */}
+          {/* На десктопе показываем поиск и кнопку сброса рядом с заголовком */}
+          {!isMobile && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 250 }}>
+                <EmployeeSearchFilter 
+                  searchText={searchText} 
+                  onSearchChange={setSearchText}
+                />
+              </div>
+              <Button
+                type="text"
+                danger
+                icon={<ClearOutlined />}
+                onClick={handleResetFilters}
+                title="Сбросить все фильтры"
+              >
+                Сбросить
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* На десктопе показываем действия справа */}
         {!isMobile && (
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <EmployeeSearchFilter 
-              searchText={searchText} 
-              onSearchChange={setSearchText}
-            />
-            <EmployeeActions
-              onAdd={handleAdd}
-              onRequest={handleRequest}
-              onSecurity={() => setIsSecurityModalOpen(true)}
-              canExport={canExport}
-            />
-          </div>
+          <EmployeeActions
+            onAdd={handleAdd}
+            onRequest={handleRequest}
+            onSecurity={() => setIsSecurityModalOpen(true)}
+            canExport={canExport}
+          />
         )}
       </div>
 
@@ -334,6 +360,7 @@ const EmployeesPage = () => {
             defaultCounterpartyId={defaultCounterpartyId}
             userCounterpartyId={user?.counterpartyId}
             onConstructionSitesEdit={handleConstructionSitesEdit}
+            resetTrigger={resetTrigger}
           />
         </div>
       )}
