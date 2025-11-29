@@ -279,6 +279,24 @@ const ExportPage = () => {
           />
         );
       },
+      filters: [
+        { text: 'ДА (обработан)', value: 'uploaded' },
+        { text: 'НЕТ (необработан)', value: 'not_uploaded' },
+      ],
+      onFilter: (value, record) => {
+        const statusMappings = record.statusMappings || [];
+        if (statusMappings.length === 0) return false;
+        
+        const allUploaded = statusMappings.every(sm => sm.isUpload);
+        
+        if (value === 'uploaded') {
+          return allUploaded;
+        }
+        if (value === 'not_uploaded') {
+          return !allUploaded;
+        }
+        return true;
+      },
     },
     {
       title: 'Файлы',

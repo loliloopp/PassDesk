@@ -1,11 +1,10 @@
 import { Button, Spin, App } from 'antd';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { employeeApi } from '@/entities/employee';
 
 /**
  * Компонент для переключения флага is_upload всех активных статусов сотрудника
- * Логика: Если хотя бы один статус false - оранжевая. Если все true - зеленая.
+ * Зеленая кнопка "ДА" (обработанный) / Оранжевая кнопка "НЕТ" (необработанный)
  */
 const StatusUploadToggle = ({ employeeId, statusMappings, onUpdate }) => {
   const { message } = App.useApp();
@@ -53,25 +52,37 @@ const StatusUploadToggle = ({ employeeId, statusMappings, onUpdate }) => {
     return '-';
   }
 
+  // Если все загружено - показываем "ДА" с зеленым контуром
+  if (allUploaded) {
+    return (
+      <Button
+        size="small"
+        onClick={handleToggle}
+        style={{
+          color: '#52c41a',
+          borderColor: '#52c41a',
+          backgroundColor: 'transparent',
+        }}
+      >
+        ДА
+      </Button>
+    );
+  }
+
+  // Если не загружено - показываем "НЕТ" с оранжевым контуром
   return (
     <Button
-      type="text"
-      shape="circle"
-      icon={allUploaded ? <CheckOutlined /> : <CloseOutlined />}
-      style={{
-        color: allUploaded ? '#52c41a' : '#ff7a45',
-        border: `2px solid ${allUploaded ? '#52c41a' : '#ff7a45'}`,
-        fontSize: '16px',
-        width: '32px',
-        height: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
+      size="small"
       onClick={handleToggle}
-    />
+      style={{
+        color: '#fa8c16',
+        borderColor: '#fa8c16',
+        backgroundColor: 'transparent',
+      }}
+    >
+      НЕТ
+    </Button>
   );
 };
 
 export default StatusUploadToggle;
-
