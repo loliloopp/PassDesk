@@ -29,6 +29,13 @@ export const useEmployeeColumns = ({
   return useMemo(() => {
     const columns = [
       {
+        title: '№',
+        key: 'index',
+        width: 40,
+        align: 'center',
+        render: (text, record, index) => index + 1,
+      },
+      {
         title: 'ФИО',
         key: 'fullName',
         width: 230,
