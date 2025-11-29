@@ -143,29 +143,22 @@ const ExportPage = () => {
           return statusObj?.name;
         };
 
-        const secureStatus = getStatusByGroup('status_secure');
         const activeStatus = getStatusByGroup('status_active');
+        const hrStatus = getStatusByGroup('status_hr');
         const mainStatus = getStatusByGroup('status');
 
         return tableFilters.status.some(value => {
-          if (value === 'blocked') {
-            return secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl';
-          }
           if (value === 'fired') {
             return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
           }
-          if (value === 'inactive') {
-            return activeStatus === 'status_active_inactive';
+          if (value === 'fired_off') {
+            return hrStatus === 'status_hr_fired_off';
+          }
+          if (value === 'edited') {
+            return hrStatus === 'status_hr_edited';
           }
           
-          return (
-            secureStatus !== 'status_secure_block' && 
-            secureStatus !== 'status_secure_block_compl' &&
-            activeStatus !== 'status_active_fired' &&
-            activeStatus !== 'status_active_fired_compl' &&
-            activeStatus !== 'status_active_inactive' &&
-            mainStatus === `status_${value}`
-          );
+          return mainStatus === `status_${value}`;
         });
       });
     }
@@ -193,21 +186,13 @@ const ExportPage = () => {
       return statusObj?.name;
     };
 
-    // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status_hr > status (Черновик/Новый/Проведен ТБ/Обработан)
-    const secureStatus = getStatusByGroup('status_secure');
     const activeStatus = getStatusByGroup('status_active');
     const hrStatus = getStatusByGroup('status_hr');
     const mainStatus = getStatusByGroup('status');
 
-    if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') {
-      return { name: 'Заблокирован', color: 'red' };
-    }
-
+    // Проверяем статус "Уволен"
     if (activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl') {
       return { name: 'Уволен', color: 'red' };
-    }
-    if (activeStatus === 'status_active_inactive') {
-      return { name: 'Неактивный', color: 'blue' };
     }
 
     // Статусы из группы status_hr (приоритет выше, чем статусы в группе status)
@@ -221,13 +206,11 @@ const ExportPage = () => {
     }
 
     const statusMap = {
-      'status_draft': { name: 'Черновик', color: 'default' },
       'status_new': { name: 'Новый', color: 'default' },
-      'status_tb_passed': { name: 'Проведен ТБ', color: 'green' },
       'status_processed': { name: 'Обработан', color: 'success' },
     };
 
-    return statusMap[mainStatus] || { name: '-', color: 'default' };
+    return statusMap[mainStatus] || null;
   };
 
   // Колонки таблицы
@@ -435,13 +418,11 @@ const ExportPage = () => {
         return <Tag color={status.color}>{status.name}</Tag>;
       },
       filters: [
-        { text: 'Заблокирован', value: 'blocked' },
-        { text: 'Уволен', value: 'fired' },
-        { text: 'Неактивный', value: 'inactive' },
-        { text: 'Черновик', value: 'draft' },
         { text: 'Новый', value: 'new' },
-        { text: 'Проведен ТБ', value: 'tb_passed' },
         { text: 'Обработан', value: 'processed' },
+        { text: 'Редактирован', value: 'edited' },
+        { text: 'Повторно принят', value: 'fired_off' },
+        { text: 'Уволен', value: 'fired' },
       ],
       filteredValue: tableFilters.status || [],
       onFilter: (value, record) => {
