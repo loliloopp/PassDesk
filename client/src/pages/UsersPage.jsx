@@ -29,6 +29,7 @@ import {
 } from '@ant-design/icons'
 import { userService } from '@/services/userService'
 import { counterpartyService } from '@/services/counterpartyService'
+import settingsService from '@/services/settingsService'
 import { useAuthStore } from '@/store/authStore'
 
 const { Title } = Typography
@@ -47,10 +48,12 @@ const UsersPage = () => {
   const { user: currentUser } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState([])
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 })
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
 
   useEffect(() => {
     fetchUsers()
     fetchCounterparties()
+    fetchDefaultCounterparty()
   }, [])
 
   const fetchUsers = async () => {
@@ -73,6 +76,15 @@ const UsersPage = () => {
       setCounterparties(data.data.counterparties)
     } catch (error) {
       console.error('Error loading counterparties:', error)
+    }
+  }
+
+  const fetchDefaultCounterparty = async () => {
+    try {
+      const response = await settingsService.getPublicSettings()
+      setDefaultCounterpartyId(response?.data?.defaultCounterpartyId)
+    } catch (error) {
+      console.error('Error loading default counterparty:', error)
     }
   }
 
@@ -479,14 +491,17 @@ const UsersPage = () => {
                   {value.text}
                 </Select.Option>
               ))}
-              <Select.Option value="admin">Администратор</Select.Option>
+              {/* Администратор доступен только для пользователей контрагента по умолчанию */}
+              {editingUser?.counterpartyId === defaultCounterpartyId && (
+                <Select.Option value="admin">Администратор</Select.Option>
+              )}
             </Select>
           </Form.Item>
 
           <Form.Item
             name="counterpartyId"
             label="Контрагент"
-            tooltip="Необязательно. Если указан, пользователь привязан к конкретному контрагенту"
+            tooltip="Контрагент, к которому привязан пользователь"
           >
             <Select
               placeholder="Не выбрано"
