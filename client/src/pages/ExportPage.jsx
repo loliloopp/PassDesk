@@ -13,6 +13,7 @@ const ExportPage = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
 
   // Загружаем ДОМ только активных сотрудников (с фильтрацией по статусам)
   const { employees, loading, refetch } = useEmployees(true);
@@ -342,10 +343,18 @@ const ExportPage = () => {
         loading={loading}
         size="small"
         pagination={{
-          pageSize: 20,
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: employees.length,
           showSizeChanger: true,
           showTotal: (total) => `Всего: ${total}`,
           pageSizeOptions: ['10', '20', '50', '100'],
+          onChange: (page, pageSize) => {
+            setPagination({ current: page, pageSize });
+          },
+          onShowSizeChange: (current, pageSize) => {
+            setPagination({ current: 1, pageSize });
+          },
         }}
         scroll={{ x: 1300, y: 600 }}
       />
