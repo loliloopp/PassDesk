@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { DatePicker, Button, Space, Tag } from 'antd';
-import { ClearOutlined } from '@ant-design/icons';
+import { DatePicker, Button } from 'antd';
 import dayjs from 'dayjs';
 
 /**
@@ -60,31 +59,13 @@ const ExportDateFilter = ({ onFilter, onReset }) => {
         style={{ width: '280px' }}
       />
 
-      <Space>
-        <Button
-          type="primary"
-          onClick={handleApplyFilter}
-          disabled={!dateRange || !dateRange[0] || !dateRange[1]}
-        >
-          Применить фильтр
-        </Button>
-
-        {isActive && (
-          <>
-            <Tag color="blue">
-              {dateRange ? `${dateRange[0].format('DD.MM.YYYY')} - ${dateRange[1].format('DD.MM.YYYY')}` : ''}
-            </Tag>
-            <Button
-              type="text"
-              icon={<ClearOutlined />}
-              onClick={handleResetFilter}
-              danger
-            >
-              Сбросить
-            </Button>
-          </>
-        )}
-      </Space>
+      <Button
+        type="primary"
+        onClick={handleApplyFilter}
+        disabled={!dateRange || !dateRange[0] || !dateRange[1]}
+      >
+        Применить фильтр
+      </Button>
     </div>
   );
 };
