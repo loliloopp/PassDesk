@@ -63,6 +63,9 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
 
       // Формируем данные для Excel
       const excelData = employeesToExport.map((emp) => {
+        // Получаем основного контрагента (первый в списке)
+        const counterpartyMapping = emp.employeeCounterpartyMappings?.[0];
+        
         return {
           'UUID': emp.id || '-',
           'Фамилия': emp.lastName || '-',
@@ -81,6 +84,8 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
           'СНИЛС': emp.snils || '-',
           'КИГ': emp.kig || '-',
           'Гражданство': emp.citizenship?.name || '-',
+          'Организация': counterpartyMapping?.counterparty?.name || '-',
+          'ИНН организации': counterpartyMapping?.counterparty?.inn || '-',
         };
       });
 
