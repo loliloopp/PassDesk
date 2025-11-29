@@ -74,6 +74,7 @@ export const EmployeeTable = ({
   onFiltersChange,
   defaultCounterpartyId,
   userCounterpartyId,
+  onConstructionSitesEdit, // Новый prop для редактирования объектов
 }) => {
   const { filters, onFiltersChange: handleLocalFiltersChange } = useTableFilters();
   const [sortOrder, setSortOrder] = useState({});
@@ -91,6 +92,7 @@ export const EmployeeTable = ({
     filters, // Передаем фильтры в хук колонок
     defaultCounterpartyId,
     userCounterpartyId,
+    onConstructionSitesEdit, // Передаем новый callback
   });
 
   // Обработчик изменения фильтров

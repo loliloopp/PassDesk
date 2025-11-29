@@ -27,6 +27,7 @@ export const useEmployeeColumns = ({
   filters = {}, // Состояние фильтров из localStorage
   defaultCounterpartyId,
   userCounterpartyId,
+  onConstructionSitesEdit, // Новый callback для редактирования объектов
 }) => {
   // Определяем, должен ли быть виден столбец Подразделение
   // Видно ТОЛЬКО для пользователей контрагента по умолчанию
@@ -190,11 +191,21 @@ export const useEmployeeColumns = ({
           const siteMappings = mappings.filter((m) => m.constructionSite);
 
           if (siteMappings.length === 0) {
-            return '-';
+            return (
+              <Button 
+                type="text" 
+                size="small"
+                onClick={() => onConstructionSitesEdit && onConstructionSitesEdit(record)}
+                style={{ padding: '0 4px', color: '#1890ff' }}
+              >
+                + Выбрать
+              </Button>
+            );
           }
 
           return (
             <div
+              onClick={() => onConstructionSitesEdit && onConstructionSitesEdit(record)}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -202,6 +213,18 @@ export const useEmployeeColumns = ({
                 whiteSpace: 'normal',
                 wordBreak: 'normal',
                 overflowWrap: 'break-word',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                marginLeft: '-8px',
+                marginRight: '-8px',
+                borderRadius: '2px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f5f5f5';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
               {siteMappings.map((mapping, index) => (
@@ -464,6 +487,7 @@ export const useEmployeeColumns = ({
     uniqueFilters,
     filters,
     showDepartmentColumn,
+    onConstructionSitesEdit,
   ]);
 };
 

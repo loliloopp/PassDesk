@@ -14,6 +14,7 @@ import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
 import EmployeeViewModal from '@/components/Employees/EmployeeViewModal';
 import EmployeeViewDrawer from '@/components/Employees/EmployeeViewDrawer';
 import EmployeeFilesModal from '@/components/Employees/EmployeeFilesModal';
+import EmployeeSitesModal from '@/components/Employees/EmployeeSitesModal';
 import ApplicationRequestModal from '@/components/Employees/ApplicationRequestModal';
 import ExportToExcelModal from '@/components/Employees/ExportToExcelModal';
 import SecurityModal from '@/components/Employees/SecurityModal';
@@ -40,9 +41,11 @@ const EmployeesPage = () => {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [isSitesModalOpen, setIsSitesModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewingEmployee, setViewingEmployee] = useState(null);
   const [filesEmployee, setFilesEmployee] = useState(null);
+  const [sitesEmployee, setSitesEmployee] = useState(null);
 
   const { user } = useAuthStore();
 
@@ -155,6 +158,21 @@ const EmployeesPage = () => {
 
   const handleFilesUpdated = () => {
     // Обновляем таблицу при изменении файлов
+    refetchEmployees();
+  };
+
+  const handleConstructionSitesEdit = (employee) => {
+    setSitesEmployee(employee);
+    setIsSitesModalOpen(true);
+  };
+
+  const handleCloseSitesModal = () => {
+    setIsSitesModalOpen(false);
+    setSitesEmployee(null);
+  };
+
+  const handleSitesUpdated = () => {
+    // Обновляем таблицу при изменении объектов
     refetchEmployees();
   };
 
@@ -315,6 +333,7 @@ const EmployeesPage = () => {
             onFiltersChange={setTableFilters}
             defaultCounterpartyId={defaultCounterpartyId}
             userCounterpartyId={user?.counterpartyId}
+            onConstructionSitesEdit={handleConstructionSitesEdit}
           />
         </div>
       )}
@@ -373,6 +392,13 @@ const EmployeesPage = () => {
         }
         onClose={handleCloseFilesModal}
         onFilesUpdated={handleFilesUpdated}
+      />
+
+      <EmployeeSitesModal
+        visible={isSitesModalOpen}
+        employee={sitesEmployee}
+        onCancel={handleCloseSitesModal}
+        onSuccess={handleSitesUpdated}
       />
 
       <ApplicationRequestModal

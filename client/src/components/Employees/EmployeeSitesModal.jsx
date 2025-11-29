@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Checkbox, Space, App } from 'antd';
-import { constructionSiteService } from '../../services/constructionSiteService';
-import { employeeService } from '../../services/employeeService';
+import { employeeApi } from '@/entities/employee';
+import api from '@/services/api';
 
 const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
   const { message } = App.useApp();
@@ -24,7 +24,7 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
 
   const fetchConstructionSites = async () => {
     try {
-      const response = await constructionSiteService.getAll();
+      const response = await api.get('/construction-sites');
       const sites = response.data.data.constructionSites || [];
       setConstructionSites(sites);
     } catch (error) {
@@ -44,7 +44,7 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
     try {
       setLoading(true);
       // Отправляем выбранные объекты на сервер
-      await employeeService.updateConstructionSites(employee.id, selectedSites);
+      await employeeApi.updateConstructionSites(employee.id, selectedSites);
       message.success('Объекты обновлены');
       onSuccess();
     } catch (error) {
