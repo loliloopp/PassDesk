@@ -33,6 +33,7 @@ const EmployeesPage = () => {
   const isMobile = !screens.md;
 
   const [searchText, setSearchText] = useState('');
+  const [tableFilters, setTableFilters] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -311,6 +312,7 @@ const EmployeesPage = () => {
             canExport={canExport}
             canDeleteEmployee={canDeleteEmployee}
             uniqueFilters={uniqueFilters}
+            onFiltersChange={setTableFilters}
           />
         </div>
       )}
@@ -377,7 +379,9 @@ const EmployeesPage = () => {
           setIsRequestModalOpen(false);
           refetchEmployees();
         }}
-        employees={employees}
+        employees={filteredEmployees}
+        tableFilters={tableFilters}
+        userRole={user?.role}
       />
 
       <ExportToExcelModal

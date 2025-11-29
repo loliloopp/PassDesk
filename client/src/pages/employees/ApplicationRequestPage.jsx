@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Typography, Button, Checkbox, Space, App, Spin, Empty } from 'antd';
-import { ArrowLeftOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { Typography, Button, Checkbox, Space, App, Spin, Empty, Input } from 'antd';
+import { ArrowLeftOutlined, FileExcelOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '@/entities/employee';
 import { employeeService } from '@/services/employeeService';
@@ -15,6 +15,7 @@ const ApplicationRequestPage = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
 
@@ -22,14 +23,32 @@ const ApplicationRequestPage = () => {
   const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees();
 
   // Фильтруем только сотрудников со статусами new и tb_passed
-  const availableEmployees = useMemo(() => 
-    employees.filter(emp => {
+  // Если есть searchText - применяем фильтр, иначе показываем всех
+  const availableEmployees = useMemo(() => {
+    let filtered = employees;
+    
+    // Применяем поиск если есть
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter((employee) => {
+        return (
+          employee.firstName?.toLowerCase().includes(searchLower) ||
+          employee.lastName?.toLowerCase().includes(searchLower) ||
+          employee.middleName?.toLowerCase().includes(searchLower) ||
+          employee.position?.name?.toLowerCase().includes(searchLower) ||
+          employee.inn?.toLowerCase().includes(searchLower) ||
+          employee.snils?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
+    // Фильтруем по статусам
+    return filtered.filter(emp => {
       const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
       const statusName = statusMapping?.status?.name;
       return statusName === 'status_new' || statusName === 'status_tb_passed';
-    }),
-    [employees]
-  );
+    });
+  }, [employees, searchText]);
 
   // Инициализируем выбор при загрузке
   useEffect(() => {
@@ -168,15 +187,26 @@ const ApplicationRequestPage = () => {
         display: 'flex',
         gap: 12,
         alignItems: 'center',
-        flexShrink: 0
+        flexShrink: 0,
+        justifyContent: 'space-between'
       }}>
-        <Button 
-          type="text" 
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/employees')}
-          size="large"
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Button 
+            type="text" 
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/employees')}
+            size="large"
+          />
+          <Title level={3} style={{ margin: 0 }}>Создать заявку</Title>
+        </div>
+        <Input
+          placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
+          prefix={<SearchOutlined />}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          allowClear
+          style={{ width: 300 }}
         />
-        <Title level={3} style={{ margin: 0 }}>Создать заявку</Title>
       </div>
 
       {/* Контент */}

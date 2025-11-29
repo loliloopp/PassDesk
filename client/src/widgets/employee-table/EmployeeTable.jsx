@@ -71,8 +71,9 @@ export const EmployeeTable = ({
   canExport,
   canDeleteEmployee,
   uniqueFilters,
+  onFiltersChange,
 }) => {
-  const { filters, onFiltersChange } = useTableFilters();
+  const { filters, onFiltersChange: handleLocalFiltersChange } = useTableFilters();
   const [sortOrder, setSortOrder] = useState({});
 
   const columns = useEmployeeColumns({
@@ -90,7 +91,12 @@ export const EmployeeTable = ({
 
   // Обработчик изменения фильтров
   const handleTableChange = (pagination, filters, sorter) => {
-    onFiltersChange(filters);
+    handleLocalFiltersChange(filters);
+    
+    // Передаем фильтры на верхний уровень если callback передан
+    if (onFiltersChange) {
+      onFiltersChange(filters);
+    }
     
     // Сохраняем сортировку
     if (sorter.field) {

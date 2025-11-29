@@ -155,6 +155,7 @@ export const getAllEmployees = async (req, res, next) => {
     ];
 
     // Для роли 'user' - применяем фильтрацию
+    // Для админа - показываем всех сотрудников всех контрагентов
     if (userRole === 'user') {
       // Получаем контрагента по умолчанию
       const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
@@ -179,6 +180,7 @@ export const getAllEmployees = async (req, res, next) => {
         employeeInclude[3].required = true;
       }
     }
+    // Для админа и manager - ограничений по контрагенту нет (видят всех)
 
     const { count, rows } = await Employee.findAndCountAll({
       where,
