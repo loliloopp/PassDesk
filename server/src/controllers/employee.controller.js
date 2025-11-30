@@ -694,10 +694,18 @@ export const updateEmployee = async (req, res, next) => {
         await EmployeeStatusService.setStatusByName(id, 'status_hr_edited', req.user.id);
       }
 
-        // Обновляем статус активности на основе чекбоксов
+      // Обновляем статус активности на основе чекбоксов
       console.log('=== UPDATING EMPLOYEE ACTIVE STATUS ===');
       console.log('isFired:', isFired);
       console.log('isInactive:', isInactive);
+      
+      // Получаем текущий статус активности
+      const currentActiveStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_active');
+      const currentStatusName = currentActiveStatus?.status?.name;
+      const currentIsUpload = currentActiveStatus?.isUpload;
+      
+      console.log('Current status_active:', currentStatusName);
+      console.log('Current is_upload:', currentIsUpload);
       
       if (isFired || isInactive) {
         const statusName = isFired ? 'status_active_fired' : 'status_active_inactive';
@@ -706,10 +714,29 @@ export const updateEmployee = async (req, res, next) => {
         console.log(`✓ Employee status_active updated to ${statusName}`);
       } else {
         // Если ни один чекбокс не выбран - сотрудник активен
-        console.log('No checkboxes selected, checking if needs to be set to employed');
-        const currentActiveStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_active');
-        console.log('Current active status:', currentActiveStatus?.status?.name);
-        if (currentActiveStatus?.status?.name !== 'status_active_employed') {
+        console.log('No checkboxes selected');
+        
+        // СПЕЦИАЛЬНАЯ ЛОГИКА: если был статус status_active_fired с is_upload = true
+        if (currentStatusName === 'status_active_fired' && currentIsUpload === true) {
+          console.log('Transitioning from status_active_fired with is_upload=true');
+          
+          // Деактивируем status_active_fired и устанавливаем is_upload = false
+          if (currentActiveStatus) {
+            currentActiveStatus.isActive = false;
+            currentActiveStatus.isUpload = false;
+            currentActiveStatus.updatedBy = req.user.id;
+            currentActiveStatus.updatedAt = new Date();
+            await currentActiveStatus.save();
+            console.log('✓ Deactivated status_active_fired and set is_upload to false');
+          }
+          
+          // Активируем status_hr_fired_off с is_upload = false (или создаем если не существует)
+          await EmployeeStatusService.activateOrCreateStatus(id, 'status_hr_fired_off', req.user.id, false);
+          console.log('✓ Activated or created status_hr_fired_off with is_upload=false');
+        }
+        
+        // Устанавливаем status_active_employed
+        if (currentStatusName !== 'status_active_employed') {
           console.log('Setting status_active to employed');
           await EmployeeStatusService.setStatusByName(id, 'status_active_employed', req.user.id);
           console.log('✓ Employee status_active updated to employed');

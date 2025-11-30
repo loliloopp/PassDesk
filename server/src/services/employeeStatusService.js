@@ -224,6 +224,51 @@ class EmployeeStatusService {
   }
 
   /**
+   * Активировать или создать статус для группы (без деактивации других статусов этой группы)
+   * Используется для специальных переходов типа status_hr_fired_off
+   */
+  static async activateOrCreateStatus(employeeId, statusName, userId, setUploadFlag = false) {
+    // Получить статус по названию
+    const status = await Status.findOne({
+      where: { name: statusName }
+    });
+
+    if (!status) {
+      throw new Error(`Статус ${statusName} не найден`);
+    }
+
+    // Проверить есть ли уже связь с этим статусом
+    let mapping = await EmployeeStatusMapping.findOne({
+      where: {
+        employeeId: employeeId,
+        statusId: status.id,
+        statusGroup: status.group
+      }
+    });
+
+    if (mapping) {
+      // Обновить существующую связь
+      mapping.isActive = true;
+      mapping.isUpload = setUploadFlag;
+      mapping.updatedBy = userId;
+      await mapping.save();
+    } else {
+      // Создать новую связь
+      mapping = await EmployeeStatusMapping.create({
+        employeeId: employeeId,
+        statusId: status.id,
+        statusGroup: status.group,
+        isActive: true,
+        isUpload: setUploadFlag,
+        createdBy: userId,
+        updatedBy: userId
+      });
+    }
+
+    return mapping;
+  }
+
+  /**
    * Инициализировать статусы для нового сотрудника
    */
   static async initializeEmployeeStatuses(employeeId, userId) {
