@@ -12,24 +12,19 @@ const requestCache = new Map();
 export const deduplicateRequest = async (key, requestFn) => {
   // Если запрос уже выполняется - возвращаем существующий Promise
   if (requestCache.has(key)) {
-    console.log(`[Cache] Using cached request for: ${key}`);
     return requestCache.get(key);
   }
-
-  console.log(`[Cache] Starting new request for: ${key}`);
 
   // Создаем новый Promise и кэшируем его
   const promise = requestFn()
     .then(result => {
       // Удаляем из кэша после успешного завершения
       requestCache.delete(key);
-      console.log(`[Cache] Request completed: ${key}`);
       return result;
     })
     .catch(error => {
       // Удаляем из кэша при ошибке
       requestCache.delete(key);
-      console.log(`[Cache] Request failed: ${key}`);
       throw error;
     });
 
@@ -56,7 +51,6 @@ export const invalidateCache = (pattern) => {
   // Если это точный ключ
   if (requestCache.has(pattern)) {
     requestCache.delete(pattern);
-    console.log(`[Cache] Invalidated: ${pattern}`);
     return;
   }
 
@@ -70,7 +64,6 @@ export const invalidateCache = (pattern) => {
 
   keysToDelete.forEach(key => {
     requestCache.delete(key);
-    console.log(`[Cache] Invalidated: ${key}`);
   });
 };
 

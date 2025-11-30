@@ -42,7 +42,6 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
 
       // Проверяем, не был ли запрос отменен
       if (abortSignal?.aborted) {
-        console.log('🛑 loadReferences: запрос отменен');
         return;
       }
 
@@ -61,7 +60,6 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     } catch (error) {
       // Игнорируем ошибки отмены запроса
       if (error.name === 'AbortError' || error.name === 'CanceledError') {
-        console.log('🛑 loadReferences: запрос отменен (catch)');
         return;
       }
       console.error('❌ Ошибка загрузки справочников:', error);
@@ -196,7 +194,6 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     
     // Cleanup: отменяем запросы при размонтировании
     return () => {
-      console.log('🛑 useEmployeeForm: отмена запросов (cleanup)');
       abortController.abort();
     };
   }, []);
