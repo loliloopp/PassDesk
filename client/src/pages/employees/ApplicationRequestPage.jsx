@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Typography, Button, Checkbox, Space, App, Spin, Empty, Input } from 'antd';
-import { ArrowLeftOutlined, FileExcelOutlined, SearchOutlined } from '@ant-design/icons';
+import { Typography, Button, Checkbox, Space, App, Spin, Empty, Input, Segmented } from 'antd';
+import { ArrowLeftOutlined, FileExcelOutlined, SearchOutlined, UserAddOutlined, TeamOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '@/entities/employee';
 import { employeeService } from '@/services/employeeService';
@@ -19,12 +19,12 @@ const ApplicationRequestPage = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
+  const [employeeFilter, setEmployeeFilter] = useState('new'); // 'new' или 'all'
 
   // Получаем список сотрудников
   const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees();
 
-  // Фильтруем только сотрудников со статусами new и tb_passed
-  // Если есть searchText - применяем фильтр, иначе показываем всех
+  // Фильтруем сотрудников в зависимости от выбранного режима
   const availableEmployees = useMemo(() => {
     let filtered = employees;
     
@@ -43,13 +43,20 @@ const ApplicationRequestPage = () => {
       });
     }
     
-    // Фильтруем по статусам
+    // Фильтруем по статусам в зависимости от режима
     return filtered.filter(emp => {
       const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
       const statusName = statusMapping?.status?.name;
-      return statusName === 'status_new' || statusName === 'status_tb_passed';
+      
+      if (employeeFilter === 'new') {
+        // Только новые: status_new и status_tb_passed
+        return statusName === 'status_new' || statusName === 'status_tb_passed';
+      } else {
+        // Все: status_new, status_tb_passed, status_processed
+        return statusName === 'status_new' || statusName === 'status_tb_passed' || statusName === 'status_processed';
+      }
     });
-  }, [employees, searchText]);
+  }, [employees, searchText, employeeFilter]);
 
   // Инициализируем выбор при загрузке
   useEffect(() => {
@@ -172,27 +179,47 @@ const ApplicationRequestPage = () => {
         padding: '16px', 
         borderBottom: '1px solid #f0f0f0',
         display: 'flex',
+        flexDirection: 'column',
         gap: 12,
-        alignItems: 'center',
-        flexShrink: 0,
-        justifyContent: 'space-between'
+        flexShrink: 0
       }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Button 
-            type="text" 
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/employees')}
-            size="large"
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <Button 
+              type="text" 
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate('/employees')}
+              size="large"
+            />
+            <Title level={3} style={{ margin: 0 }}>Создать заявку</Title>
+          </div>
+          <Input
+            placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            allowClear
+            style={{ width: 300 }}
           />
-          <Title level={3} style={{ margin: 0 }}>Создать заявку</Title>
         </div>
-        <Input
-          placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
-          prefix={<SearchOutlined />}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          allowClear
-          style={{ width: 300 }}
+        
+        {/* Переключатель режима фильтрации */}
+        <Segmented
+          value={employeeFilter}
+          onChange={setEmployeeFilter}
+          options={[
+            {
+              label: 'Новые сотрудники',
+              value: 'new',
+              icon: <UserAddOutlined />
+            },
+            {
+              label: 'Все сотрудники',
+              value: 'all',
+              icon: <TeamOutlined />
+            }
+          ]}
+          style={{ alignSelf: 'flex-start' }}
         />
       </div>
 
@@ -245,6 +272,9 @@ const ApplicationRequestPage = () => {
                         }
                         if (statusName === 'status_tb_passed') {
                           return <span style={{ marginLeft: 8, color: '#52c41a' }}>● Прошел ТБ</span>;
+                        }
+                        if (statusName === 'status_processed') {
+                          return <span style={{ marginLeft: 8, color: '#1890ff' }}>● Обработан</span>;
                         }
                         return null;
                       })()}

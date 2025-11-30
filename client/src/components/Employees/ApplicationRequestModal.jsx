@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, Table, Checkbox, Space, Button, App } from 'antd';
-import { FileExcelOutlined } from '@ant-design/icons';
+import { Modal, Table, Checkbox, Space, Button, App, Segmented } from 'antd';
+import { FileExcelOutlined, UserAddOutlined, TeamOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
 import { employeeStatusService } from '../../services/employeeStatusService';
+import { applicationService } from '../../services/applicationService';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
@@ -12,6 +13,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   const [loading, setLoading] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
+  const [employeeFilter, setEmployeeFilter] = useState('new'); // 'new' или 'all'
 
   // Применяем фильтры таблицы + фильтруем по статусам
   const availableEmployees = useMemo(() => {
@@ -66,13 +68,20 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       });
     }
     
-    // Фильтруем только сотрудников со статусами new и tb_passed
+    // Фильтруем по статусам в зависимости от режима
     return filtered.filter(emp => {
       const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
       const statusName = statusMapping?.status?.name;
-      return statusName === 'status_new' || statusName === 'status_tb_passed';
+      
+      if (employeeFilter === 'new') {
+        // Только новые: status_new и status_tb_passed
+        return statusName === 'status_new' || statusName === 'status_tb_passed';
+      } else {
+        // Все: status_new, status_tb_passed, status_processed
+        return statusName === 'status_new' || statusName === 'status_tb_passed' || statusName === 'status_processed';
+      }
     });
-  }, [allEmployees, tableFilters]);
+  }, [allEmployees, tableFilters, employeeFilter]);
 
   useEffect(() => {
     if (visible) {
@@ -110,6 +119,12 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
 
     try {
       setLoading(true);
+
+      // Создаем заявку в БД
+      await applicationService.create({
+        employeeIds: selectedEmployees,
+        // constructionSiteId и passValidUntil теперь необязательны
+      });
 
       // Фильтруем только выбранных сотрудников
       const employeesToExport = availableEmployees.filter(emp => selectedEmployees.includes(emp.id));
@@ -152,32 +167,8 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       // Сохраняем файл
       XLSX.writeFile(workbook, fileName);
 
-      // Обновляем статусы сотрудников: new и tb_passed -> processed
-      const employeesToUpdate = employeesToExport.filter(emp => {
-        const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
-        const statusName = statusMapping?.status?.name;
-        return statusName === 'status_new' || statusName === 'status_tb_passed';
-      });
-      
-      if (employeesToUpdate.length > 0) {
-        try {
-          const allStatuses = await employeeStatusService.getAllStatuses();
-          const processedStatus = allStatuses.find(s => s.name === 'status_processed');
-          
-          if (processedStatus) {
-            await Promise.all(
-              employeesToUpdate.map(emp =>
-                employeeStatusService.setStatus(emp.id, processedStatus.id)
-              )
-            );
-          }
-        } catch (error) {
-          console.warn('Error updating statuses:', error);
-          // Продолжаем даже если ошибка
-        }
-      }
-
-      message.success(`Файл успешно сохранен: ${fileName}`);
+      // Статусы обновляются на сервере автоматически при создании заявки
+      message.success(`Заявка создана и файл сохранен: ${fileName}`);
       onCancel();
     } catch (error) {
       console.error('Create request error:', error);
@@ -230,6 +221,24 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       }
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        {/* Переключатель режима фильтрации */}
+        <Segmented
+          value={employeeFilter}
+          onChange={setEmployeeFilter}
+          options={[
+            {
+              label: 'Новые сотрудники',
+              value: 'new',
+              icon: <UserAddOutlined />
+            },
+            {
+              label: 'Все сотрудники',
+              value: 'all',
+              icon: <TeamOutlined />
+            }
+          ]}
+        />
+
         {/* Чекбокс "Выделить все / Снять все" */}
         {availableEmployees.length > 0 && (
           <Checkbox
