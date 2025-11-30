@@ -108,11 +108,11 @@ export const uploadEmployeeFiles = async (req, res, next) => {
       }
     }
     
-    // Формируем путь: PassDesk/Counterparty_Name/Employee_LastName_FirstName_MiddleName/
-    const employeeFullName = `${employee.lastName}_${employee.firstName}${employee.middleName ? '_' + employee.middleName : ''}`;
+    // Формируем путь: PassDesk/Counterparty_Name/employee_uuid/
+    // Используем UUID сотрудника для стабильности при редактировании ФИО
     const relativeDirectory = buildEmployeeFilePath(
       counterparty.name,
-      employeeFullName
+      employee.id
     ).replace(/^\/+/, '');
     const folderPath = storageProvider.resolvePath(relativeDirectory);
     

@@ -71,14 +71,13 @@ export const transliterate = (text) => {
 /**
  * Построение пути для файлов сотрудника
  * @param {string} counterpartyName - Название контрагента
- * @param {string} employeeFullName - ФИО сотрудника
- * @returns {string} - Относительный путь вида /Counterparty_Name/Employee_Name
+ * @param {string} employeeId - UUID сотрудника
+ * @returns {string} - Относительный путь вида /Counterparty_Name/employee_uuid
  */
-export const buildEmployeeFilePath = (counterpartyName, employeeFullName) => {
+export const buildEmployeeFilePath = (counterpartyName, employeeId) => {
   const transliteratedCounterparty = transliterate(counterpartyName);
-  const transliteratedEmployee = transliterate(employeeFullName);
   
-  return `/${transliteratedCounterparty}/${transliteratedEmployee}`;
+  return `/${transliteratedCounterparty}/${employeeId}`;
 };
 
 /**
