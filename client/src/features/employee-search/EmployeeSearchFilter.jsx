@@ -54,6 +54,15 @@ export const EmployeeSearchFilter = ({
         </div>
       ),
     },
+    {
+      key: 'fired',
+      label: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Уволен</span>
+          {statusFilter === 'fired' && <CheckOutlined style={{ color: '#1890ff' }} />}
+        </div>
+      ),
+    },
   ];
 
   const handleStatusFilterChange = ({ key }) => {
@@ -66,6 +75,7 @@ export const EmployeeSearchFilter = ({
     if (statusFilter === 'new') return 'Новые';
     if (statusFilter === 'draft') return 'Черновик';
     if (statusFilter === 'processed') return 'Отправленные';
+    if (statusFilter === 'fired') return 'Уволен';
     return 'Фильтр';
   };
 

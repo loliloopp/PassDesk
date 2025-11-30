@@ -35,6 +35,7 @@ const EmployeesPage = () => {
   const isMobile = !screens.md;
 
   const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState(null);
   const [tableFilters, setTableFilters] = useState({});
   const [resetTrigger, setResetTrigger] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -87,12 +88,37 @@ const EmployeesPage = () => {
   const { createEmployee, updateEmployee, deleteEmployee, updateDepartment } =
     useEmployeeActions(refetchEmployees);
 
-  // Мемоизированная фильтрация (БЕЗ фильтра по статусам - только поиск)
+  // Мемоизированная фильтрация с учетом поиска и статуса
   const filteredEmployees = useMemo(
     () => {
       let filtered = employees;
       
-      // Фильтр по поисковому запросу (без фильтра по статусам)
+      // Фильтр по статусу
+      if (statusFilter) {
+        filtered = filtered.filter((employee) => {
+          // Находим статусы сотрудника
+          const cardStatusMapping = employee.statusMappings?.find(
+            m => m.statusGroup === 'status_card' || m.status_group === 'status_card'
+          );
+          const activeStatusMapping = employee.statusMappings?.find(
+            m => m.statusGroup === 'status_active' || m.status_group === 'status_active'
+          );
+          
+          // Проверяем статусы
+          const isDraft = cardStatusMapping?.status?.name === 'status_card_draft';
+          const isProcessed = cardStatusMapping?.status?.name === 'status_card_processed';
+          const isNew = cardStatusMapping?.status?.name === 'status_card_new';
+          const isFired = activeStatusMapping?.status?.name === 'status_active_fired';
+          
+          if (statusFilter === 'draft') return isDraft;
+          if (statusFilter === 'processed') return isProcessed;
+          if (statusFilter === 'new') return isNew;
+          if (statusFilter === 'fired') return isFired;
+          return true;
+        });
+      }
+      
+      // Фильтр по поисковому запросу
       if (!searchText) return filtered;
 
       const searchLower = searchText.toLowerCase();
@@ -107,7 +133,7 @@ const EmployeesPage = () => {
         );
       });
     },
-    [employees, searchText]
+    [employees, searchText, statusFilter]
   );
 
   // Мемоизированные уникальные значения для фильтров
@@ -238,6 +264,7 @@ const EmployeesPage = () => {
   // Сброс фильтров таблицы
   const handleResetFilters = () => {
     setSearchText('');
+    setStatusFilter(null);
     setTableFilters({});
     // Инкрементируем триггер для сброса фильтров в таблице
     setResetTrigger(prev => prev + 1);
@@ -281,6 +308,8 @@ const EmployeesPage = () => {
                 <EmployeeSearchFilter 
                   searchText={searchText} 
                   onSearchChange={setSearchText}
+                  statusFilter={statusFilter}
+                  onStatusFilterChange={setStatusFilter}
                 />
               </div>
               <Button
@@ -313,6 +342,8 @@ const EmployeesPage = () => {
           <EmployeeSearchFilter 
             searchText={searchText} 
             onSearchChange={setSearchText}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
           />
           <div style={{ display: 'flex', gap: 12 }}>
             <Button
