@@ -26,13 +26,13 @@ const Application = sequelize.define('Application', {
   },
   constructionSiteId: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true,
     field: 'construction_site_id',
     references: {
       model: 'construction_sites',
       key: 'id'
     },
-    comment: 'Объект строительства'
+    comment: 'Объект строительства (необязательно)'
   },
   subcontractId: {
     type: DataTypes.UUID,

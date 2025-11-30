@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '@/entities/employee';
 import { employeeService } from '@/services/employeeService';
 import { employeeStatusService } from '@/services/employeeStatusService';
+import { applicationService } from '@/services/applicationService';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '@/utils/formatters';
@@ -95,6 +96,12 @@ const ApplicationRequestPage = () => {
     try {
       setLoading(true);
 
+      // Создаем заявку в БД
+      await applicationService.create({
+        employeeIds: selectedEmployees,
+        // constructionSiteId и passValidUntil теперь необязательны
+      });
+
       // Фильтруем только выбранных сотрудников
       const employeesToExport = availableEmployees.filter(emp => selectedEmployees.includes(emp.id));
 
@@ -136,28 +143,8 @@ const ApplicationRequestPage = () => {
       // Сохраняем файл
       XLSX.writeFile(workbook, fileName);
 
-      // Обновляем статусы сотрудников: new и tb_passed -> processed
-      const employeesToUpdate = employeesToExport.filter(emp => {
-        const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
-        const statusName = statusMapping?.status?.name;
-        return statusName === 'status_new' || statusName === 'status_tb_passed';
-      });
-      
-      if (employeesToUpdate.length > 0) {
-        // Получаем ID статуса 'status_processed'
-        const allStatuses = await employeeStatusService.getAllStatuses();
-        const processedStatus = allStatuses.find(s => s.name === 'status_processed');
-        
-        if (processedStatus) {
-          await Promise.all(
-            employeesToUpdate.map(emp =>
-              employeeStatusService.setStatus(emp.id, processedStatus.id)
-            )
-          );
-        }
-      }
-
-      message.success(`Файл успешно сохранен: ${fileName}`);
+      // Статусы обновляются на сервере автоматически при создании заявки
+      message.success(`Заявка создана и файл сохранен: ${fileName}`);
       
       // Обновляем данные и возвращаемся
       await refetchEmployees();

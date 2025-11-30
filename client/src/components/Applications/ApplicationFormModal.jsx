@@ -200,7 +200,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
           <Form.Item
             name="constructionSiteId"
             label="Объект строительства"
-            rules={[{ required: true, message: 'Выберите объект' }]}
           >
             <Select
               placeholder="Выберите объект"
@@ -268,7 +267,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
           <Form.Item
             name="passValidUntil"
             label="Дата окончания действия пропусков"
-            rules={[{ required: true, message: 'Укажите дату окончания действия пропусков' }]}
           >
             <DatePicker 
               style={{ width: '100%' }} 

@@ -1,11 +1,19 @@
-import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, Position, sequelize } from '../models/index.js';
+import { Application, Counterparty, ConstructionSite, Contract, Employee, User, ApplicationEmployeeMapping, ApplicationFileMapping, File, Citizenship, EmployeeCounterpartyMapping, Position, sequelize, Status, EmployeeStatusMapping } from '../models/index.js';
 import { Op } from 'sequelize';
 import storageProvider from '../config/storage.js';
 import { generateApplicationDocument } from '../services/documentService.js';
+import EmployeeStatusService from '../services/employeeStatusService.js';
 
 // Функция генерации номера заявки
 const generateApplicationNumber = async (constructionSiteId) => {
   try {
+    // Если объект строительства не указан, используем запасной формат
+    if (!constructionSiteId) {
+      const timestamp = Date.now();
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      return `APP-${timestamp}-${random}`;
+    }
+    
     // Загружаем объект строительства
     const site = await ConstructionSite.findByPk(constructionSiteId);
     
@@ -256,6 +264,9 @@ export const getApplicationById = async (req, res) => {
 
 // Создать заявку
 export const createApplication = async (req, res) => {
+  console.log('[createApplication] ===== START ===== req.body:', JSON.stringify(req.body, null, 2));
+  console.log('[createApplication] user:', req.user?.id, 'counterpartyId:', req.user?.counterpartyId);
+  
   const transaction = await sequelize.transaction();
   
   try {
@@ -289,29 +300,121 @@ export const createApplication = async (req, res) => {
     
     await ApplicationEmployeeMapping.bulkCreate(mappingRecords, { transaction });
     
-    // Обновляем/создаем записи в employee_counterparty_mapping для каждого сотрудника
+    // Обновляем статусы сотрудников при создании заявки
+    // status_new и status_tb_passed становятся неактивными (is_active=false)
+    // status_processed становится активным (is_active=true)
+    console.log('[createApplication] Начинаем обновление статусов для', employeeIds.length, 'сотрудников');
+    
     for (const employeeId of employeeIds) {
-      // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
-      let mapping = await EmployeeCounterpartyMapping.findOne({
-        where: {
-          employeeId: employeeId,
-          counterpartyId: req.user.counterpartyId,
-          constructionSiteId: applicationData.constructionSiteId
-        },
-        transaction
-      });
+      try {
+        // Получаем текущий статус сотрудника в группе 'status'
+        const currentMapping = await EmployeeStatusMapping.findOne({
+          where: {
+            employeeId: employeeId,
+            statusGroup: 'status',
+            isActive: true
+          },
+          include: [{ model: Status, as: 'status' }],
+          transaction
+        });
+        
+        console.log(`[createApplication] Сотрудник ${employeeId}: текущий статус = ${currentMapping?.status?.name}`);
+        
+        const currentStatusName = currentMapping?.status?.name;
+        
+        // Если текущий статус - 'status_new' или 'status_tb_passed', переводим в 'status_processed'
+        if (currentStatusName === 'status_new' || currentStatusName === 'status_tb_passed') {
+          console.log(`[createApplication] Переводим ${employeeId} из ${currentStatusName} в status_processed`);
+          
+          // Деактивируем старый статус
+          await EmployeeStatusMapping.update(
+            { isActive: false },
+            {
+              where: {
+                employeeId: employeeId,
+                statusGroup: 'status',
+                isActive: true
+              },
+              transaction
+            }
+          );
+          
+          // Получаем статус 'status_processed'
+          const processedStatus = await Status.findOne({
+            where: { name: 'status_processed', group: 'status' },
+            transaction
+          });
+          
+          if (!processedStatus) {
+            console.error(`[createApplication] Статус 'status_processed' не найден!`);
+            continue;
+          }
+          
+          // Проверяем, есть ли уже запись для этого статуса
+          let mapping = await EmployeeStatusMapping.findOne({
+            where: {
+              employeeId: employeeId,
+              statusId: processedStatus.id
+            },
+            transaction
+          });
+          
+          if (mapping) {
+            // Обновляем существующую запись
+            await mapping.update(
+              { isActive: true, updatedBy: req.user.id },
+              { transaction }
+            );
+            console.log(`[createApplication] Активировали существующий маппинг для ${employeeId}`);
+          } else {
+            // Создаем новую запись
+            await EmployeeStatusMapping.create({
+              employeeId: employeeId,
+              statusId: processedStatus.id,
+              statusGroup: 'status',
+              createdBy: req.user.id,
+              updatedBy: req.user.id,
+              isActive: true
+            }, { transaction });
+            console.log(`[createApplication] Создали новый маппинг для ${employeeId}`);
+          }
+        } else {
+          console.log(`[createApplication] Статус ${currentStatusName} не требует изменения`);
+        }
+      } catch (error) {
+        console.error(`[createApplication] Ошибка при обновлении статуса сотрудника ${employeeId}:`, error.message, error.stack);
+        // Продолжаем создание заявки даже если обновление статуса не удалось
+      }
+    }
+    
+    console.log('[createApplication] Обновление статусов завершено');
+    
+    // Обновляем/создаем записи в employee_counterparty_mapping для каждого сотрудника
+    // Только если указан объект строительства
+    if (applicationData.constructionSiteId) {
+      for (const employeeId of employeeIds) {
+        // Проверяем, есть ли уже запись для этой комбинации сотрудник-контрагент-объект
+        let mapping = await EmployeeCounterpartyMapping.findOne({
+          where: {
+            employeeId: employeeId,
+            counterpartyId: req.user.counterpartyId,
+            constructionSiteId: applicationData.constructionSiteId
+          },
+          transaction
+        });
 
-      if (mapping) {
-        // Связка уже существует - обновляем updated_at
-        await mapping.save({ transaction });
-      } else {
-        // Связки нет - создаем новую
-        await EmployeeCounterpartyMapping.create({
-          employeeId: employeeId,
-          counterpartyId: req.user.counterpartyId,
-          constructionSiteId: applicationData.constructionSiteId,
-          departmentId: null
-        }, { transaction });
+        if (mapping) {
+          // Связка уже существует - обновляем updated_at
+          await mapping.save({ transaction });
+        } else {
+          // Связки нет - создаем новую
+          await EmployeeCounterpartyMapping.create({
+            employeeId: employeeId,
+            counterpartyId: req.user.counterpartyId,
+            constructionSiteId: applicationData.constructionSiteId,
+            departmentId: null
+          }, { transaction });
+        }
       }
     }
     
