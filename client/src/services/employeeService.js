@@ -1,16 +1,23 @@
 import api from './api'
+import { deduplicateRequest } from '../utils/requestCache'
 
 export const employeeService = {
   // Получить всех сотрудников
   getAll: async (params = {}) => {
-    const response = await api.get('/employees', { params })
-    return response.data
+    const key = `employees:getAll:${JSON.stringify(params)}`;
+    return deduplicateRequest(key, async () => {
+      const response = await api.get('/employees', { params })
+      return response.data
+    });
   },
 
   // Получить сотрудника по ID
   getById: async (id) => {
-    const response = await api.get(`/employees/${id}`)
-    return response.data
+    const key = `employees:getById:${id}`;
+    return deduplicateRequest(key, async () => {
+      const response = await api.get(`/employees/${id}`)
+      return response.data
+    });
   },
 
   // Создать сотрудника
@@ -53,8 +60,11 @@ export const employeeService = {
 
   // Получить файлы сотрудника
   getFiles: async (employeeId) => {
-    const response = await api.get(`/employees/${employeeId}/files`)
-    return response.data
+    const key = `employees:getFiles:${employeeId}`;
+    return deduplicateRequest(key, async () => {
+      const response = await api.get(`/employees/${employeeId}/files`)
+      return response.data
+    });
   },
 
   // Удалить файл сотрудника

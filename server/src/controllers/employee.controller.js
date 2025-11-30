@@ -372,6 +372,17 @@ export const getEmployeeById = async (req, res, next) => {
               attributes: ['id', 'shortName', 'fullName']
             }
           ]
+        },
+        {
+          model: EmployeeStatusMapping,
+          as: 'statusMappings',
+          where: { isActive: true },
+          required: false,
+          include: [{
+            model: Status,
+            as: 'status',
+            attributes: ['id', 'name', 'group']
+          }]
         }
       ],
       // Добавляем подсчет файлов

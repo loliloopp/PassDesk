@@ -6,6 +6,7 @@ import { constructionSiteService } from '../../services/constructionSiteService'
 import positionService from '../../services/positionService';
 import settingsService from '../../services/settingsService';
 import { employeeStatusService } from '../../services/employeeStatusService';
+import { invalidateCache } from '../../utils/requestCache';
 import { useAuthStore } from '../../store/authStore';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
 import dayjs from 'dayjs';
@@ -213,6 +214,8 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
     try {
       setLoadingFire(true);
       await employeeStatusService.fireEmployee(employee.id);
+      // Очищаем кэш для этого сотрудника
+      invalidateCache(`employees:getById:${employee.id}`);
       messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} уволен`);
       // Закрываем модал
       setTimeout(() => {
@@ -230,6 +233,8 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
     try {
       setLoadingReinstate(true);
       await employeeStatusService.reinstateEmployee(employee.id);
+      // Очищаем кэш для этого сотрудника
+      invalidateCache(`employees:getById:${employee.id}`);
       messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`);
       // Закрываем модал
       setTimeout(() => {
@@ -394,6 +399,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   };
 
   useEffect(() => {
+    const abortController = new AbortController();
+    
     const initializeModal = async () => {
       if (!visible) {
         // Сбрасываем состояние при закрытии
@@ -414,6 +421,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           fetchPositions(),
           fetchDefaultCounterparty()
         ]);
+        
+        // Проверяем, не был ли запрос отменен
+        if (abortController.signal.aborted) {
+          console.log('🛑 EmployeeFormModal: инициализация отменена после загрузки справочников');
+          return;
+        }
 
         if (employee) {
           // Сразу устанавливаем данные сотрудника в форму
@@ -487,13 +500,26 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           setDataLoaded(true);
         }
       } catch (error) {
+        // Игнорируем ошибки отмены запроса
+        if (error.name === 'AbortError' || error.name === 'CanceledError') {
+          console.log('🛑 EmployeeFormModal: инициализация отменена (catch)');
+          return;
+        }
         console.error('❌ EmployeeFormModal: initialization error', error);
-        setCheckingCitizenship(false);
-        setDataLoaded(true);
+        if (!abortController.signal.aborted) {
+          setCheckingCitizenship(false);
+          setDataLoaded(true);
+        }
       }
     };
 
     initializeModal();
+    
+    // Cleanup: отменяем запросы при размонтировании или изменении visible/employee
+    return () => {
+      console.log('🛑 EmployeeFormModal: отмена запросов (cleanup)');
+      abortController.abort();
+    };
   }, [visible, employee]);
 
   // Обновляем валидацию при изменении requiresPatent

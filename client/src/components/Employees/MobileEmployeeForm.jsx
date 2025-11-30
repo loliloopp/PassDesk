@@ -3,6 +3,7 @@ import { SaveOutlined, CaretRightOutlined, FileOutlined, ExclamationCircleOutlin
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import { employeeStatusService } from '../../services/employeeStatusService';
+import { invalidateCache } from '../../utils/requestCache';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
 import dayjs from 'dayjs';
 
@@ -16,7 +17,7 @@ const DATE_FORMAT = 'DD.MM.YYYY';
  * Все поля в один столбец, блоки вместо вкладок
  */
 const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
-  const { modal } = App.useApp();
+  const { modal, message: messageApi } = App.useApp();
   const {
     form,
     loading,
@@ -89,13 +90,14 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
   // Блок 0: Статусы (если редактирование) - ДО Личной информации
   if (employee?.id) {
-    const { message: messageApi } = App.useApp();
     const isFired = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_fired';
     const isInactive = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_inactive';
 
     const handleFire = async () => {
       try {
         await employeeStatusService.fireEmployee(employee.id);
+        // Очищаем кэш для этого сотрудника
+        invalidateCache(`employees:getById:${employee.id}`);
         messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} уволен`);
         setTimeout(() => {
           onCancel && onCancel();
@@ -109,6 +111,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     const handleReinstate = async () => {
       try {
         await employeeStatusService.reinstateEmployee(employee.id);
+        // Очищаем кэш для этого сотрудника
+        invalidateCache(`employees:getById:${employee.id}`);
         messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`);
         setTimeout(() => {
           onCancel && onCancel();

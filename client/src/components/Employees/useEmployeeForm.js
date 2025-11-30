@@ -30,7 +30,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
 
   // Загрузка справочников
-  const loadReferences = async () => {
+  const loadReferences = async (abortSignal) => {
     setLoadingReferences(true);
     try {
       const [citizenshipsRes, sitesRes, positionsRes, settingsRes] = await Promise.all([
@@ -39,6 +39,12 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         positionService.getAll({ limit: 1000 }), // Загружаем все должности
         settingsService.getPublicSettings(),
       ]);
+
+      // Проверяем, не был ли запрос отменен
+      if (abortSignal?.aborted) {
+        console.log('🛑 loadReferences: запрос отменен');
+        return;
+      }
 
       // Извлекаем данные с учетом структуры API
       const citizenshipsData = citizenshipsRes.data?.data?.citizenships || [];
@@ -53,6 +59,11 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         setDefaultCounterpartyId(settingsData.defaultCounterpartyId);
       }
     } catch (error) {
+      // Игнорируем ошибки отмены запроса
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        console.log('🛑 loadReferences: запрос отменен (catch)');
+        return;
+      }
       console.error('❌ Ошибка загрузки справочников:', error);
       message.error('Ошибка загрузки справочников');
     } finally {
@@ -180,7 +191,14 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
 
   // Загрузка справочников при монтировании
   useEffect(() => {
-    loadReferences();
+    const abortController = new AbortController();
+    loadReferences(abortController.signal);
+    
+    // Cleanup: отменяем запросы при размонтировании
+    return () => {
+      console.log('🛑 useEmployeeForm: отмена запросов (cleanup)');
+      abortController.abort();
+    };
   }, []);
 
   // Инициализация данных сотрудника

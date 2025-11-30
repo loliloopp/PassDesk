@@ -1,20 +1,27 @@
 import api from './api';
+import { deduplicateRequest } from '../utils/requestCache';
 
 const settingsService = {
   /**
    * Получить публичные настройки (доступно всем авторизованным пользователям)
    */
   getPublicSettings: async () => {
-    const response = await api.get('/settings/public');
-    return response.data;
+    const key = 'settings:public';
+    return deduplicateRequest(key, async () => {
+      const response = await api.get('/settings/public');
+      return response.data;
+    });
   },
 
   /**
    * Получить все настройки (только для администратора)
    */
   getSettings: async () => {
-    const response = await api.get('/settings');
-    return response.data;
+    const key = 'settings:all';
+    return deduplicateRequest(key, async () => {
+      const response = await api.get('/settings');
+      return response.data;
+    });
   },
 
   /**

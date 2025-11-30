@@ -1,14 +1,17 @@
 import api from './api';
+import { deduplicateRequest } from '../utils/requestCache';
 
 const positionService = {
   // Получить все должности
   getAll: (params = {}) => {
-    return api.get('/positions', { params });
+    const key = `positions:getAll:${JSON.stringify(params)}`;
+    return deduplicateRequest(key, () => api.get('/positions', { params }));
   },
 
   // Получить должность по ID
   getById: (id) => {
-    return api.get(`/positions/${id}`);
+    const key = `positions:getById:${id}`;
+    return deduplicateRequest(key, () => api.get(`/positions/${id}`));
   },
 
   // Создать должность
