@@ -1,5 +1,5 @@
-import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse } from 'antd';
-import { SaveOutlined, CaretRightOutlined, FileOutlined } from '@ant-design/icons';
+import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse, App } from 'antd';
+import { SaveOutlined, CaretRightOutlined, FileOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
@@ -15,6 +15,7 @@ const DATE_FORMAT = 'DD.MM.YYYY';
  * Все поля в один столбец, блоки вместо вкладок
  */
 const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
+  const { modal } = App.useApp();
   const {
     form,
     loading,
@@ -66,6 +67,21 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
   // Проверяем права доступа
   const canEditConstructionSite = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
+
+  // Функция для обработки отмены с подтверждением
+  const handleCancelWithConfirm = () => {
+    modal.confirm({
+      title: 'Вы уверены?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Все несохраненные данные будут потеряны. Вы хотите выйти?',
+      okText: 'Да, выйти',
+      okType: 'danger',
+      cancelText: 'Остаться',
+      onOk() {
+        onCancel();
+      },
+    });
+  };
 
   // Формируем items для Collapse
   const collapseItems = [];
@@ -606,7 +622,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               borderColor: '#ff4d4f',
               color: '#ff4d4f'
             }} 
-            onClick={onCancel} 
+            onClick={handleCancelWithConfirm} 
             disabled={loading}
           >
             Отмена
