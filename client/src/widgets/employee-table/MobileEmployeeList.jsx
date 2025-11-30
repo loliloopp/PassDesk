@@ -75,16 +75,6 @@ const MobileEmployeeList = ({
     return items;
   };
 
-  // Обработчик подтверждения удаления
-  const handleDeleteConfirm = async () => {
-    try {
-      await onDelete(deletingId);
-      setDeletingId(null);
-    } catch (error) {
-      // Ошибка уже обработана в хуке
-    }
-  };
-
   // Показываем модальное окно подтверждения удаления
   const showDeleteConfirm = (employee) => {
     Modal.confirm({
@@ -95,9 +85,6 @@ const MobileEmployeeList = ({
       cancelText: 'Отмена',
       onOk() {
         return onDelete(employee.id);
-      },
-      onCancel() {
-        setDeletingId(null);
       },
     });
   };
@@ -156,11 +143,23 @@ const MobileEmployeeList = ({
                       </div>
                     )}
                     {(() => {
+                      // Проверяем статус уволен
+                      const activeStatusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_active' || m.status_group === 'status_active');
+                      const isFired = activeStatusMapping?.status?.name === 'status_active_fired';
+                      
+                      // Проверяем статус черновик
                       const cardStatusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
-                      if (cardStatusMapping?.status?.name === 'status_card_draft') {
-                        return <Tag color="default" style={{ fontSize: 10, margin: 0 }}>Черновик</Tag>;
-                      }
-                      return null;
+                      const isDraft = cardStatusMapping?.status?.name === 'status_card_draft';
+                      
+                      // Показываем только если есть хотя бы один статус
+                      if (!isFired && !isDraft) return null;
+                      
+                      return (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {isFired && <Tag color="red" style={{ fontSize: 10, margin: 0 }}>Уволен</Tag>}
+                          {isDraft && <Tag color="default" style={{ fontSize: 10, margin: 0 }}>Черновик</Tag>}
+                        </div>
+                      );
                     })()}
                   </div>
                 </div>
