@@ -2,7 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { validate } from '../middleware/validator.js';
 import * as authController from '../controllers/auth.controller.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authenticateForLogout } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ const registerValidation = [
 // Публичная регистрация (без authenticate middleware)
 router.post('/register', registerValidation, validate, authController.register);
 router.post('/login', loginValidation, validate, authController.login);
-router.post('/logout', authenticate, authController.logout);
+router.post('/logout', authenticateForLogout, authController.logout);
 router.post('/refresh', authController.refreshToken);
 router.get('/me', authenticate, authController.getCurrentUser);
 

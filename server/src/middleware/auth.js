@@ -95,6 +95,47 @@ export const authenticateWithoutActivationCheck = async (req, res, next) => {
   }
 };
 
+// Middleware для logout - НЕ требует валидный токен (может быть истёкший)
+// Разрешает logout даже если токен истек или отсутствует
+export const authenticateForLogout = async (req, res, next) => {
+  try {
+    // Получаем токен из заголовка
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // Разрешаем logout даже без токена
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Пытаемся декодировать токен (если успешно)
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findByPk(decoded.id, {
+        attributes: ['id', 'role', 'counterpartyId']
+      });
+      
+      if (user) {
+        req.user = {
+          id: user.id,
+          role: user.role,
+          counterpartyId: user.counterpartyId
+        };
+      }
+    } catch (tokenError) {
+      // Даже если токен невалиден или истёк - разрешаем logout
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⏱️ Token validation skipped for logout:', tokenError.message);
+      }
+    }
+    
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {

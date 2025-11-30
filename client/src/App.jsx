@@ -20,6 +20,7 @@ import DebugPage from './pages/DebugPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 import { useAuthStore } from './store/authStore'
+import { useTokenRefresh } from './hooks/useTokenRefresh'
 
 // Компонент для перенаправления на employees для всех ролей
 const RoleBasedRedirect = () => {
@@ -27,6 +28,9 @@ const RoleBasedRedirect = () => {
 }
 
 function App() {
+  // Автоматически обновляем токен в фоне каждые 30 секунд
+  useTokenRefresh()
+  
   return (
     <ConfigProvider theme={antdTheme} locale={ruRU}>
       <AntApp>
