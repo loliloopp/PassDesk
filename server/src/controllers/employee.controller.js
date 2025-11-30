@@ -710,6 +710,21 @@ export const updateEmployee = async (req, res, next) => {
       if (isFired || isInactive) {
         const statusName = isFired ? 'status_active_fired' : 'status_active_inactive';
         console.log(`Setting status_active to ${statusName}`);
+        
+        // СПЕЦИАЛЬНАЯ ЛОГИКА для status_active_fired: деактивируем status_hr_fired_off если он активен
+        if (isFired) {
+          console.log('Checking for active status_hr_fired_off to deactivate');
+          const hrFiredOffStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_hr');
+          if (hrFiredOffStatus?.status?.name === 'status_hr_fired_off') {
+            hrFiredOffStatus.isActive = false;
+            hrFiredOffStatus.isUpload = false;
+            hrFiredOffStatus.updatedBy = req.user.id;
+            hrFiredOffStatus.updatedAt = new Date();
+            await hrFiredOffStatus.save();
+            console.log('✓ Deactivated status_hr_fired_off and set is_upload to false');
+          }
+        }
+        
         await EmployeeStatusService.setStatusByName(id, statusName, req.user.id);
         console.log(`✓ Employee status_active updated to ${statusName}`);
       } else {
@@ -730,7 +745,29 @@ export const updateEmployee = async (req, res, next) => {
             console.log('✓ Deactivated status_active_fired and set is_upload to false');
           }
           
+          // Деактивируем status_hr_edited ДО активации status_hr_fired_off
+          console.log('Looking for status_hr_edited to deactivate...');
+          const hrEditedStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_hr');
+          console.log('Found status_hr:', hrEditedStatus?.status?.name, 'is_active:', hrEditedStatus?.isActive, 'is_upload:', hrEditedStatus?.isUpload);
+          
+          if (hrEditedStatus?.status?.name === 'status_hr_edited') {
+            console.log('Deactivating status_hr_edited...');
+            hrEditedStatus.isActive = false;
+            hrEditedStatus.isUpload = false;
+            hrEditedStatus.updatedBy = req.user.id;
+            hrEditedStatus.updatedAt = new Date();
+            await hrEditedStatus.save();
+            console.log('✓ Deactivated status_hr_edited and set is_upload to false');
+            
+            // Перепроверяем, что сохранилось
+            const verifyStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_hr');
+            console.log('Verification after deactivation:', verifyStatus?.status?.name, 'is_active:', verifyStatus?.isActive, 'is_upload:', verifyStatus?.isUpload);
+          } else {
+            console.log('status_hr_edited not found, might have been already deactivated or other status is active');
+          }
+          
           // Активируем status_hr_fired_off с is_upload = false (или создаем если не существует)
+          console.log('Activating status_hr_fired_off...');
           await EmployeeStatusService.activateOrCreateStatus(id, 'status_hr_fired_off', req.user.id, false);
           console.log('✓ Activated or created status_hr_fired_off with is_upload=false');
         }
@@ -1157,18 +1194,58 @@ export const setEditedStatus = async (req, res, next) => {
       });
     }
 
+    // Проверяем есть ли активный статус status_hr_fired_off
+    const firedOffMapping = await EmployeeStatusMapping.findOne({
+      where: {
+        employeeId: employeeId,
+        statusGroup: 'status_hr',
+        isActive: true
+      },
+      include: [
+        {
+          model: Status,
+          as: 'status'
+        }
+      ]
+    });
+
+    // Если активен status_hr_fired_off - не создаем status_hr_edited
+    if (firedOffMapping?.status?.name === 'status_hr_fired_off') {
+      console.log('Employee has active status_hr_fired_off, skipping status_hr_edited creation');
+      return res.json({
+        success: true,
+        message: 'Статус "Редактирован" не установлен (сотрудник в статусе "Повторно принят")',
+        data: {
+          statusUpdated: false,
+          reason: 'status_hr_fired_off_active'
+        }
+      });
+    }
+
+    // Деактивируем все другие активные статусы группы status_hr
+    await EmployeeStatusMapping.update(
+      { isActive: false },
+      {
+        where: {
+          employeeId: employeeId,
+          statusGroup: 'status_hr',
+          isActive: true
+        }
+      }
+    );
+
     // Проверяем есть ли уже такой статус у сотрудника
     const existingMapping = await EmployeeStatusMapping.findOne({
       where: {
         employeeId: employeeId,
         statusId: editedStatusRecord.id,
-        statusGroup: 'status_hr',
-        isActive: true
+        statusGroup: 'status_hr'
       }
     });
 
     if (existingMapping) {
       // Обновляем существующий
+      existingMapping.isActive = true;
       existingMapping.isUpload = isUpload;
       existingMapping.updatedBy = userId;
       existingMapping.updatedAt = new Date();
@@ -1195,6 +1272,150 @@ export const setEditedStatus = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error setting edited status:', error);
+    next(error);
+  }
+};
+
+/**
+ * Уволить сотрудника
+ * Очищает группу status_hr и устанавливает status_active_fired
+ */
+export const fireEmployee = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сотрудник не найден'
+      });
+    }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+
+    console.log(`=== FIRING EMPLOYEE: ${employee.firstName} ${employee.lastName} ===`);
+
+    // 1. Деактивируем все статусы группы status_hr и очищаем is_upload
+    await EmployeeStatusMapping.update(
+      { isActive: false, isUpload: false },
+      {
+        where: {
+          employeeId: id,
+          statusGroup: 'status_hr'
+        }
+      }
+    );
+    console.log('✓ All status_hr statuses deactivated and is_upload set to false');
+
+    // 2. Активируем status_active_fired с is_upload = false
+    await EmployeeStatusService.setStatusByName(id, 'status_active_fired', userId);
+    
+    // Обновляем is_upload = false для только что установленного статуса
+    const firedMapping = await EmployeeStatusService.getCurrentStatus(id, 'status_active');
+    if (firedMapping) {
+      firedMapping.isUpload = false;
+      firedMapping.updatedBy = userId;
+      firedMapping.updatedAt = new Date();
+      await firedMapping.save();
+    }
+    console.log('✓ status_active_fired activated with is_upload=false');
+
+    res.json({
+      success: true,
+      message: `Сотрудник ${employee.firstName} ${employee.lastName} уволен`,
+      data: {
+        employeeId: id,
+        action: 'fired'
+      }
+    });
+  } catch (error) {
+    console.error('Error firing employee:', error);
+    next(error);
+  }
+};
+
+/**
+ * Принять уволенного сотрудника
+ * Очищает группу status_hr кроме status_hr_fired_off и активирует status_hr_fired_off
+ */
+export const reinstateEmployee = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сотрудник не найден'
+      });
+    }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+
+    console.log(`=== REINSTATING EMPLOYEE: ${employee.firstName} ${employee.lastName} ===`);
+
+    // 1. Получить статус status_hr_fired_off
+    const firedOffStatus = await Status.findOne({
+      where: { name: 'status_hr_fired_off' }
+    });
+
+    if (!firedOffStatus) {
+      throw new Error('Статус status_hr_fired_off не найден');
+    }
+
+    // 2. Деактивируем все другие статусы группы status_hr и очищаем is_upload
+    await EmployeeStatusMapping.update(
+      { isActive: false, isUpload: false },
+      {
+        where: {
+          employeeId: id,
+          statusGroup: 'status_hr',
+          statusId: { [Op.ne]: firedOffStatus.id }
+        }
+      }
+    );
+    console.log('✓ All status_hr statuses except status_hr_fired_off deactivated and is_upload set to false');
+
+    // 3. Активируем status_hr_fired_off с is_upload = false (создаем или обновляем)
+    await EmployeeStatusService.activateOrCreateStatus(id, 'status_hr_fired_off', userId, false);
+    console.log('✓ status_hr_fired_off activated with is_upload=false');
+
+    // 4. Деактивируем status_active_fired и устанавливаем status_active_employed
+    const currentActiveStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_active');
+    if (currentActiveStatus?.status?.name === 'status_active_fired') {
+      currentActiveStatus.isActive = false;
+      currentActiveStatus.isUpload = false;
+      currentActiveStatus.updatedBy = userId;
+      currentActiveStatus.updatedAt = new Date();
+      await currentActiveStatus.save();
+      console.log('✓ status_active_fired deactivated');
+    }
+
+    // Активируем status_active_employed
+    await EmployeeStatusService.setStatusByName(id, 'status_active_employed', userId);
+    console.log('✓ status_active_employed activated');
+
+    res.json({
+      success: true,
+      message: `Сотрудник ${employee.firstName} ${employee.lastName} восстановлен`,
+      data: {
+        employeeId: id,
+        action: 'reinstated'
+      }
+    });
+  } catch (error) {
+    console.error('Error reinstating employee:', error);
     next(error);
   }
 };

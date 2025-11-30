@@ -237,6 +237,8 @@ class EmployeeStatusService {
       throw new Error(`Статус ${statusName} не найден`);
     }
 
+    console.log(`[activateOrCreateStatus] Processing ${statusName} for employee ${employeeId}, setUploadFlag=${setUploadFlag}`);
+
     // Проверить есть ли уже связь с этим статусом
     let mapping = await EmployeeStatusMapping.findOne({
       where: {
@@ -248,12 +250,14 @@ class EmployeeStatusService {
 
     if (mapping) {
       // Обновить существующую связь
+      console.log(`[activateOrCreateStatus] Updating existing mapping: is_active ${mapping.isActive} → true, is_upload ${mapping.isUpload} → ${setUploadFlag}`);
       mapping.isActive = true;
       mapping.isUpload = setUploadFlag;
       mapping.updatedBy = userId;
       await mapping.save();
     } else {
       // Создать новую связь
+      console.log(`[activateOrCreateStatus] Creating new mapping with is_active=true, is_upload=${setUploadFlag}`);
       mapping = await EmployeeStatusMapping.create({
         employeeId: employeeId,
         statusId: status.id,
@@ -265,6 +269,7 @@ class EmployeeStatusService {
       });
     }
 
+    console.log(`[activateOrCreateStatus] Mapping after save: is_active=${mapping.isActive}, is_upload=${mapping.isUpload}`);
     return mapping;
   }
 

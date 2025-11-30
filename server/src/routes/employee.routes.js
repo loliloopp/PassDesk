@@ -84,6 +84,8 @@ router.put('/:id/department', employeeController.updateEmployeeDepartment); // �
 router.put('/:employeeId/status/:statusMappingId/upload', employeeController.updateStatusUploadFlag); // Обновить флаг is_upload для статуса
 router.put('/:employeeId/statuses/upload', employeeController.updateAllStatusesUploadFlag); // Обновить флаг is_upload для всех активных статусов
 router.post('/:employeeId/status/edited', employeeController.setEditedStatus); // Установить статус "Редактирован" с is_upload
+router.post('/:id/action/fire', employeeController.fireEmployee); // Уволить сотрудника
+router.post('/:id/action/reinstate', employeeController.reinstateEmployee); // Принять уволенного сотрудника
 router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере
 router.get('/search', employeeController.searchEmployees);
 

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import positionService from '../../services/positionService';
 import settingsService from '../../services/settingsService';
+import { employeeStatusService } from '../../services/employeeStatusService';
 import { useAuthStore } from '../../store/authStore';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
 import dayjs from 'dayjs';
@@ -196,6 +197,91 @@ const formatBlankNumber = (value) => {
   
   // Форматируем: ПР1234567
   return `${limitedLetters}${limitedNumbers}`;
+};
+
+/**
+ * Компонент кнопок для действий со статусом уволен/неактивен
+ */
+const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
+  const [loadingFire, setLoadingFire] = useState(false);
+  const [loadingReinstate, setLoadingReinstate] = useState(false);
+
+  const isFired = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_fired';
+  const isInactive = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_inactive';
+
+  const handleFire = async () => {
+    try {
+      setLoadingFire(true);
+      await employeeStatusService.fireEmployee(employee.id);
+      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} уволен`);
+      // Закрываем модал
+      setTimeout(() => {
+        onCancel && onCancel();
+      }, 500);
+    } catch (error) {
+      console.error('Error firing employee:', error);
+      messageApi.error('Ошибка при увольнении сотрудника');
+    } finally {
+      setLoadingFire(false);
+    }
+  };
+
+  const handleReinstate = async () => {
+    try {
+      setLoadingReinstate(true);
+      await employeeStatusService.reinstateEmployee(employee.id);
+      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`);
+      // Закрываем модал
+      setTimeout(() => {
+        onCancel && onCancel();
+      }, 500);
+    } catch (error) {
+      console.error('Error reinstating employee:', error);
+      messageApi.error('Ошибка при восстановлении сотрудника');
+    } finally {
+      setLoadingReinstate(false);
+    }
+  };
+
+  return (
+    <Space wrap>
+      {isFired ? (
+        <Popconfirm
+          title="Восстановить сотрудника?"
+          description={`Вы уверены, что ${employee.lastName} ${employee.firstName} восстанавливается?`}
+          onConfirm={handleReinstate}
+          okText="Да"
+          cancelText="Нет"
+        >
+          <Button type="primary" danger loading={loadingReinstate}>
+            Принять уволенного
+          </Button>
+        </Popconfirm>
+      ) : (
+        <Popconfirm
+          title="Уволить сотрудника?"
+          description={`Вы уверены, что ${employee.lastName} ${employee.firstName} увольняется?`}
+          onConfirm={handleFire}
+          okText="Да"
+          cancelText="Нет"
+        >
+          <Button danger loading={loadingFire}>
+            Уволить
+          </Button>
+        </Popconfirm>
+      )}
+      
+      {isInactive ? (
+        <Button type="default">
+          Активен
+        </Button>
+      ) : (
+        <Button type="default">
+          Неактивен
+        </Button>
+      )}
+    </Space>
+  );
 };
 
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
@@ -730,41 +816,16 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         ),
         children: (
           <>
-            {/* Чекбоксы статусов - только для существующих сотрудников */}
+            {/* Кнопки действий со статусами - только для существующих сотрудников */}
             {employee?.id && (
               <Row gutter={16} style={{ marginBottom: 16 }}>
                 <Col span={24}>
-                  <Space size="large">
-                    <Form.Item name="isFired" valuePropName="checked" noStyle>
-                      <Checkbox
-                        disabled={employee?.employeeCounterpartyMappings?.[0]?.counterpartyId !== user?.counterpartyId}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            form.setFieldsValue({ isFired: true, isInactive: false });
-                          } else {
-                            form.setFieldsValue({ isFired: false });
-                          }
-                        }}
-                        style={{ color: '#ff4d4f', fontWeight: 'bold' }}
-                      >
-                        Уволен
-                      </Checkbox>
-                    </Form.Item>
-                    <Form.Item name="isInactive" valuePropName="checked" noStyle>
-                      <Checkbox
-                        disabled={employee?.employeeCounterpartyMappings?.[0]?.counterpartyId !== user?.counterpartyId}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            form.setFieldsValue({ isInactive: true, isFired: false });
-                          } else {
-                            form.setFieldsValue({ isInactive: false });
-                          }
-                        }}
-                        style={{ color: '#1890ff', fontWeight: 'bold' }}
-                      >
-                        Неактивный
-                      </Checkbox>
-                    </Form.Item>
+                  <Space size="middle" wrap>
+                    <EmployeeActionButtons 
+                      employee={employee}
+                      messageApi={message}
+                      onCancel={onCancel}
+                    />
                   </Space>
                 </Col>
               </Row>

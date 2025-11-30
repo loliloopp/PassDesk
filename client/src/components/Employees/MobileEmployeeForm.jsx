@@ -1,7 +1,8 @@
-import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse, App } from 'antd';
+import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse, App, Popconfirm } from 'antd';
 import { SaveOutlined, CaretRightOutlined, FileOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
+import { employeeStatusService } from '../../services/employeeStatusService';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
 import dayjs from 'dayjs';
 
@@ -88,19 +89,77 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
   // Блок 0: Статусы (если редактирование) - ДО Личной информации
   if (employee?.id) {
+    const { message: messageApi } = App.useApp();
+    const isFired = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_fired';
+    const isInactive = employee.statusMappings?.find(m => m.statusGroup === 'status_active')?.status?.name === 'status_active_inactive';
+
+    const handleFire = async () => {
+      try {
+        await employeeStatusService.fireEmployee(employee.id);
+        messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} уволен`);
+        setTimeout(() => {
+          onCancel && onCancel();
+        }, 500);
+      } catch (error) {
+        console.error('Error firing employee:', error);
+        messageApi.error('Ошибка при увольнении сотрудника');
+      }
+    };
+
+    const handleReinstate = async () => {
+      try {
+        await employeeStatusService.reinstateEmployee(employee.id);
+        messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} восстановлен`);
+        setTimeout(() => {
+          onCancel && onCancel();
+        }, 500);
+      } catch (error) {
+        console.error('Error reinstating employee:', error);
+        messageApi.error('Ошибка при восстановлении сотрудника');
+      }
+    };
+
     collapseItems.push({
       key: 'statuses',
       label: <Title level={5} style={{ margin: 0 }}>⚙️ Статусы</Title>,
       children: (
-        <>
-          <Form.Item name="isFired" valuePropName="checked">
-            <Checkbox>Уволен</Checkbox>
-          </Form.Item>
-
-          <Form.Item name="isInactive" valuePropName="checked">
-            <Checkbox>Неактивен (временно)</Checkbox>
-          </Form.Item>
-        </>
+        <Space direction="vertical" style={{ width: '100%' }}>
+          {isFired ? (
+            <Popconfirm
+              title="Восстановить сотрудника?"
+              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} восстанавливается?`}
+              onConfirm={handleReinstate}
+              okText="Да"
+              cancelText="Нет"
+            >
+              <Button type="primary" danger block>
+                Принять уволенного
+              </Button>
+            </Popconfirm>
+          ) : (
+            <Popconfirm
+              title="Уволить сотрудника?"
+              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} увольняется?`}
+              onConfirm={handleFire}
+              okText="Да"
+              cancelText="Нет"
+            >
+              <Button danger block>
+                Уволить
+              </Button>
+            </Popconfirm>
+          )}
+          
+          {isInactive ? (
+            <Button type="default" block>
+              Активен
+            </Button>
+          ) : (
+            <Button type="default" block>
+              Неактивен
+            </Button>
+          )}
+        </Space>
       ),
     });
   }

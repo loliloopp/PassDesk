@@ -47,6 +47,18 @@ export const employeeStatusService = {
   getStatusesBatch: async (employeeIds) => {
     const response = await api.post('/employees/statuses/batch', { employeeIds })
     return response.data
+  },
+
+  // Уволить сотрудника
+  fireEmployee: async (employeeId) => {
+    const response = await api.post(`/employees/${employeeId}/action/fire`)
+    return response.data
+  },
+
+  // Принять уволенного сотрудника
+  reinstateEmployee: async (employeeId) => {
+    const response = await api.post(`/employees/${employeeId}/action/reinstate`)
+    return response.data
   }
 }
 
