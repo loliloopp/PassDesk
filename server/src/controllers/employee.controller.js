@@ -687,6 +687,29 @@ export const updateEmployee = async (req, res, next) => {
         console.log('✓ Employee statuses updated to completed');
       }
 
+      // НОВАЯ ЛОГИКА: если в группе status_hr есть активный статус с is_upload=true - очищаем группу и активируем status_hr_edited
+      console.log('=== CHECKING STATUS_HR GROUP ===');
+      const currentHRStatusBeforeUpdate = await EmployeeStatusService.getCurrentStatus(id, 'status_hr');
+      if (currentHRStatusBeforeUpdate?.isUpload === true) {
+        console.log(`Found active status_hr with is_upload=true: ${currentHRStatusBeforeUpdate?.status?.name}`);
+        
+        // Деактивируем все статусы группы status_hr и устанавливаем is_upload = false
+        await EmployeeStatusMapping.update(
+          { isActive: false, isUpload: false },
+          {
+            where: {
+              employeeId: id,
+              statusGroup: 'status_hr'
+            }
+          }
+        );
+        console.log('✓ All status_hr statuses deactivated and is_upload set to false');
+        
+        // Активируем status_hr_edited с is_upload = false (создаем или обновляем)
+        await EmployeeStatusService.activateOrCreateStatus(id, 'status_hr_edited', req.user.id, false);
+        console.log('✓ status_hr_edited activated with is_upload=false');
+      }
+
       // Проверяем, есть ли статус status_hr_new_compl - если да, присваиваем status_hr_edited
       const currentHRStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_hr');
       if (currentHRStatus?.status?.name === 'status_hr_new_compl') {
