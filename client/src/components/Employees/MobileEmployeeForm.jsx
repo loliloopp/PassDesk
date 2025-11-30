@@ -44,6 +44,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   // Состояние для открытых панелей (по умолчанию все открыны)
   const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'statuses']);
   const [employeeIdOnLoad, setEmployeeIdOnLoad] = useState(null); // Отслеживаем id сотрудника при загрузке
+  const [fireLoading, setFireLoading] = useState(false); // Состояние загрузки для увольнения
+  const [activateLoading, setActivateLoading] = useState(false); // Состояние загрузки для активации
 
   // Инициализируем данные формы при изменении сотрудника или справочников
   useEffect(() => {
@@ -95,6 +97,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
 
     const handleFire = async () => {
       try {
+        setFireLoading(true);
         await employeeStatusService.fireEmployee(employee.id);
         // Очищаем кэш для этого сотрудника
         invalidateCache(`employees:getById:${employee.id}`);
@@ -105,11 +108,14 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
       } catch (error) {
         console.error('Error firing employee:', error);
         messageApi.error('Ошибка при увольнении сотрудника');
+      } finally {
+        setFireLoading(false);
       }
     };
 
     const handleReinstate = async () => {
       try {
+        setActivateLoading(true);
         await employeeStatusService.reinstateEmployee(employee.id);
         // Очищаем кэш для этого сотрудника
         invalidateCache(`employees:getById:${employee.id}`);
@@ -120,6 +126,44 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
       } catch (error) {
         console.error('Error reinstating employee:', error);
         messageApi.error('Ошибка при восстановлении сотрудника');
+      } finally {
+        setActivateLoading(false);
+      }
+    };
+
+    const handleDeactivate = async () => {
+      try {
+        setFireLoading(true);
+        await employeeStatusService.deactivateEmployee(employee.id);
+        // Очищаем кэш для этого сотрудника
+        invalidateCache(`employees:getById:${employee.id}`);
+        messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} деактивирован`);
+        setTimeout(() => {
+          onCancel && onCancel();
+        }, 500);
+      } catch (error) {
+        console.error('Error deactivating employee:', error);
+        messageApi.error('Ошибка при деактивации сотрудника');
+      } finally {
+        setFireLoading(false);
+      }
+    };
+
+    const handleActivate = async () => {
+      try {
+        setActivateLoading(true);
+        await employeeStatusService.activateEmployee(employee.id);
+        // Очищаем кэш для этого сотрудника
+        invalidateCache(`employees:getById:${employee.id}`);
+        messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} активирован`);
+        setTimeout(() => {
+          onCancel && onCancel();
+        }, 500);
+      } catch (error) {
+        console.error('Error activating employee:', error);
+        messageApi.error('Ошибка при активации сотрудника');
+      } finally {
+        setActivateLoading(false);
       }
     };
 
@@ -136,7 +180,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               okText="Да"
               cancelText="Нет"
             >
-              <Button type="primary" danger block>
+              <Button type="primary" danger block loading={activateLoading}>
                 Принять уволенного
               </Button>
             </Popconfirm>
@@ -148,20 +192,36 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               okText="Да"
               cancelText="Нет"
             >
-              <Button danger block>
+              <Button danger block loading={fireLoading}>
                 Уволить
               </Button>
             </Popconfirm>
           )}
           
           {isInactive ? (
-            <Button type="default" block>
-              Активен
-            </Button>
+            <Popconfirm
+              title="Активировать сотрудника?"
+              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} активируется?`}
+              onConfirm={handleActivate}
+              okText="Да"
+              cancelText="Нет"
+            >
+              <Button type="primary" block loading={activateLoading}>
+                Активировать
+              </Button>
+            </Popconfirm>
           ) : (
-            <Button type="default" block>
-              Неактивен
-            </Button>
+            <Popconfirm
+              title="Деактивировать сотрудника?"
+              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} деактивируется?`}
+              onConfirm={handleDeactivate}
+              okText="Да"
+              cancelText="Нет"
+            >
+              <Button type="default" block loading={fireLoading}>
+                Деактивировать
+              </Button>
+            </Popconfirm>
           )}
         </Space>
       ),

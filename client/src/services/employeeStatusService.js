@@ -59,6 +59,18 @@ export const employeeStatusService = {
   reinstateEmployee: async (employeeId) => {
     const response = await api.post(`/employees/${employeeId}/action/reinstate`)
     return response.data
+  },
+
+  // Деактивировать сотрудника (установить статус inactive)
+  deactivateEmployee: async (employeeId) => {
+    const response = await api.post(`/employees/${employeeId}/action/deactivate`)
+    return response.data
+  },
+
+  // Активировать сотрудника (установить статус employed)
+  activateEmployee: async (employeeId) => {
+    const response = await api.post(`/employees/${employeeId}/action/activate`)
+    return response.data
   }
 }
 

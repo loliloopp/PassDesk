@@ -248,6 +248,44 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
     }
   };
 
+  const handleDeactivate = async () => {
+    try {
+      setLoadingFire(true);
+      await employeeStatusService.deactivateEmployee(employee.id);
+      // Очищаем кэш для этого сотрудника
+      invalidateCache(`employees:getById:${employee.id}`);
+      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} деактивирован`);
+      // Закрываем модал
+      setTimeout(() => {
+        onCancel && onCancel();
+      }, 500);
+    } catch (error) {
+      console.error('Error deactivating employee:', error);
+      messageApi.error('Ошибка при деактивации сотрудника');
+    } finally {
+      setLoadingFire(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    try {
+      setLoadingReinstate(true);
+      await employeeStatusService.activateEmployee(employee.id);
+      // Очищаем кэш для этого сотрудника
+      invalidateCache(`employees:getById:${employee.id}`);
+      messageApi.success(`Сотрудник ${employee.lastName} ${employee.firstName} активирован`);
+      // Закрываем модал
+      setTimeout(() => {
+        onCancel && onCancel();
+      }, 500);
+    } catch (error) {
+      console.error('Error activating employee:', error);
+      messageApi.error('Ошибка при активации сотрудника');
+    } finally {
+      setLoadingReinstate(false);
+    }
+  };
+
   return (
     <Space wrap>
       {isFired ? (
@@ -277,13 +315,29 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
       )}
       
       {isInactive ? (
-        <Button type="default">
-          Активен
-        </Button>
+        <Popconfirm
+          title="Активировать сотрудника?"
+          description={`Вы уверены, что ${employee.lastName} ${employee.firstName} активируется?`}
+          onConfirm={handleActivate}
+          okText="Да"
+          cancelText="Нет"
+        >
+          <Button type="primary" loading={loadingReinstate}>
+            Активировать
+          </Button>
+        </Popconfirm>
       ) : (
-        <Button type="default">
-          Неактивен
-        </Button>
+        <Popconfirm
+          title="Деактивировать сотрудника?"
+          description={`Вы уверены, что ${employee.lastName} ${employee.firstName} деактивируется?`}
+          onConfirm={handleDeactivate}
+          okText="Да"
+          cancelText="Нет"
+        >
+          <Button type="default" loading={loadingFire}>
+            Деактивировать
+          </Button>
+        </Popconfirm>
       )}
     </Space>
   );

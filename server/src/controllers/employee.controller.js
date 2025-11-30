@@ -1454,6 +1454,101 @@ export const reinstateEmployee = async (req, res, next) => {
   }
 };
 
+/**
+ * Деактивировать сотрудника (установить status_active_inactive)
+ */
+export const deactivateEmployee = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сотрудник не найден'
+      });
+    }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+
+    console.log(`=== DEACTIVATING EMPLOYEE: ${employee.firstName} ${employee.lastName} ===`);
+
+    // Устанавливаем status_active_inactive
+    await EmployeeStatusService.setStatusByName(id, 'status_active_inactive', userId);
+    console.log('✓ status_active_inactive activated');
+
+    res.json({
+      success: true,
+      message: `Сотрудник ${employee.firstName} ${employee.lastName} деактивирован`,
+      data: {
+        employeeId: id,
+        action: 'deactivated'
+      }
+    });
+  } catch (error) {
+    console.error('Error deactivating employee:', error);
+    next(error);
+  }
+};
+
+/**
+ * Активировать сотрудника (установить status_active_employed)
+ */
+export const activateEmployee = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const employee = await Employee.findByPk(id, {
+      include: employeeAccessInclude
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сотрудник не найден'
+      });
+    }
+
+    // ПРОВЕРКА ПРАВ ДОСТУПА
+    await checkEmployeeAccess(req.user, employee);
+
+    console.log(`=== ACTIVATING EMPLOYEE: ${employee.firstName} ${employee.lastName} ===`);
+
+    // Деактивируем текущий статус из группы status_active
+    const currentActiveStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_active');
+    if (currentActiveStatus) {
+      currentActiveStatus.isActive = false;
+      currentActiveStatus.isUpload = false;
+      currentActiveStatus.updatedBy = userId;
+      currentActiveStatus.updatedAt = new Date();
+      await currentActiveStatus.save();
+      console.log('✓ Previous status deactivated');
+    }
+
+    // Устанавливаем status_active_employed
+    await EmployeeStatusService.setStatusByName(id, 'status_active_employed', userId);
+    console.log('✓ status_active_employed activated');
+
+    res.json({
+      success: true,
+      message: `Сотрудник ${employee.firstName} ${employee.lastName} активирован`,
+      data: {
+        employeeId: id,
+        action: 'activated'
+      }
+    });
+  } catch (error) {
+    console.error('Error activating employee:', error);
+    next(error);
+  }
+};
+
 export const searchEmployees = async (req, res, next) => {
   try {
     const { query, counterpartyId, position } = req.query;

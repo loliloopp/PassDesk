@@ -86,6 +86,8 @@ router.put('/:employeeId/statuses/upload', employeeController.updateAllStatusesU
 router.post('/:employeeId/status/edited', employeeController.setEditedStatus); // Установить статус "Редактирован" с is_upload
 router.post('/:id/action/fire', employeeController.fireEmployee); // Уволить сотрудника
 router.post('/:id/action/reinstate', employeeController.reinstateEmployee); // Принять уволенного сотрудника
+router.post('/:id/action/deactivate', employeeController.deactivateEmployee); // Деактивировать сотрудника
+router.post('/:id/action/activate', employeeController.activateEmployee); // Активировать сотрудника
 router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере
 router.get('/search', employeeController.searchEmployees);
 
