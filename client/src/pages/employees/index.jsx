@@ -109,11 +109,13 @@ const EmployeesPage = () => {
           const isProcessed = cardStatusMapping?.status?.name === 'status_card_processed';
           const isNew = cardStatusMapping?.status?.name === 'status_card_new';
           const isFired = activeStatusMapping?.status?.name === 'status_active_fired';
+          const isInactive = activeStatusMapping?.status?.name === 'status_active_inactive';
           
           if (statusFilter === 'draft') return isDraft;
           if (statusFilter === 'processed') return isProcessed;
           if (statusFilter === 'new') return isNew;
           if (statusFilter === 'fired') return isFired;
+          if (statusFilter === 'inactive') return isInactive;
           return true;
         });
       }
