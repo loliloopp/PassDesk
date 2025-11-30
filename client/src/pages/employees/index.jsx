@@ -7,6 +7,7 @@ import { employeeApi } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
 import { useSettings } from '@/entities/settings';
 import { useAuthStore } from '@/store/authStore';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { EmployeeTable, MobileEmployeeList } from '@/widgets/employee-table';
 import { EmployeeSearchFilter } from '@/features/employee-search';
 import { EmployeeActions } from '@/features/employee-actions';
@@ -49,6 +50,9 @@ const EmployeesPage = () => {
   const [sitesEmployee, setSitesEmployee] = useState(null);
 
   const { user } = useAuthStore();
+
+  // Устанавливаем заголовок страницы для мобильной версии
+  usePageTitle('Сотрудники', isMobile);
 
   // Загружаем ВСЕ сотрудников без фильтрации по статусам (activeOnly = false)
   const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees(false);
@@ -263,9 +267,12 @@ const EmployeesPage = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
-          <Title level={isMobile ? 3 : 2} style={{ margin: 0, flexShrink: 0 }}>
-            Сотрудники
-          </Title>
+          {/* Заголовок только на десктопе - на мобильных в Header */}
+          {!isMobile && (
+            <Title level={2} style={{ margin: 0, flexShrink: 0 }}>
+              Сотрудники
+            </Title>
+          )}
 
           {/* На десктопе показываем поиск и кнопку сброса рядом с заголовком */}
           {!isMobile && (
