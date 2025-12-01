@@ -29,8 +29,7 @@ const DOCUMENT_TYPES = [
   { value: 'migration_card', label: 'Миграционная карта' },
   { value: 'arrival_notice', label: 'Уведомление о прибытии (регистрация)' },
   { value: 'patent_payment_receipt', label: 'Чек об оплате патента' },
-  { value: 'mvd_notification', label: 'Уведомление МВД' },
-  { value: 'other', label: 'Другое' }
+  { value: 'mvd_notification', label: 'Уведомление МВД' }
 ];
 
 const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange, hideUploadButton = false }) => {
