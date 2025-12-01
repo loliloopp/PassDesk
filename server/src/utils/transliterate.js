@@ -116,7 +116,13 @@ const documentTypeNames = {
   'patent_back': 'патент2',
   'bank_details': 'реквизиты',
   'kig': 'киг',
-  'application_scan': 'заявка'
+  'application_scan': 'заявка',
+  'diploma': 'диплом',
+  'med_book': 'мед_книжка',
+  'migration_card': 'миграционная_карта',
+  'arrival_notice': 'уведомление_прибытии',
+  'patent_payment_receipt': 'чек_оплата_патента',
+  'mvd_notification': 'уведомление_мвд'
 };
 
 /**
