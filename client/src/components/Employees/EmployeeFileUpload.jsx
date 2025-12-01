@@ -24,6 +24,12 @@ const DOCUMENT_TYPES = [
   { value: 'patent_front', label: 'Лицевая сторона патента (с фото)' },
   { value: 'patent_back', label: 'Задняя сторона патента' },
   { value: 'biometric_consent', label: 'Согласие на обработку биометрических данных' },
+  { value: 'diploma', label: 'Диплом / Документ об образовании' },
+  { value: 'med_book', label: 'Мед.книжка' },
+  { value: 'migration_card', label: 'Миграционная карта' },
+  { value: 'arrival_notice', label: 'Уведомление о прибытии (регистрация)' },
+  { value: 'patent_payment_receipt', label: 'Чек об оплате патента' },
+  { value: 'mvd_notification', label: 'Уведомление МВД' },
   { value: 'other', label: 'Другое' }
 ];
 
