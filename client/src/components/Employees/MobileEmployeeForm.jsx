@@ -664,8 +664,62 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                       readonly={false}
                       multiple={false}
                     />
+
+                    {/* Чек об оплате патента */}
+                    <EmployeeDocumentUpload
+                      employeeId={employee.id}
+                      documentType="patent_payment_receipt"
+                      label="Чек об оплате патента"
+                      readonly={false}
+                      multiple={true}
+                    />
                   </>
                 )}
+
+                {/* Диплом / Документ об образовании */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="diploma"
+                  label="Диплом / Документ об образовании"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* Мед.книжка */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="med_book"
+                  label="Мед.книжка"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* Миграционная карта */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="migration_card"
+                  label="Миграционная карта"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* Уведомление о прибытии (регистрация) */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="arrival_notice"
+                  label="Уведомление о прибытии (регистрация)"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* Уведомление МВД */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="mvd_notification"
+                  label="Уведомление МВД"
+                  readonly={false}
+                  multiple={true}
+                />
               </>
             )}
       </>
