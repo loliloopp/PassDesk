@@ -1350,9 +1350,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
       open={visible}
       onCancel={handleModalCancel}
       maskClosable={false}
-      width={1200}
+      width={1350}
       footer={footer}
-      styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+      styles={{ body: { maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' } }}
     >
       {formContent}
     </Modal>
