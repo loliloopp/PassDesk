@@ -35,7 +35,7 @@ Employee.init(
       comment: 'Должность сотрудника'
     },
     citizenshipId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: true,
       field: 'citizenship_id',
       references: {
@@ -43,6 +43,16 @@ Employee.init(
         key: 'id'
       },
       comment: 'Гражданство'
+    },
+    birthCountryId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'birth_country_id',
+      references: {
+        model: 'citizenships',
+        key: 'id'
+      },
+      comment: 'Страна рождения'
     },
   birthDate: {
     type: DataTypes.DATE,
@@ -225,6 +235,9 @@ Employee.init(
     },
     {
       fields: ['citizenship_id']
+    },
+    {
+      fields: ['birth_country_id']
     },
     {
       fields: ['inn']

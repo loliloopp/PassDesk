@@ -407,7 +407,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   // Определяем обязательные поля для каждой вкладки (динамически)
   const getRequiredFieldsByTab = () => {
     const baseFields = {
-      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthCountryId', 'birthDate', 'registrationAddress', 'phone'],
       '2': requiresPatent 
         ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
         : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
@@ -435,7 +435,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     
     // Пересчитываем requiredFieldsByTab с учетом актуального гражданства
     const currentRequiredFieldsByTab = {
-      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthCountryId', 'birthDate', 'registrationAddress', 'phone'],
       '2': currentRequiresPatent 
         ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
         : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'],
@@ -1114,9 +1114,31 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               </Col>
             </Row>
 
-            {/* Адрес регистрации */}
+            {/* Дата рождения (мобила) + Страна рождения + Адрес регистрации */}
             <Row gutter={16}>
-              <Col span={24}>
+              <Col xs={24} sm={12} md={8} lg={8}>
+                <Form.Item 
+                  name="birthCountryId" 
+                  label="Страна рождения"
+                  rules={[{ required: true, message: 'Выберите страну рождения' }]}
+                >
+                  <Select
+                    placeholder="Выберите страну рождения"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    virtual={false}
+                    autoComplete="off"
+                  >
+                    {citizenships.map((c) => (
+                      <Option key={c.id} value={c.id}>
+                        {c.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12} md={16} lg={16}>
                 <Form.Item 
                   name="registrationAddress" 
                   label="Адрес регистрации"

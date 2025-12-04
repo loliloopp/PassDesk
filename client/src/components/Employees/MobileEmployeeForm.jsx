@@ -424,6 +424,31 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             </Form.Item>
 
             <Form.Item
+              label="Страна рождения"
+              name="birthCountryId"
+              rules={[{ required: true, message: 'Выберите страну рождения' }]}
+            >
+              <Select
+                placeholder="Выберите страну рождения"
+                size="large"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
+                virtual={false}
+                loading={loadingReferences}
+                disabled={loadingReferences || citizenships.length === 0}
+              >
+                {citizenships.map((c) => (
+                  <Option key={c.id} value={c.id}>
+                    {c.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
               label="Адрес регистрации"
               name="registrationAddress"
               rules={[{ required: true, message: 'Введите адрес регистрации' }]}
