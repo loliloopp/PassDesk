@@ -290,16 +290,21 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               <Input placeholder="1234-567890-12" size="large" />
             </Form.Item>
 
-            <Form.Item
-              label="Пол"
-              name="gender"
-              rules={[{ required: true, message: 'Выберите пол' }]}
-            >
-              <Radio.Group style={{ display: 'flex', gap: '16px' }}>
-                <Radio value="male">Муж</Radio>
-                <Radio value="female">Жен</Radio>
-              </Radio.Group>
-            </Form.Item>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
+              <label style={{ marginBottom: 0, minWidth: '70px', fontWeight: 500 }}>
+                Пол <span style={{ color: '#ff4d4f' }}>*</span>
+              </label>
+              <Form.Item
+                name="gender"
+                rules={[{ required: true, message: 'Выберите пол' }]}
+                style={{ marginBottom: 0 }}
+              >
+                <Radio.Group style={{ display: 'flex', gap: '16px' }}>
+                  <Radio value="male">Муж</Radio>
+                  <Radio value="female">Жен</Radio>
+                </Radio.Group>
+              </Form.Item>
+            </div>
 
             <Form.Item
               label="Фамилия"
