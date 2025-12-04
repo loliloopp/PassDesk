@@ -452,7 +452,7 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
   );
 };
 
-const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
+const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
@@ -828,6 +828,19 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     }, 100);
   };
 
+  // Обработчик проверки ИНН при потере фокуса
+  const handleInnBlur = async () => {
+    if (!onCheckInn || employee) {
+      // Если это редактирование существующего сотрудника, не проверяем
+      return;
+    }
+
+    const innValue = form.getFieldValue('inn');
+    if (innValue) {
+      await onCheckInn(innValue);
+    }
+  };
+
   // Переход на следующую вкладку
   const handleNext = () => {
     // Определяем доступные вкладки в зависимости от requiresPatent
@@ -1070,7 +1083,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     return formatInn(value);
                   }}
                 >
-                  <Input maxLength={14} placeholder="XXXX-XXXXX-X" {...noAutoFillProps} />
+                  <Input maxLength={14} placeholder="XXXX-XXXXX-X" {...noAutoFillProps} onBlur={handleInnBlur} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={3} md={3} lg={3}>

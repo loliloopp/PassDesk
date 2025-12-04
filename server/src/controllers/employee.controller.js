@@ -1549,6 +1549,129 @@ export const activateEmployee = async (req, res, next) => {
   }
 };
 
+export const checkEmployeeByInn = async (req, res, next) => {
+  try {
+    const { inn } = req.query;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const userCounterpartyId = req.user.counterpartyId;
+
+    // Валидация параметра
+    if (!inn || typeof inn !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Параметр inn обязателен'
+      });
+    }
+
+    // Нормализуем ИНН (убираем дефисы, оставляем только цифры)
+    const normalizedInn = inn.replace(/[^\d]/g, '');
+
+    // Валидация длины ИНН
+    if (normalizedInn.length !== 10 && normalizedInn.length !== 12) {
+      return res.status(400).json({
+        success: false,
+        message: 'ИНН должен содержать 10 или 12 цифр'
+      });
+    }
+
+    // Ищем сотрудника по ИНН
+    let where = { inn: normalizedInn };
+
+    // Фильтруем по контрагенту в зависимости от роли
+    let includeOptions = [];
+
+    if (userRole !== 'admin') {
+      // Для user и manager - проверяем контрагент
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+
+      if (userCounterpartyId === defaultCounterpartyId) {
+        // Контрагент по умолчанию: ищем сотрудников, созданных пользователем
+        where.createdBy = userId;
+      } else {
+        // Другие контрагенты: ищем через маппинг
+        includeOptions.push({
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          where: { counterpartyId: userCounterpartyId },
+          required: true,
+          attributes: []
+        });
+      }
+    }
+    // Для админа - ограничений по контрагенту нет
+
+    const employee = await Employee.findOne({
+      where,
+      include: [
+        {
+          model: Citizenship,
+          as: 'citizenship',
+          attributes: ['id', 'name', 'code', 'requiresPatent']
+        },
+        {
+          model: Position,
+          as: 'position',
+          attributes: ['id', 'name']
+        },
+        {
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          include: [
+            {
+              model: Counterparty,
+              as: 'counterparty',
+              attributes: ['id', 'name', 'type', 'inn', 'kpp']
+            },
+            {
+              model: Department,
+              as: 'department',
+              attributes: ['id', 'name']
+            },
+            {
+              model: ConstructionSite,
+              as: 'constructionSite',
+              attributes: ['id', 'shortName', 'fullName']
+            }
+          ]
+        },
+        ...includeOptions
+      ]
+    });
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сотрудник не найден'
+      });
+    }
+
+    // Проверка доступа для обычных пользователей
+    if (userRole === 'user' && userCounterpartyId !== await Setting.getSetting('default_counterparty_id')) {
+      // Проверяем, если это не контрагент по умолчанию
+      const hasAccess = employee.employeeCounterpartyMappings?.some(
+        m => m.counterpartyId === userCounterpartyId
+      );
+      if (!hasAccess) {
+        return res.status(403).json({
+          success: false,
+          message: 'Нет доступа к этому сотруднику'
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        employee: employee.toJSON()
+      }
+    });
+  } catch (error) {
+    console.error('Error checking employee by inn:', error);
+    next(error);
+  }
+};
+
 export const searchEmployees = async (req, res, next) => {
   try {
     const { query, counterpartyId, position } = req.query;

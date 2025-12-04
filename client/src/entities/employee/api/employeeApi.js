@@ -52,6 +52,12 @@ export const employeeApi = {
     return response.data;
   },
 
+  // Проверить наличие сотрудника по ИНН
+  checkByInn: async (inn) => {
+    const response = await api.get('/employees/check-inn', { params: { inn } });
+    return response.data;
+  },
+
   // Загрузить файлы для сотрудника
   uploadFiles: async (employeeId, formData) => {
     const response = await api.post(`/employees/${employeeId}/files`, formData, {

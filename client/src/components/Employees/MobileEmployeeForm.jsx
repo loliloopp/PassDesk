@@ -126,7 +126,7 @@ const normalizeRussianPassportNumber = (value) => {
  * Мобильная форма сотрудника
  * Все поля в один столбец, блоки вместо вкладок
  */
-const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
+const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
   const { modal, message: messageApi } = App.useApp();
   const {
     form,
@@ -373,6 +373,15 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 placeholder="1234-567890-12" 
                 size="large" 
                 {...noAutoFillProps}
+                onBlur={async () => {
+                  if (!onCheckInn || employee) {
+                    return;
+                  }
+                  const innValue = form.getFieldValue('inn');
+                  if (innValue) {
+                    await onCheckInn(innValue);
+                  }
+                }}
               />
             </Form.Item>
 

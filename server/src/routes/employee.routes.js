@@ -74,6 +74,7 @@ const updateMyProfileValidation = [
 // Employee routes
 router.get('/my-profile', employeeController.getMyProfile); // Получить свой профиль
 router.put('/my-profile', updateMyProfileValidation, validate, employeeController.updateMyProfile); // Обновить свой профиль
+router.get('/check-inn', employeeController.checkEmployeeByInn); // Проверить наличие сотрудника по ИНН
 router.get('/', employeeController.getAllEmployees);
 router.get('/:id', employeeController.getEmployeeById);
 router.post('/', createEmployeeValidation, validate, employeeController.createEmployee); // Валидация для создания (нужна минимум фамилия)

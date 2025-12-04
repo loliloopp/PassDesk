@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Typography, Grid, App } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { useEmployeeActions } from '@/entities/employee';
+import { useEmployeeActions, useCheckInn } from '@/entities/employee';
 import { employeeService } from '@/services/employeeService';
 import MobileEmployeeForm from '@/components/Employees/MobileEmployeeForm';
 import EmployeeFormModal from '@/components/Employees/EmployeeFormModal';
@@ -26,9 +26,12 @@ const AddEmployeePage = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [loading, setLoading] = useState(false);
 
-
   const { createEmployee, updateEmployee } = useEmployeeActions(() => {
     // Не нужно refetch, так как мы уходим со страницы
+  });
+
+  const { checkInn } = useCheckInn((employeeId) => {
+    navigate(`/employees/add/${employeeId}`);
   });
 
   // Загружаем сотрудника при редактировании
@@ -129,6 +132,7 @@ const AddEmployeePage = () => {
             employee={editingEmployee}
             onSuccess={handleFormSuccess}
             onCancel={handleCancel}
+            onCheckInn={checkInn}
           />
         ) : (
           <EmployeeFormModal
@@ -136,6 +140,7 @@ const AddEmployeePage = () => {
             employee={editingEmployee}
             onCancel={handleClose}
             onSuccess={handleFormSuccess}
+            onCheckInn={checkInn}
           />
         )}
       </div>
