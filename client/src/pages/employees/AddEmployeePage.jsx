@@ -34,6 +34,8 @@ const AddEmployeePage = () => {
     navigate(`/employees/add/${employeeId}`);
   });
 
+  console.log('🟡 AddEmployeePage - checkInn:', checkInn, 'type:', typeof checkInn);
+
   // Загружаем сотрудника при редактировании
   useEffect(() => {
     if (id) {

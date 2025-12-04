@@ -23,8 +23,23 @@
 			],
 			"indexes": [
 				{
-					"index_definition": "CREATE UNIQUE INDEX application_employees_mapping_pkey ON public.application_employees_mapping USING btree (application_id, employee_id)",
+					"index_definition": "CREATE UNIQUE INDEX application_employees_mapping_pkey ON public.application_employees_mapping USING btree (id)",
 					"index_name": "application_employees_mapping_pkey",
+					"table_name": "application_employees_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX idx_application_employees_mapping_application_id ON public.application_employees_mapping USING btree (application_id)",
+					"index_name": "idx_application_employees_mapping_application_id",
+					"table_name": "application_employees_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX idx_application_employees_mapping_employee_id ON public.application_employees_mapping USING btree (employee_id)",
+					"index_name": "idx_application_employees_mapping_employee_id",
+					"table_name": "application_employees_mapping"
+				},
+				{
+					"index_definition": "CREATE UNIQUE INDEX idx_application_employees_mapping_unique ON public.application_employees_mapping USING btree (application_id, employee_id)",
+					"index_name": "idx_application_employees_mapping_unique",
 					"table_name": "application_employees_mapping"
 				},
 				{
@@ -163,6 +178,36 @@
 					"table_name": "counterparties"
 				},
 				{
+					"index_definition": "CREATE UNIQUE INDEX counterparty_construction_sit_counterparty_id_construction__key ON public.counterparty_construction_sites_mapping USING btree (counterparty_id, construction_site_id)",
+					"index_name": "counterparty_construction_sit_counterparty_id_construction__key",
+					"table_name": "counterparty_construction_sites_mapping"
+				},
+				{
+					"index_definition": "CREATE UNIQUE INDEX counterparty_construction_sites_mapping_pkey ON public.counterparty_construction_sites_mapping USING btree (id)",
+					"index_name": "counterparty_construction_sites_mapping_pkey",
+					"table_name": "counterparty_construction_sites_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX idx_ccm_construction_site_id ON public.counterparty_construction_sites_mapping USING btree (construction_site_id)",
+					"index_name": "idx_ccm_construction_site_id",
+					"table_name": "counterparty_construction_sites_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX idx_ccm_counterparty_id ON public.counterparty_construction_sites_mapping USING btree (counterparty_id)",
+					"index_name": "idx_ccm_counterparty_id",
+					"table_name": "counterparty_construction_sites_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX idx_counterparty_construction_mapping_counterparty ON public.counterparty_construction_sites_mapping USING btree (counterparty_id)",
+					"index_name": "idx_counterparty_construction_mapping_counterparty",
+					"table_name": "counterparty_construction_sites_mapping"
+				},
+				{
+					"index_definition": "CREATE INDEX idx_counterparty_construction_mapping_site ON public.counterparty_construction_sites_mapping USING btree (construction_site_id)",
+					"index_name": "idx_counterparty_construction_mapping_site",
+					"table_name": "counterparty_construction_sites_mapping"
+				},
+				{
 					"index_definition": "CREATE UNIQUE INDEX departments_pkey ON public.departments USING btree (id)",
 					"index_name": "departments_pkey",
 					"table_name": "departments"
@@ -230,6 +275,11 @@
 				{
 					"index_definition": "CREATE UNIQUE INDEX employees_snils_unique ON public.employees USING btree (snils) WHERE ((snils IS NOT NULL) AND ((snils)::text <> ''::text))",
 					"index_name": "employees_snils_unique",
+					"table_name": "employees"
+				},
+				{
+					"index_definition": "CREATE INDEX idx_employees_birth_country_id ON public.employees USING btree (birth_country_id)",
+					"index_name": "idx_employees_birth_country_id",
 					"table_name": "employees"
 				},
 				{
@@ -434,23 +484,7 @@
 					"increment": "1",
 					"maximum_value": "2147483647",
 					"minimum_value": "1",
-					"sequence_name": "application_employees_mapping_id_seq",
-					"start_value": "1"
-				},
-				{
-					"data_type": "integer",
-					"increment": "1",
-					"maximum_value": "2147483647",
-					"minimum_value": "1",
 					"sequence_name": "citizenship_synonyms_id_seq",
-					"start_value": "1"
-				},
-				{
-					"data_type": "integer",
-					"increment": "1",
-					"maximum_value": "2147483647",
-					"minimum_value": "1",
-					"sequence_name": "employees_statuses_mapping_id_seq",
 					"start_value": "1"
 				},
 				{
@@ -467,7 +501,7 @@
 					"check_constraints": [
 						{
 							"check_clause": "id IS NOT NULL",
-							"constraint_name": "2200_17016_1_not_null"
+							"constraint_name": "2200_17016_7_not_null"
 						},
 						{
 							"check_clause": "application_id IS NOT NULL",
@@ -479,14 +513,6 @@
 						}
 					],
 					"columns": [
-						{
-							"character_maximum_length": null,
-							"column_default": "nextval('application_employees_mapping_id_seq'::regclass)",
-							"column_name": "id",
-							"data_type": "integer",
-							"is_nullable": "NO",
-							"ordinal_position": "1"
-						},
 						{
 							"character_maximum_length": null,
 							"column_default": "CURRENT_TIMESTAMP",
@@ -510,29 +536,33 @@
 							"data_type": "uuid",
 							"is_nullable": "NO",
 							"ordinal_position": "6"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "gen_random_uuid()",
+							"column_name": "id",
+							"data_type": "uuid",
+							"is_nullable": "NO",
+							"ordinal_position": "7"
 						}
 					],
 					"foreign_keys": [
-						{
-							"column_name": "application_id",
-							"constraint_name": "application_employees_mapping_application_id_fkey",
-							"foreign_column": "id",
-							"foreign_table": "applications"
-						},
 						{
 							"column_name": "employee_id",
 							"constraint_name": "application_employees_mapping_employee_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "employees"
+						},
+						{
+							"column_name": "application_id",
+							"constraint_name": "application_employees_mapping_application_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "applications"
 						}
 					],
 					"primary_keys": [
 						{
-							"column_name": "application_id",
-							"constraint_name": "application_employees_mapping_pkey"
-						},
-						{
-							"column_name": "employee_id",
+							"column_name": "id",
 							"constraint_name": "application_employees_mapping_pkey"
 						}
 					],
@@ -542,20 +572,20 @@
 				{
 					"check_constraints": [
 						{
-							"check_clause": "application_id IS NOT NULL",
-							"constraint_name": "2200_17943_2_not_null"
-						},
-						{
-							"check_clause": "id IS NOT NULL",
-							"constraint_name": "2200_17943_1_not_null"
-						},
-						{
 							"check_clause": "employee_id IS NOT NULL",
 							"constraint_name": "2200_17943_3_not_null"
 						},
 						{
 							"check_clause": "file_id IS NOT NULL",
 							"constraint_name": "2200_17943_4_not_null"
+						},
+						{
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_17943_1_not_null"
+						},
+						{
+							"check_clause": "application_id IS NOT NULL",
+							"constraint_name": "2200_17943_2_not_null"
 						}
 					],
 					"columns": [
@@ -610,10 +640,10 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "application_id",
-							"constraint_name": "application_files_mapping_application_id_fkey",
+							"column_name": "file_id",
+							"constraint_name": "application_files_mapping_file_id_fkey",
 							"foreign_column": "id",
-							"foreign_table": "applications"
+							"foreign_table": "files"
 						},
 						{
 							"column_name": "employee_id",
@@ -622,10 +652,10 @@
 							"foreign_table": "employees"
 						},
 						{
-							"column_name": "file_id",
-							"constraint_name": "application_files_mapping_file_id_fkey",
+							"column_name": "application_id",
+							"constraint_name": "application_files_mapping_application_id_fkey",
 							"foreign_column": "id",
-							"foreign_table": "files"
+							"foreign_table": "applications"
 						}
 					],
 					"primary_keys": [
@@ -649,18 +679,6 @@
 				{
 					"check_constraints": [
 						{
-							"check_clause": "status IS NOT NULL",
-							"constraint_name": "2200_16971_7_not_null"
-						},
-						{
-							"check_clause": "construction_site_id IS NOT NULL",
-							"constraint_name": "2200_16971_14_not_null"
-						},
-						{
-							"check_clause": "counterparty_id IS NOT NULL",
-							"constraint_name": "2200_16971_13_not_null"
-						},
-						{
 							"check_clause": "application_type IS NOT NULL",
 							"constraint_name": "2200_16971_19_not_null"
 						},
@@ -671,6 +689,14 @@
 						{
 							"check_clause": "((application_type)::text = ANY ((ARRAY['biometric'::character varying, 'customer'::character varying])::text[]))",
 							"constraint_name": "applications_type_check"
+						},
+						{
+							"check_clause": "status IS NOT NULL",
+							"constraint_name": "2200_16971_7_not_null"
+						},
+						{
+							"check_clause": "counterparty_id IS NOT NULL",
+							"constraint_name": "2200_16971_13_not_null"
 						},
 						{
 							"check_clause": "created_by IS NOT NULL",
@@ -747,7 +773,7 @@
 							"column_default": null,
 							"column_name": "construction_site_id",
 							"data_type": "uuid",
-							"is_nullable": "NO",
+							"is_nullable": "YES",
 							"ordinal_position": "14"
 						},
 						{
@@ -799,10 +825,10 @@
 							"foreign_table": "users"
 						},
 						{
-							"column_name": "subcontract_id",
-							"constraint_name": "applications_subcontract_id_fkey",
+							"column_name": "counterparty_id",
+							"constraint_name": "applications_counterparty_id_fkey",
 							"foreign_column": "id",
-							"foreign_table": "contracts"
+							"foreign_table": "counterparties"
 						},
 						{
 							"column_name": "construction_site_id",
@@ -811,10 +837,10 @@
 							"foreign_table": "construction_sites"
 						},
 						{
-							"column_name": "counterparty_id",
-							"constraint_name": "applications_counterparty_id_fkey",
+							"column_name": "subcontract_id",
+							"constraint_name": "applications_subcontract_id_fkey",
 							"foreign_column": "id",
-							"foreign_table": "counterparties"
+							"foreign_table": "contracts"
 						},
 						{
 							"column_name": "created_by",
@@ -840,16 +866,16 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "citizenship_id IS NOT NULL",
+							"constraint_name": "2200_18052_2_not_null"
+						},
+						{
 							"check_clause": "synonym IS NOT NULL",
 							"constraint_name": "2200_18052_3_not_null"
 						},
 						{
 							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_18052_1_not_null"
-						},
-						{
-							"check_clause": "citizenship_id IS NOT NULL",
-							"constraint_name": "2200_18052_2_not_null"
 						}
 					],
 					"columns": [
@@ -1003,12 +1029,12 @@
 				{
 					"check_constraints": [
 						{
-							"check_clause": "full_name IS NOT NULL",
-							"constraint_name": "2200_16882_3_not_null"
-						},
-						{
 							"check_clause": "short_name IS NOT NULL",
 							"constraint_name": "2200_16882_2_not_null"
+						},
+						{
+							"check_clause": "full_name IS NOT NULL",
+							"constraint_name": "2200_16882_3_not_null"
 						},
 						{
 							"check_clause": "address IS NOT NULL",
@@ -1111,6 +1137,18 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "contract_number IS NOT NULL",
+							"constraint_name": "2200_16904_2_not_null"
+						},
+						{
+							"check_clause": "contract_date IS NOT NULL",
+							"constraint_name": "2200_16904_3_not_null"
+						},
+						{
+							"check_clause": "type IS NOT NULL",
+							"constraint_name": "2200_16904_7_not_null"
+						},
+						{
 							"check_clause": "counterparty1_id IS NOT NULL",
 							"constraint_name": "2200_16904_13_not_null"
 						},
@@ -1129,18 +1167,6 @@
 						{
 							"check_clause": "id IS NOT NULL",
 							"constraint_name": "2200_16904_1_not_null"
-						},
-						{
-							"check_clause": "contract_number IS NOT NULL",
-							"constraint_name": "2200_16904_2_not_null"
-						},
-						{
-							"check_clause": "contract_date IS NOT NULL",
-							"constraint_name": "2200_16904_3_not_null"
-						},
-						{
-							"check_clause": "type IS NOT NULL",
-							"constraint_name": "2200_16904_7_not_null"
 						}
 					],
 					"columns": [
@@ -1235,6 +1261,18 @@
 					],
 					"foreign_keys": [
 						{
+							"column_name": "counterparty2_id",
+							"constraint_name": "contracts_counterparty2_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "counterparties"
+						},
+						{
+							"column_name": "created_by",
+							"constraint_name": "contracts_created_by_fkey",
+							"foreign_column": "id",
+							"foreign_table": "users"
+						},
+						{
 							"column_name": "updated_by",
 							"constraint_name": "contracts_updated_by_fkey",
 							"foreign_column": "id",
@@ -1251,18 +1289,6 @@
 							"constraint_name": "contracts_counterparty1_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "counterparties"
-						},
-						{
-							"column_name": "counterparty2_id",
-							"constraint_name": "contracts_counterparty2_id_fkey",
-							"foreign_column": "id",
-							"foreign_table": "counterparties"
-						},
-						{
-							"column_name": "created_by",
-							"constraint_name": "contracts_created_by_fkey",
-							"foreign_column": "id",
-							"foreign_table": "users"
 						}
 					],
 					"primary_keys": [
@@ -1281,6 +1307,10 @@
 							"constraint_name": "counterparties_type_check"
 						},
 						{
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_16858_1_not_null"
+						},
+						{
 							"check_clause": "name IS NOT NULL",
 							"constraint_name": "2200_16858_2_not_null"
 						},
@@ -1291,10 +1321,6 @@
 						{
 							"check_clause": "type IS NOT NULL",
 							"constraint_name": "2200_16858_9_not_null"
-						},
-						{
-							"check_clause": "id IS NOT NULL",
-							"constraint_name": "2200_16858_1_not_null"
 						}
 					],
 					"columns": [
@@ -1413,14 +1439,14 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "created_by",
-							"constraint_name": "counterparties_created_by_fkey",
+							"column_name": "updated_by",
+							"constraint_name": "counterparties_updated_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						},
 						{
-							"column_name": "updated_by",
-							"constraint_name": "counterparties_updated_by_fkey",
+							"column_name": "created_by",
+							"constraint_name": "counterparties_created_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
 						}
@@ -1442,16 +1468,105 @@
 				{
 					"check_constraints": [
 						{
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_18289_1_not_null"
+						},
+						{
 							"check_clause": "counterparty_id IS NOT NULL",
-							"constraint_name": "2200_18076_3_not_null"
+							"constraint_name": "2200_18289_2_not_null"
+						},
+						{
+							"check_clause": "construction_site_id IS NOT NULL",
+							"constraint_name": "2200_18289_3_not_null"
+						}
+					],
+					"columns": [
+						{
+							"character_maximum_length": null,
+							"column_default": "gen_random_uuid()",
+							"column_name": "id",
+							"data_type": "uuid",
+							"is_nullable": "NO",
+							"ordinal_position": "1"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "counterparty_id",
+							"data_type": "uuid",
+							"is_nullable": "NO",
+							"ordinal_position": "2"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "construction_site_id",
+							"data_type": "uuid",
+							"is_nullable": "NO",
+							"ordinal_position": "3"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "CURRENT_TIMESTAMP",
+							"column_name": "created_at",
+							"data_type": "timestamp with time zone",
+							"is_nullable": "YES",
+							"ordinal_position": "4"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "CURRENT_TIMESTAMP",
+							"column_name": "updated_at",
+							"data_type": "timestamp with time zone",
+							"is_nullable": "YES",
+							"ordinal_position": "5"
+						}
+					],
+					"foreign_keys": [
+						{
+							"column_name": "counterparty_id",
+							"constraint_name": "counterparty_construction_sites_mapping_counterparty_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "counterparties"
+						},
+						{
+							"column_name": "construction_site_id",
+							"constraint_name": "counterparty_construction_sites_mappi_construction_site_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "construction_sites"
+						}
+					],
+					"primary_keys": [
+						{
+							"column_name": "id",
+							"constraint_name": "counterparty_construction_sites_mapping_pkey"
+						}
+					],
+					"table_name": "counterparty_construction_sites_mapping",
+					"unique_constraints": [
+						{
+							"column_name": "counterparty_id",
+							"constraint_name": "counterparty_construction_sit_counterparty_id_construction__key"
+						},
+						{
+							"column_name": "construction_site_id",
+							"constraint_name": "counterparty_construction_sit_counterparty_id_construction__key"
+						}
+					]
+				},
+				{
+					"check_constraints": [
+						{
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_18076_1_not_null"
 						},
 						{
 							"check_clause": "name IS NOT NULL",
 							"constraint_name": "2200_18076_2_not_null"
 						},
 						{
-							"check_clause": "id IS NOT NULL",
-							"constraint_name": "2200_18076_1_not_null"
+							"check_clause": "counterparty_id IS NOT NULL",
+							"constraint_name": "2200_18076_3_not_null"
 						}
 					],
 					"columns": [
@@ -1513,11 +1628,11 @@
 					"table_name": "departments",
 					"unique_constraints": [
 						{
-							"column_name": "counterparty_id",
+							"column_name": "name",
 							"constraint_name": "unique_department_name_per_counterparty"
 						},
 						{
-							"column_name": "name",
+							"column_name": "counterparty_id",
 							"constraint_name": "unique_department_name_per_counterparty"
 						}
 					]
@@ -1597,10 +1712,10 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "construction_site_id",
-							"constraint_name": "fk_ecm_construction_site",
+							"column_name": "department_id",
+							"constraint_name": "fk_mapping_department",
 							"foreign_column": "id",
-							"foreign_table": "construction_sites"
+							"foreign_table": "departments"
 						},
 						{
 							"column_name": "counterparty_id",
@@ -1609,16 +1724,16 @@
 							"foreign_table": "counterparties"
 						},
 						{
+							"column_name": "construction_site_id",
+							"constraint_name": "fk_ecm_construction_site",
+							"foreign_column": "id",
+							"foreign_table": "construction_sites"
+						},
+						{
 							"column_name": "employee_id",
 							"constraint_name": "fk_mapping_employee",
 							"foreign_column": "id",
 							"foreign_table": "employees"
-						},
-						{
-							"column_name": "department_id",
-							"constraint_name": "fk_mapping_department",
-							"foreign_column": "id",
-							"foreign_table": "departments"
 						}
 					],
 					"primary_keys": [
@@ -1633,8 +1748,8 @@
 				{
 					"check_constraints": [
 						{
-							"check_clause": "((status_card)::text = ANY ((ARRAY['draft'::character varying, 'completed'::character varying])::text[]))",
-							"constraint_name": "employees_status_card_check"
+							"check_clause": "((gender)::text = ANY ((ARRAY['male'::character varying, 'female'::character varying])::text[]))",
+							"constraint_name": "check_gender_values"
 						},
 						{
 							"check_clause": "id IS NOT NULL",
@@ -1851,53 +1966,55 @@
 							"ordinal_position": "35"
 						},
 						{
-							"character_maximum_length": "20",
-							"column_default": "'draft'::character varying",
-							"column_name": "status",
-							"data_type": "character varying",
-							"is_nullable": "YES",
-							"ordinal_position": "36"
-						},
-						{
-							"character_maximum_length": "20",
-							"column_default": "'draft'::character varying",
-							"column_name": "status_card",
-							"data_type": "character varying",
-							"is_nullable": "YES",
-							"ordinal_position": "37"
-						},
-						{
-							"character_maximum_length": null,
-							"column_default": null,
-							"column_name": "status_active",
-							"data_type": "USER-DEFINED",
-							"is_nullable": "YES",
-							"ordinal_position": "38"
-						},
-						{
-							"character_maximum_length": null,
-							"column_default": "'allow'::employee_status_secure",
-							"column_name": "status_secure",
-							"data_type": "USER-DEFINED",
-							"is_nullable": "YES",
-							"ordinal_position": "39"
-						},
-						{
 							"character_maximum_length": null,
 							"column_default": null,
 							"column_name": "position_id",
 							"data_type": "uuid",
 							"is_nullable": "YES",
 							"ordinal_position": "40"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "kig_end_date",
+							"data_type": "date",
+							"is_nullable": "YES",
+							"ordinal_position": "41"
+						},
+						{
+							"character_maximum_length": "20",
+							"column_default": null,
+							"column_name": "passport_type",
+							"data_type": "character varying",
+							"is_nullable": "YES",
+							"ordinal_position": "42"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "passport_expiry_date",
+							"data_type": "date",
+							"is_nullable": "YES",
+							"ordinal_position": "43"
+						},
+						{
+							"character_maximum_length": "10",
+							"column_default": null,
+							"column_name": "gender",
+							"data_type": "character varying",
+							"is_nullable": "YES",
+							"ordinal_position": "44"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": null,
+							"column_name": "birth_country_id",
+							"data_type": "uuid",
+							"is_nullable": "YES",
+							"ordinal_position": "45"
 						}
 					],
 					"foreign_keys": [
-						{
-							"column_name": "position_id",
-							"constraint_name": "employees_position_id_fkey",
-							"foreign_column": "id",
-							"foreign_table": "positions"
-						},
 						{
 							"column_name": "citizenship_id",
 							"constraint_name": "employees_citizenship_id_fkey",
@@ -1911,10 +2028,22 @@
 							"foreign_table": "users"
 						},
 						{
+							"column_name": "birth_country_id",
+							"constraint_name": "employees_birth_country_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "citizenships"
+						},
+						{
 							"column_name": "updated_by",
 							"constraint_name": "employees_updated_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
+						},
+						{
+							"column_name": "position_id",
+							"constraint_name": "employees_position_id_fkey",
+							"foreign_column": "id",
+							"foreign_table": "positions"
 						}
 					],
 					"primary_keys": [
@@ -1928,10 +2057,6 @@
 				},
 				{
 					"check_constraints": [
-						{
-							"check_clause": "id IS NOT NULL",
-							"constraint_name": "2200_18247_1_not_null"
-						},
 						{
 							"check_clause": "employee_id IS NOT NULL",
 							"constraint_name": "2200_18247_2_not_null"
@@ -1947,17 +2072,17 @@
 						{
 							"check_clause": "created_by IS NOT NULL",
 							"constraint_name": "2200_18247_5_not_null"
+						},
+						{
+							"check_clause": "is_upload IS NOT NULL",
+							"constraint_name": "2200_18247_10_not_null"
+						},
+						{
+							"check_clause": "id IS NOT NULL",
+							"constraint_name": "2200_18247_11_not_null"
 						}
 					],
 					"columns": [
-						{
-							"character_maximum_length": null,
-							"column_default": "nextval('employees_statuses_mapping_id_seq'::regclass)",
-							"column_name": "id",
-							"data_type": "integer",
-							"is_nullable": "NO",
-							"ordinal_position": "1"
-						},
 						{
 							"character_maximum_length": null,
 							"column_default": null,
@@ -2021,6 +2146,22 @@
 							"data_type": "boolean",
 							"is_nullable": "YES",
 							"ordinal_position": "9"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "false",
+							"column_name": "is_upload",
+							"data_type": "boolean",
+							"is_nullable": "NO",
+							"ordinal_position": "10"
+						},
+						{
+							"character_maximum_length": null,
+							"column_default": "gen_random_uuid()",
+							"column_name": "id",
+							"data_type": "uuid",
+							"is_nullable": "NO",
+							"ordinal_position": "11"
 						}
 					],
 					"foreign_keys": [
@@ -2237,16 +2378,16 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "employee_id",
-							"constraint_name": "fk_files_employee",
-							"foreign_column": "id",
-							"foreign_table": "employees"
-						},
-						{
 							"column_name": "uploaded_by",
 							"constraint_name": "files_uploaded_by_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
+						},
+						{
+							"column_name": "employee_id",
+							"constraint_name": "fk_files_employee",
+							"foreign_column": "id",
+							"foreign_table": "employees"
 						}
 					],
 					"primary_keys": [
@@ -2446,10 +2587,10 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "revoked_by",
-							"constraint_name": "passes_revoked_by_fkey",
+							"column_name": "employee_id",
+							"constraint_name": "passes_employee_id_fkey",
 							"foreign_column": "id",
-							"foreign_table": "users"
+							"foreign_table": "employees"
 						},
 						{
 							"column_name": "issued_by",
@@ -2458,10 +2599,10 @@
 							"foreign_table": "users"
 						},
 						{
-							"column_name": "employee_id",
-							"constraint_name": "passes_employee_id_fkey",
+							"column_name": "revoked_by",
+							"constraint_name": "passes_revoked_by_fkey",
 							"foreign_column": "id",
-							"foreign_table": "employees"
+							"foreign_table": "users"
 						}
 					],
 					"primary_keys": [
@@ -2778,12 +2919,6 @@
 					],
 					"foreign_keys": [
 						{
-							"column_name": "counterparty_id",
-							"constraint_name": "fk_user_employee_mapping_counterparty",
-							"foreign_column": "id",
-							"foreign_table": "counterparties"
-						},
-						{
 							"column_name": "employee_id",
 							"constraint_name": "user_employee_mapping_employee_id_fkey",
 							"foreign_column": "id",
@@ -2794,6 +2929,12 @@
 							"constraint_name": "user_employee_mapping_user_id_fkey",
 							"foreign_column": "id",
 							"foreign_table": "users"
+						},
+						{
+							"column_name": "counterparty_id",
+							"constraint_name": "fk_user_employee_mapping_counterparty",
+							"foreign_column": "id",
+							"foreign_table": "counterparties"
 						}
 					],
 					"primary_keys": [
@@ -2805,11 +2946,11 @@
 					"table_name": "user_employee_mapping",
 					"unique_constraints": [
 						{
-							"column_name": "employee_id",
+							"column_name": "user_id",
 							"constraint_name": "unique_user_employee"
 						},
 						{
-							"column_name": "user_id",
+							"column_name": "employee_id",
 							"constraint_name": "unique_user_employee"
 						}
 					]
@@ -2888,7 +3029,7 @@
 						},
 						{
 							"character_maximum_length": null,
-							"column_default": "'user'::enum_users_role",
+							"column_default": "'user'::enum_users_role_old",
 							"column_name": "role",
 							"data_type": "USER-DEFINED",
 							"is_nullable": "NO",
@@ -2960,6 +3101,14 @@
 					"table_name": "users",
 					"unique_constraints": [
 						{
+							"column_name": "identification_number",
+							"constraint_name": "users_identification_number_key"
+						},
+						{
+							"column_name": "email",
+							"constraint_name": "users_email_key"
+						},
+						{
 							"column_name": "email",
 							"constraint_name": "users_email_key3"
 						},
@@ -2968,16 +3117,8 @@
 							"constraint_name": "users_email_key2"
 						},
 						{
-							"column_name": "identification_number",
-							"constraint_name": "users_identification_number_key"
-						},
-						{
 							"column_name": "email",
 							"constraint_name": "users_email_key1"
-						},
-						{
-							"column_name": "email",
-							"constraint_name": "users_email_key"
 						}
 					]
 				}
@@ -3017,6 +3158,13 @@
 					"event_manipulation": "UPDATE",
 					"event_object_table": "counterparties",
 					"trigger_name": "update_counterparties_updated_at"
+				},
+				{
+					"action_statement": "EXECUTE FUNCTION update_updated_at_column()",
+					"action_timing": "BEFORE",
+					"event_manipulation": "UPDATE",
+					"event_object_table": "counterparty_construction_sites_mapping",
+					"trigger_name": "update_counterparty_construction_sites_mapping_updated_at"
 				}
 			]
 		}

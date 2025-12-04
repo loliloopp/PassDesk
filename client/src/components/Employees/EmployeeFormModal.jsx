@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm, Radio } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
@@ -452,6 +452,8 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
 };
 
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn }) => {
+  console.log('🟠 EmployeeFormModal props - onCheckInn:', onCheckInn, 'type:', typeof onCheckInn);
+  
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
@@ -470,6 +472,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const [passportType, setPassportType] = useState(null); // Состояние для типа паспорта
+  const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
   const { user } = useAuthStore();
 
   // Обработчик для обновления при изменении файлов
@@ -621,7 +624,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             ...employee,
             birthDate: employee.birthDate ? dayjs(employee.birthDate) : null,
             passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
+            passportExpiryDate: employee.passportExpiryDate ? dayjs(employee.passportExpiryDate) : null,
             patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
+            kigEndDate: employee.kigEndDate ? dayjs(employee.kigEndDate) : null,
             constructionSiteId: mapping?.constructionSiteId || null,
             birthCountryId: employee.birthCountryId || null,
             isFired: isFired,
@@ -810,8 +815,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   };
 
   // Обработчик изменения полей формы
-  const handleFieldsChange = () => {
-    if (!dataLoaded) return; // Не запускаем валидацию, пока данные не загружены
+  const handleFieldsChange = (changedFields) => {
+    console.log('🟢 handleFieldsChange вызван:', changedFields);
+    
+    if (!dataLoaded) {
+      console.log('⚠️ dataLoaded = false, выход');
+      return; // Не запускаем валидацию, пока данные не загружены
+    }
     
     // Обновляем тип паспорта
     const currentPassportType = form.getFieldValue('passportType');
@@ -825,18 +835,50 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     window.validationTimeout = setTimeout(() => {
       scheduleValidation();
     }, 100);
+
+    // Проверяем ИНН если поле изменилось
+    handleFormFieldsChange(changedFields);
   };
 
-  // Обработчик проверки ИНН при потере фокуса
-  const handleInnBlur = async () => {
-    if (!onCheckInn || employee) {
-      // Если это редактирование существующего сотрудника, не проверяем
-      return;
-    }
-
-    const innValue = form.getFieldValue('inn');
-    if (innValue) {
-      await onCheckInn(innValue);
+  // Обработчик изменения полей формы с проверкой ИНН
+  const handleFormFieldsChange = (changedFields) => {
+    console.log('🔵 handleFormFieldsChange вызван, changedFields:', changedFields);
+    console.log('🔵 employee:', employee, 'onCheckInn:', onCheckInn);
+    
+    // Проверяем, изменилось ли поле ИНН
+    const innChanged = changedFields.some(field => {
+      console.log('🔍 Проверяем поле:', field.name);
+      return field.name[0] === 'inn';
+    });
+    
+    console.log('🔵 innChanged:', innChanged);
+    
+    if (innChanged && !employee && onCheckInn) {
+      console.log('✅ Условия выполнены, запускаем проверку');
+      
+      // Очищаем предыдущий таймер, если он есть
+      if (innCheckTimeoutRef.current) {
+        clearTimeout(innCheckTimeoutRef.current);
+      }
+      
+      // Запускаем проверку с задержкой 500мс (debounce)
+      innCheckTimeoutRef.current = setTimeout(async () => {
+        const innValue = form.getFieldValue('inn');
+        console.log('🔵 Форма изменилась, innValue:', innValue);
+        
+        // Проверяем только если поле заполнено полностью (10 или 12 цифр)
+        const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
+        console.log('🔵 normalized:', normalized, 'length:', normalized.length);
+        
+        if ((normalized.length === 10 || normalized.length === 12) && innValue) {
+          console.log('📤 Отправляю запрос проверки ИНН');
+          await onCheckInn(innValue);
+        } else {
+          console.log('⚠️ Недостаточно цифр для проверки');
+        }
+      }, 500);
+    } else {
+      console.log('❌ Условия не выполнены для проверки ИНН');
     }
   };
 
@@ -1082,7 +1124,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                     return formatInn(value);
                   }}
                 >
-                  <Input maxLength={14} placeholder="XXXX-XXXXX-X" {...noAutoFillProps} onBlur={handleInnBlur} />
+                  <Input maxLength={14} placeholder="XXXX-XXXXX-X" {...noAutoFillProps} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={3} md={3} lg={3}>

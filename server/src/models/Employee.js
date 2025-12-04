@@ -24,6 +24,12 @@ Employee.init(
       type: DataTypes.STRING,
       field: 'middle_name'
     },
+    gender: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      field: 'gender',
+      comment: 'Пол (male или female)'
+    },
     positionId: {
       type: DataTypes.UUID,
       allowNull: true,
@@ -137,6 +143,24 @@ Employee.init(
       allowNull: true,
       field: 'passport_issuer',
       comment: 'Кем выдан паспорт'
+    },
+    passportType: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      field: 'passport_type',
+      comment: 'Тип паспорта (russian или foreign)'
+    },
+    passportExpiryDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'passport_expiry_date',
+      comment: 'Дата окончания иностранного паспорта'
+    },
+    kigEndDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'kig_end_date',
+      comment: 'Дата окончания КИГ'
     },
     registrationAddress: {
       type: DataTypes.TEXT,

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Typography, App, Grid, Button } from 'antd';
 import { PlusOutlined, FileExcelOutlined, ClearOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useEmployees, useEmployeeActions, getUniqueFilterValues } from '@/entities/employee';
+import { useEmployees, useEmployeeActions, useCheckInn, getUniqueFilterValues } from '@/entities/employee';
 import { employeeApi } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
 import { useSettings } from '@/entities/settings';
@@ -87,6 +87,15 @@ const EmployeesPage = () => {
   // Actions для работы с сотрудниками
   const { createEmployee, updateEmployee, deleteEmployee, updateDepartment } =
     useEmployeeActions(refetchEmployees);
+
+  // Хук проверки ИНН
+  const { checkInn } = useCheckInn((employeeId) => {
+    // При находке сотрудника с таким ИНН - переходим к редактированию
+    employeeApi.getById(employeeId).then((response) => {
+      setEditingEmployee(response.data);
+      setIsModalOpen(true);
+    });
+  });
 
   // Мемоизированная фильтрация с учетом поиска и статуса
   const filteredEmployees = useMemo(
@@ -416,6 +425,7 @@ const EmployeesPage = () => {
               setEditingEmployee(null);
             }}
             onSuccess={handleFormSuccess}
+            onCheckInn={checkInn}
           />
 
           <EmployeeViewModal

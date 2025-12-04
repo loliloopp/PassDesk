@@ -1556,6 +1556,8 @@ export const checkEmployeeByInn = async (req, res, next) => {
     const userRole = req.user.role;
     const userCounterpartyId = req.user.counterpartyId;
 
+    console.log('🔍 checkEmployeeByInn - inn:', inn, 'userRole:', userRole, 'userCounterpartyId:', userCounterpartyId);
+
     // Валидация параметра
     if (!inn || typeof inn !== 'string') {
       return res.status(400).json({
@@ -1566,6 +1568,7 @@ export const checkEmployeeByInn = async (req, res, next) => {
 
     // Нормализуем ИНН (убираем дефисы, оставляем только цифры)
     const normalizedInn = inn.replace(/[^\d]/g, '');
+    console.log('🔍 Normalized INN:', normalizedInn);
 
     // Валидация длины ИНН
     if (normalizedInn.length !== 10 && normalizedInn.length !== 12) {
@@ -1578,9 +1581,30 @@ export const checkEmployeeByInn = async (req, res, next) => {
     // Ищем сотрудника по ИНН
     let where = { inn: normalizedInn };
 
-    // Фильтруем по контрагенту в зависимости от роли
-    let includeOptions = [];
+    // Настраиваем include для маппинга контрагентов
+    const mappingInclude = {
+      model: EmployeeCounterpartyMapping,
+      as: 'employeeCounterpartyMappings',
+      include: [
+        {
+          model: Counterparty,
+          as: 'counterparty',
+          attributes: ['id', 'name', 'type', 'inn', 'kpp']
+        },
+        {
+          model: Department,
+          as: 'department',
+          attributes: ['id', 'name']
+        },
+        {
+          model: ConstructionSite,
+          as: 'constructionSite',
+          attributes: ['id', 'shortName', 'fullName']
+        }
+      ]
+    };
 
+    // Фильтруем по контрагенту в зависимости от роли
     if (userRole !== 'admin') {
       // Для user и manager - проверяем контрагент
       const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
@@ -1590,13 +1614,8 @@ export const checkEmployeeByInn = async (req, res, next) => {
         where.createdBy = userId;
       } else {
         // Другие контрагенты: ищем через маппинг
-        includeOptions.push({
-          model: EmployeeCounterpartyMapping,
-          as: 'employeeCounterpartyMappings',
-          where: { counterpartyId: userCounterpartyId },
-          required: true,
-          attributes: []
-        });
+        mappingInclude.where = { counterpartyId: userCounterpartyId };
+        mappingInclude.required = true;
       }
     }
     // Для админа - ограничений по контрагенту нет
@@ -1614,51 +1633,20 @@ export const checkEmployeeByInn = async (req, res, next) => {
           as: 'position',
           attributes: ['id', 'name']
         },
-        {
-          model: EmployeeCounterpartyMapping,
-          as: 'employeeCounterpartyMappings',
-          include: [
-            {
-              model: Counterparty,
-              as: 'counterparty',
-              attributes: ['id', 'name', 'type', 'inn', 'kpp']
-            },
-            {
-              model: Department,
-              as: 'department',
-              attributes: ['id', 'name']
-            },
-            {
-              model: ConstructionSite,
-              as: 'constructionSite',
-              attributes: ['id', 'shortName', 'fullName']
-            }
-          ]
-        },
-        ...includeOptions
+        mappingInclude
       ]
     });
 
     if (!employee) {
+      console.log('❌ Сотрудник не найден или нет доступа');
       return res.status(404).json({
         success: false,
         message: 'Сотрудник не найден'
       });
     }
 
-    // Проверка доступа для обычных пользователей
-    if (userRole === 'user' && userCounterpartyId !== await Setting.getSetting('default_counterparty_id')) {
-      // Проверяем, если это не контрагент по умолчанию
-      const hasAccess = employee.employeeCounterpartyMappings?.some(
-        m => m.counterpartyId === userCounterpartyId
-      );
-      if (!hasAccess) {
-        return res.status(403).json({
-          success: false,
-          message: 'Нет доступа к этому сотруднику'
-        });
-      }
-    }
+    // Права доступа уже проверены в запросе через required: true и where.createdBy
+    console.log('✅ Сотрудник найден:', employee.id, employee.firstName, employee.lastName);
 
     res.json({
       success: true,

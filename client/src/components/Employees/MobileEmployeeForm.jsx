@@ -1,6 +1,6 @@
 import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse, App, Popconfirm, Radio } from 'antd';
 import { SaveOutlined, CaretRightOutlined, FileOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
@@ -155,6 +155,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
   const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'statuses']);
   const [employeeIdOnLoad, setEmployeeIdOnLoad] = useState(null); // Отслеживаем id сотрудника при загрузке
   const [fireLoading, setFireLoading] = useState(false); // Состояние загрузки для увольнения
+  const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
   const [activateLoading, setActivateLoading] = useState(false); // Состояние загрузки для активации
   const [passportType, setPassportType] = useState(null); // Отслеживаем тип паспорта
 
@@ -371,15 +372,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                 placeholder="1234-567890-12" 
                 size="large" 
                 {...noAutoFillProps}
-                onBlur={async () => {
-                  if (!onCheckInn || employee) {
-                    return;
-                  }
-                  const innValue = form.getFieldValue('inn');
-                  if (innValue) {
-                    await onCheckInn(innValue);
-                  }
-                }}
               />
             </Form.Item>
 
@@ -1065,6 +1057,30 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
           form={form}
           layout="vertical"
           autoComplete="off"
+          onFieldsChange={(changedFields) => {
+            // Проверяем, изменилось ли поле ИНН
+            const innChanged = changedFields.some(field => field.name[0] === 'inn');
+            
+            if (innChanged && !employee && onCheckInn) {
+              // Очищаем предыдущий таймер, если он есть
+              if (innCheckTimeoutRef.current) {
+                clearTimeout(innCheckTimeoutRef.current);
+              }
+              
+              // Запускаем проверку с задержкой 500мс (debounce)
+              innCheckTimeoutRef.current = setTimeout(async () => {
+                const innValue = form.getFieldValue('inn');
+                console.log('🔵 Форма изменилась (мобила), innValue:', innValue);
+                
+                // Проверяем только если поле заполнено полностью (10 или 12 цифр)
+                const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
+                if ((normalized.length === 10 || normalized.length === 12) && innValue) {
+                  console.log('📤 Отправляю запрос проверки ИНН (мобила)');
+                  await onCheckInn(innValue);
+                }
+              }, 500);
+            }
+          }}
           requiredMark={(label, { required }) => (
             <>
               {label}

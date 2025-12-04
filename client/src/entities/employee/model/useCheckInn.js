@@ -11,6 +11,12 @@ export const useCheckInn = (onNavigateToEmployee) => {
 
   const checkInn = useCallback(async (innValue) => {
     if (!innValue) return null;
+    
+    // Не запускаем новую проверку, если предыдущая еще выполняется
+    if (checking) {
+      console.log('⏳ Проверка уже выполняется, пропускаем');
+      return null;
+    }
 
     try {
       setChecking(true);
@@ -20,45 +26,55 @@ export const useCheckInn = (onNavigateToEmployee) => {
 
       // Проверяем длину
       if (normalizedInn.length !== 10 && normalizedInn.length !== 12) {
+        console.log('⚠️ Некорректная длина ИНН:', normalizedInn.length);
+        setChecking(false);
         return null;
       }
 
+      console.log('🔍 Проверяем ИНН:', normalizedInn);
+
       try {
-        const response = await employeeApi.checkByInn(innValue);
+        const response = await employeeApi.checkByInn(normalizedInn);
         
         if (response.success && response.data?.employee) {
           const employee = response.data.employee;
+          console.log('✅ Найден сотрудник:', employee);
           
           // Показываем диалог подтверждения
-          return new Promise((resolve) => {
-            Modal.confirm({
-              title: 'Сотрудник найден',
-              content: `Сотрудник с таким ИНН уже существует. Перейти к редактированию?\n\n${employee.firstName} ${employee.lastName}`,
-              okText: 'ОК',
-              cancelText: 'Отмена',
-              onOk: () => {
-                onNavigateToEmployee?.(employee.id);
-                resolve(employee);
-              },
-              onCancel: () => {
-                resolve(null);
-              },
-            });
+          Modal.confirm({
+            title: 'Сотрудник найден',
+            content: `Сотрудник с таким ИНН уже существует. Перейти к редактированию?\n\n${employee.firstName} ${employee.lastName}`,
+            okText: 'ОК',
+            cancelText: 'Отмена',
+            onOk: () => {
+              console.log('👉 Переход на редактирование:', employee.id);
+              onNavigateToEmployee?.(employee.id);
+            },
           });
+          
+          return employee;
         }
       } catch (error) {
         // 404 — сотрудник не найден, это нормально
         if (error.response?.status === 404) {
+          console.log('ℹ️ Сотрудник с таким ИНН не найден');
+          setChecking(false);
           return null;
         }
-        // Для остальных ошибок — игнорируем или логируем
-        console.warn('Error checking INN:', error);
+        // Для остальных ошибок — логируем
+        console.error('❌ Ошибка проверки ИНН:', error);
+        setChecking(false);
         return null;
       }
-    } finally {
+      
       setChecking(false);
+      return null;
+    } catch (error) {
+      console.error('❌ Непредвиденная ошибка:', error);
+      setChecking(false);
+      return null;
     }
-  }, [onNavigateToEmployee]);
+  }, [onNavigateToEmployee, checking]);
 
   return {
     checking,
