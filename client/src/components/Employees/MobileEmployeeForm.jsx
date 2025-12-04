@@ -235,6 +235,25 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     children: (
         <>
             <Form.Item
+              label="ИНН"
+              name="inn"
+              rules={[
+                { required: true, message: 'Введите ИНН' },
+                {
+                  validator: (_, value) => {
+                    if (!value) return Promise.resolve();
+                    const digits = value.replace(/[^\d]/g, '');
+                    if (digits.length === 10 || digits.length === 12) return Promise.resolve();
+                    return Promise.reject(new Error('ИНН должен содержать 10 или 12 цифр'));
+                  },
+                },
+              ]}
+              getValueFromEvent={(e) => formatInn(e.target.value)}
+            >
+              <Input placeholder="1234-567890-12" size="large" />
+            </Form.Item>
+
+            <Form.Item
               label="Фамилия"
               name="lastName"
               rules={[{ required: true, message: 'Введите фамилию' }]}
@@ -391,25 +410,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     label: <Title level={5} style={{ margin: 0 }}>📄 Документы</Title>,
     children: (
         <>
-            <Form.Item
-              label="ИНН"
-              name="inn"
-              rules={[
-                { required: true, message: 'Введите ИНН' },
-                {
-                  validator: (_, value) => {
-                    if (!value) return Promise.resolve();
-                    const digits = value.replace(/[^\d]/g, '');
-                    if (digits.length === 10 || digits.length === 12) return Promise.resolve();
-                    return Promise.reject(new Error('ИНН должен содержать 10 или 12 цифр'));
-                  },
-                },
-              ]}
-              getValueFromEvent={(e) => formatInn(e.target.value)}
-            >
-              <Input placeholder="1234-567890-12" size="large" />
-            </Form.Item>
-
             <Form.Item
               label="СНИЛС"
               name="snils"

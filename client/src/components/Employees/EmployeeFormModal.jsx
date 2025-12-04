@@ -376,10 +376,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   // Определяем обязательные поля для каждой вкладки (динамически)
   const getRequiredFieldsByTab = () => {
     const baseFields = {
-      '1': ['lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['inn', 'lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': requiresPatent 
-        ? ['inn', 'snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
-        : ['inn', 'snils', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
+        ? ['snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
+        : ['snils', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
       '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
     };
     
@@ -404,10 +404,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     
     // Пересчитываем requiredFieldsByTab с учетом актуального гражданства
     const currentRequiredFieldsByTab = {
-      '1': ['lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['inn', 'lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': currentRequiresPatent 
-        ? ['inn', 'snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
-        : ['inn', 'snils', 'passportNumber', 'passportDate', 'passportIssuer'],
+        ? ['snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
+        : ['snils', 'passportNumber', 'passportDate', 'passportIssuer'],
       '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
     };
     
@@ -911,8 +911,26 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               </Row>
             )}
             
-            {/* ФИО и должность - 4 столбца */}
+            {/* ИНН - первое поле */}
             <Row gutter={16}>
+              <Col span={6}>
+                <Form.Item 
+                  name="inn" 
+                  label="ИНН"
+                  rules={[
+                    { required: true, message: 'Введите ИНН' },
+                    {
+                      pattern: /^\d{4}-\d{5}-\d{1}$|^\d{4}-\d{6}-\d{2}$/,
+                      message: 'ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX'
+                    }
+                  ]}
+                  normalize={(value) => {
+                    return formatInn(value);
+                  }}
+                >
+                  <Input maxLength={14} placeholder="XXXX-XXXXX-X или XXXX-XXXXXX-XX" autoComplete="off" />
+                </Form.Item>
+              </Col>
               <Col span={6}>
                 <Form.Item
                   name="lastName"
@@ -936,7 +954,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Input autoComplete="off" />
                 </Form.Item>
               </Col>
-              <Col span={6}>
+            </Row>
+
+            {/* Должность на отдельной строке с гражданством и датой рождения */}
+            <Row gutter={16}>
+              <Col span={8}>
                 <Form.Item
                   name="positionId"
                   label="Должность"
@@ -964,11 +986,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Select>
                 </Form.Item>
               </Col>
-            </Row>
-
-            {/* Гражданство и дата рождения */}
-            <Row gutter={16}>
-              <Col span={12}>
+              <Col span={8}>
                 <Form.Item 
                   name="citizenshipId" 
                   label="Гражданство"
@@ -991,7 +1009,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col span={12}>
+              <Col span={8}>
                 <Form.Item 
                   name="birthDate" 
                   label="Дата рождения"
@@ -1099,25 +1117,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         children: (
           <>
             <Row gutter={16}>
-              <Col span={requiresPatent ? 8 : 12}>
-                <Form.Item 
-                  name="inn" 
-                  label="ИНН"
-                  rules={[
-                    { required: true, message: 'Введите ИНН' },
-                    {
-                      pattern: /^\d{4}-\d{5}-\d{1}$|^\d{4}-\d{6}-\d{2}$/,
-                      message: 'ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX'
-                    }
-                  ]}
-                  normalize={(value) => {
-                    return formatInn(value);
-                  }}
-                >
-                  <Input maxLength={14} placeholder="XXXX-XXXXX-X или XXXX-XXXXXX-XX" autoComplete="off" />
-                </Form.Item>
-              </Col>
-              <Col span={requiresPatent ? 8 : 12}>
+              <Col span={requiresPatent ? 12 : 24}>
                 <Form.Item 
                   name="snils" 
                   label="СНИЛС"
