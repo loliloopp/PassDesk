@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm, Radio } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
 import { constructionSiteService } from '../../services/constructionSiteService';
@@ -407,7 +407,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   // Определяем обязательные поля для каждой вкладки (динамически)
   const getRequiredFieldsByTab = () => {
     const baseFields = {
-      '1': ['inn', 'lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': requiresPatent 
         ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
         : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
@@ -435,7 +435,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     
     // Пересчитываем requiredFieldsByTab с учетом актуального гражданства
     const currentRequiredFieldsByTab = {
-      '1': ['inn', 'lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
+      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': currentRequiresPatent 
         ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
         : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'],
@@ -972,9 +972,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
               </Row>
             )}
             
-            {/* ИНН - первое поле */}
+            {/* ИНН и Пол - первая строка */}
             <Row gutter={16}>
-              <Col span={6}>
+              <Col xs={24} sm={3} md={3} lg={3}>
                 <Form.Item 
                   name="inn" 
                   label="ИНН"
@@ -989,10 +989,22 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     return formatInn(value);
                   }}
                 >
-                  <Input maxLength={14} placeholder="XXXX-XXXXX-X или XXXX-XXXXXX-XX" autoComplete="off" />
+                  <Input maxLength={14} placeholder="XXXX-XXXXX-X" autoComplete="off" />
                 </Form.Item>
               </Col>
-              <Col span={6}>
+              <Col xs={24} sm={3} md={3} lg={3}>
+                <Form.Item
+                  name="gender"
+                  label="Пол"
+                  rules={[{ required: true, message: 'Выберите пол' }]}
+                >
+                  <Radio.Group style={{ display: 'flex', gap: '8px' }}>
+                    <Radio value="male">Муж</Radio>
+                    <Radio value="female">Жен</Radio>
+                  </Radio.Group>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={6} md={6} lg={6}>
                 <Form.Item
                   name="lastName"
                   label="Фамилия"
@@ -1001,7 +1013,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Input autoComplete="off" />
                 </Form.Item>
               </Col>
-              <Col span={6}>
+              <Col xs={24} sm={6} md={6} lg={6}>
                 <Form.Item
                   name="firstName"
                   label="Имя"
@@ -1010,7 +1022,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Input autoComplete="off" />
                 </Form.Item>
               </Col>
-              <Col span={6}>
+              <Col xs={24} sm={6} md={6} lg={6}>
                 <Form.Item name="middleName" label="Отчество">
                   <Input autoComplete="off" />
                 </Form.Item>
@@ -1019,7 +1031,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
             {/* Должность на отдельной строке с гражданством и датой рождения */}
             <Row gutter={16}>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item
                   name="positionId"
                   label="Должность"
@@ -1047,7 +1059,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="citizenshipId" 
                   label="Гражданство"
@@ -1070,7 +1082,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="birthDate" 
                   label="Дата рождения"
@@ -1117,7 +1129,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
             {/* Контакты */}
             <Row gutter={16}>
-              <Col span={12}>
+              <Col xs={24} sm={12} md={12} lg={12}>
                 <Form.Item
                   name="email"
                   label="Email"
@@ -1131,7 +1143,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Input placeholder="ivanov@example.com" autoComplete="off" />
                 </Form.Item>
               </Col>
-              <Col span={12}>
+              <Col xs={24} sm={12} md={12} lg={12}>
                 <Form.Item 
                   name="phone" 
                   label="Телефон"
@@ -1178,7 +1190,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         children: (
           <>
             <Row gutter={16}>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="snils" 
                   label="СНИЛС"
@@ -1197,7 +1209,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 </Form.Item>
               </Col>
               {requiresPatent && (
-                <Col span={8}>
+                <Col xs={24} sm={8} md={8} lg={8}>
                   <Form.Item 
                     name="kig" 
                     label="КИГ"
@@ -1217,7 +1229,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 </Col>
               )}
               {requiresPatent && (
-                <Col span={8}>
+                <Col xs={24} sm={8} md={8} lg={8}>
                   <Form.Item 
                     name="kigEndDate" 
                     label="Дата окончания КИГ"
@@ -1234,7 +1246,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             </Row>
 
             <Row gutter={16}>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="passportType" 
                   label="Тип паспорта"
@@ -1246,7 +1258,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Select>
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="passportNumber" 
                   label="№ паспорта"
@@ -1258,7 +1270,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="passportDate" 
                   label="Дата выдачи паспорта"
@@ -1275,7 +1287,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
             <Row gutter={16}>
               {passportType === 'foreign' && (
-                <Col span={12}>
+                <Col xs={24} sm={12} md={12} lg={12}>
                   <Form.Item 
                     name="passportExpiryDate" 
                     label="Дата окончания паспорта"
@@ -1288,7 +1300,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Form.Item>
                 </Col>
               )}
-              <Col span={passportType === 'foreign' ? 12 : 24}>
+              <Col xs={24} sm={passportType === 'foreign' ? 12 : 24} md={passportType === 'foreign' ? 12 : 24} lg={passportType === 'foreign' ? 12 : 24}>
                 <Form.Item 
                   name="passportIssuer" 
                   label="Кем выдан паспорт"
@@ -1322,7 +1334,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         ) : (
           <>
             <Row gutter={16}>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="patentNumber" 
                   label="Номер патента"
@@ -1344,7 +1356,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="patentIssueDate" 
                   label="Дата выдачи патента"
@@ -1357,7 +1369,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col xs={24} sm={8} md={8} lg={8}>
                 <Form.Item 
                   name="blankNumber" 
                   label="Номер бланка"

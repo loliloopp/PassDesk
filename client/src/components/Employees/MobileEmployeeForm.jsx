@@ -1,4 +1,4 @@
-import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse, App, Popconfirm } from 'antd';
+import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse, App, Popconfirm, Radio } from 'antd';
 import { SaveOutlined, CaretRightOutlined, FileOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
@@ -288,6 +288,17 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               getValueFromEvent={(e) => formatInn(e.target.value)}
             >
               <Input placeholder="1234-567890-12" size="large" />
+            </Form.Item>
+
+            <Form.Item
+              label="Пол"
+              name="gender"
+              rules={[{ required: true, message: 'Выберите пол' }]}
+            >
+              <Radio.Group style={{ display: 'flex', gap: '16px' }}>
+                <Radio value="male">Муж</Radio>
+                <Radio value="female">Жен</Radio>
+              </Radio.Group>
             </Form.Item>
 
             <Form.Item
