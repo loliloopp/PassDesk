@@ -3,12 +3,12 @@ import { sequelize } from '../config/database.js';
 
 const ApplicationEmployeeMapping = sequelize.define('ApplicationEmployeeMapping', {
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true
+    defaultValue: DataTypes.UUIDV4
   },
   applicationId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     field: 'application_id',
     references: {
@@ -17,7 +17,7 @@ const ApplicationEmployeeMapping = sequelize.define('ApplicationEmployeeMapping'
     }
   },
   employeeId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     field: 'employee_id',
     references: {

@@ -6,9 +6,9 @@ class EmployeeStatusMapping extends Model {}
 EmployeeStatusMapping.init(
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       primaryKey: true,
-      autoIncrement: true
+      defaultValue: DataTypes.UUIDV4
     },
     employeeId: {
       type: DataTypes.UUID,
@@ -61,12 +61,6 @@ EmployeeStatusMapping.init(
       defaultValue: false,
       field: 'is_active',
       comment: 'Активен ли этот статус для группы в данный момент'
-    },
-    isUpload: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-      field: 'is_upload',
-      comment: 'Флаг для отслеживания загрузки в ЗУП (true - загружено, false - не загружено)'
     },
     isUpload: {
       type: DataTypes.BOOLEAN,
