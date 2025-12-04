@@ -1059,26 +1059,23 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
           autoComplete="off"
           onFieldsChange={(changedFields) => {
             // Проверяем, изменилось ли поле ИНН
-            const innChanged = changedFields.some(field => field.name[0] === 'inn');
+            const innField = changedFields.find(field => field.name && field.name[0] === 'inn');
             
-            if (innChanged && !employee && onCheckInn) {
+            if (innField && !employee && onCheckInn) {
               // Очищаем предыдущий таймер, если он есть
               if (innCheckTimeoutRef.current) {
                 clearTimeout(innCheckTimeoutRef.current);
               }
               
-              // Запускаем проверку с задержкой 500мс (debounce)
+              // Запускаем проверку с задержкой 1000мс (debounce)
               innCheckTimeoutRef.current = setTimeout(async () => {
                 const innValue = form.getFieldValue('inn');
-                console.log('🔵 Форма изменилась (мобила), innValue:', innValue);
-                
-                // Проверяем только если поле заполнено полностью (10 или 12 цифр)
                 const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
+                
                 if ((normalized.length === 10 || normalized.length === 12) && innValue) {
-                  console.log('📤 Отправляю запрос проверки ИНН (мобила)');
                   await onCheckInn(innValue);
                 }
-              }, 500);
+              }, 1000); // Увеличил до 1000мс, чтобы дать пользователю время ввести весь ИНН
             }
           }}
           requiredMark={(label, { required }) => (

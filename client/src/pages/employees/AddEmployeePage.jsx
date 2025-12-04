@@ -19,7 +19,7 @@ const { useBreakpoint } = Grid;
 const AddEmployeePage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
   
@@ -30,11 +30,27 @@ const AddEmployeePage = () => {
     // Не нужно refetch, так как мы уходим со страницы
   });
 
-  const { checkInn } = useCheckInn((employeeId) => {
-    navigate(`/employees/add/${employeeId}`);
-  });
+  const { checkInn } = useCheckInn();
 
-  console.log('🟡 AddEmployeePage - checkInn:', checkInn, 'type:', typeof checkInn);
+  // Обработчик проверки ИНН с показом модального окна
+  const handleCheckInn = async (innValue) => {
+    const foundEmployee = await checkInn(innValue);
+    if (foundEmployee) {
+      const fullName = [foundEmployee.lastName, foundEmployee.firstName, foundEmployee.middleName]
+        .filter(Boolean)
+        .join(' ');
+      
+      modal.confirm({
+        title: 'Сотрудник с таким ИНН уже существует',
+        content: `Перейти к редактированию?\n\n${fullName}`,
+        okText: 'ОК',
+        cancelText: 'Отмена',
+        onOk: () => {
+          navigate(`/employees/edit/${foundEmployee.id}`);
+        },
+      });
+    }
+  };
 
   // Загружаем сотрудника при редактировании
   useEffect(() => {
@@ -130,20 +146,20 @@ const AddEmployeePage = () => {
       {/* Форма - мобильная или десктопная */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {isMobile ? (
-          <MobileEmployeeForm
-            employee={editingEmployee}
-            onSuccess={handleFormSuccess}
-            onCancel={handleCancel}
-            onCheckInn={checkInn}
-          />
+        <MobileEmployeeForm
+          employee={editingEmployee}
+          onSuccess={handleFormSuccess}
+          onCancel={handleCancel}
+          onCheckInn={handleCheckInn}
+        />
         ) : (
-          <EmployeeFormModal
-            visible={true}
-            employee={editingEmployee}
-            onCancel={handleClose}
-            onSuccess={handleFormSuccess}
-            onCheckInn={checkInn}
-          />
+        <EmployeeFormModal
+          visible={true}
+          employee={editingEmployee}
+          onCancel={handleClose}
+          onSuccess={handleFormSuccess}
+          onCheckInn={handleCheckInn}
+        />
         )}
       </div>
     </div>

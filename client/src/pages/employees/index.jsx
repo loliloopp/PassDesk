@@ -29,7 +29,7 @@ const { useBreakpoint } = Grid;
  * Адаптивный дизайн: таблица на десктопе, карточки на мобильных
  */
 const EmployeesPage = () => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
@@ -89,13 +89,29 @@ const EmployeesPage = () => {
     useEmployeeActions(refetchEmployees);
 
   // Хук проверки ИНН
-  const { checkInn } = useCheckInn((employeeId) => {
-    // При находке сотрудника с таким ИНН - переходим к редактированию
-    employeeApi.getById(employeeId).then((response) => {
-      setEditingEmployee(response.data);
-      setIsModalOpen(true);
-    });
-  });
+  const { checkInn } = useCheckInn();
+
+  // Обработчик проверки ИНН с показом модального окна
+  const handleCheckInn = async (innValue) => {
+    const foundEmployee = await checkInn(innValue);
+    if (foundEmployee) {
+      const fullName = [foundEmployee.lastName, foundEmployee.firstName, foundEmployee.middleName]
+        .filter(Boolean)
+        .join(' ');
+      
+      modal.confirm({
+        title: 'Сотрудник с таким ИНН уже существует',
+        content: `Перейти к редактированию?\n\n${fullName}`,
+        okText: 'ОК',
+        cancelText: 'Отмена',
+        onOk: () => {
+          setIsModalOpen(false);
+          setEditingEmployee(null);
+          navigate(`/employees/edit/${foundEmployee.id}`);
+        },
+      });
+    }
+  };
 
   // Мемоизированная фильтрация с учетом поиска и статуса
   const filteredEmployees = useMemo(
@@ -425,7 +441,7 @@ const EmployeesPage = () => {
               setEditingEmployee(null);
             }}
             onSuccess={handleFormSuccess}
-            onCheckInn={checkInn}
+            onCheckInn={handleCheckInn}
           />
 
           <EmployeeViewModal

@@ -452,8 +452,6 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
 };
 
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn }) => {
-  console.log('🟠 EmployeeFormModal props - onCheckInn:', onCheckInn, 'type:', typeof onCheckInn);
-  
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
@@ -592,7 +590,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         
         // Проверяем, не был ли запрос отменен
         if (abortController.signal.aborted) {
-          console.log('🛑 EmployeeFormModal: инициализация отменена после загрузки справочников');
           return;
         }
 
@@ -676,7 +673,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       } catch (error) {
         // Игнорируем ошибки отмены запроса
         if (error.name === 'AbortError' || error.name === 'CanceledError') {
-          console.log('🛑 EmployeeFormModal: инициализация отменена (catch)');
           return;
         }
         console.error('❌ EmployeeFormModal: initialization error', error);
@@ -691,7 +687,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     
     // Cleanup: отменяем запросы при размонтировании или изменении visible/employee
     return () => {
-      console.log('🛑 EmployeeFormModal: отмена запросов (cleanup)');
       abortController.abort();
     };
   }, [visible, employee]);
@@ -816,10 +811,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   // Обработчик изменения полей формы
   const handleFieldsChange = (changedFields) => {
-    console.log('🟢 handleFieldsChange вызван:', changedFields);
-    
     if (!dataLoaded) {
-      console.log('⚠️ dataLoaded = false, выход');
       return; // Не запускаем валидацию, пока данные не загружены
     }
     
@@ -837,48 +829,23 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     }, 100);
 
     // Проверяем ИНН если поле изменилось
-    handleFormFieldsChange(changedFields);
-  };
-
-  // Обработчик изменения полей формы с проверкой ИНН
-  const handleFormFieldsChange = (changedFields) => {
-    console.log('🔵 handleFormFieldsChange вызван, changedFields:', changedFields);
-    console.log('🔵 employee:', employee, 'onCheckInn:', onCheckInn);
+    const innField = changedFields.find(field => field.name && field.name[0] === 'inn');
     
-    // Проверяем, изменилось ли поле ИНН
-    const innChanged = changedFields.some(field => {
-      console.log('🔍 Проверяем поле:', field.name);
-      return field.name[0] === 'inn';
-    });
-    
-    console.log('🔵 innChanged:', innChanged);
-    
-    if (innChanged && !employee && onCheckInn) {
-      console.log('✅ Условия выполнены, запускаем проверку');
-      
+    if (innField && !employee && onCheckInn) {
       // Очищаем предыдущий таймер, если он есть
       if (innCheckTimeoutRef.current) {
         clearTimeout(innCheckTimeoutRef.current);
       }
       
-      // Запускаем проверку с задержкой 500мс (debounce)
+      // Запускаем проверку с задержкой 1000мс (debounce)
       innCheckTimeoutRef.current = setTimeout(async () => {
         const innValue = form.getFieldValue('inn');
-        console.log('🔵 Форма изменилась, innValue:', innValue);
-        
-        // Проверяем только если поле заполнено полностью (10 или 12 цифр)
         const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
-        console.log('🔵 normalized:', normalized, 'length:', normalized.length);
         
         if ((normalized.length === 10 || normalized.length === 12) && innValue) {
-          console.log('📤 Отправляю запрос проверки ИНН');
           await onCheckInn(innValue);
-        } else {
-          console.log('⚠️ Недостаточно цифр для проверки');
         }
-      }, 500);
-    } else {
-      console.log('❌ Условия не выполнены для проверки ИНН');
+      }, 1000); // Увеличил до 1000мс, чтобы дать пользователю время ввести весь ИНН
     }
   };
 
