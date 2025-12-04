@@ -146,6 +146,15 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     return `${letters}${numbers}`;
   };
 
+  const formatRussianPassportNumber = (value) => {
+    if (!value) return value;
+    const cleaned = value.replace(/[^\d№]/g, '');
+    const numbersOnly = cleaned.replace(/№/g, '');
+    const limited = numbersOnly.slice(0, 10);
+    if (limited.length <= 4) return limited;
+    return `${limited.slice(0, 4)} №${limited.slice(4)}`;
+  };
+
   // Нормализация данных перед отправкой
   const normalizePhoneNumber = (value) => {
     if (!value) return value;
@@ -172,6 +181,11 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   const normalizeInn = (value) => {
     if (!value) return value;
     return value.replace(/[^\d]/g, '');
+  };
+
+  const normalizeRussianPassportNumber = (value) => {
+    if (!value) return value;
+    return value.replace(/[\s№]/g, '');
   };
 
   // Нормализация дат (может быть dayjs или строка в формате ДД.ММ.ГГГГ)
@@ -250,6 +264,9 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         kig: employee.kig ? formatKig(employee.kig) : null,
         patentNumber: employee.patentNumber ? formatPatentNumber(employee.patentNumber) : null,
         blankNumber: employee.blankNumber ? formatBlankNumber(employee.blankNumber) : null,
+        passportNumber: (employee.passportType === 'russian' && employee.passportNumber)
+          ? formatRussianPassportNumber(employee.passportNumber)
+          : employee.passportNumber,
       };
       
       return formData;
@@ -279,6 +296,9 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         inn: normalizeInn(values.inn),
         kig: normalizeKig(values.kig),
         patentNumber: normalizePatentNumber(values.patentNumber),
+        passportNumber: values.passportType === 'russian' 
+          ? normalizeRussianPassportNumber(values.passportNumber)
+          : values.passportNumber,
         // УБРАНО: статусы теперь управляются через employeeStatusService
       };
 
@@ -314,6 +334,11 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         inn: values.inn ? normalizeInn(values.inn) : null,
         kig: values.kig ? normalizeKig(values.kig) : null,
         patentNumber: values.patentNumber ? normalizePatentNumber(values.patentNumber) : null,
+        passportNumber: values.passportNumber 
+          ? (values.passportType === 'russian'
+              ? normalizeRussianPassportNumber(values.passportNumber)
+              : values.passportNumber)
+          : null,
         // УБРАНО: статусы теперь управляются через employeeStatusService
       };
 

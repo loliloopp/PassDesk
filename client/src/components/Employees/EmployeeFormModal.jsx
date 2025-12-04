@@ -178,6 +178,36 @@ const normalizePatentNumber = (value) => {
   return value.replace(/\s/g, '');
 };
 
+// Маска для российского паспорта: форматирует ввод в 1234 №567890 (4 цифры, пробел, №, 6 цифр)
+const formatRussianPassportNumber = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр и №
+  const cleaned = value.replace(/[^\d№]/g, '');
+  
+  // Убираем все символы №, чтобы потом добавить один
+  const numbersOnly = cleaned.replace(/№/g, '');
+  
+  // Ограничиваем длину до 10 цифр (4 серия + 6 номер)
+  const limited = numbersOnly.slice(0, 10);
+  
+  // Если введено меньше 4 символов, просто возвращаем
+  if (limited.length <= 4) {
+    return limited;
+  }
+  
+  // Форматируем: XXXX №XXXXXX
+  return `${limited.slice(0, 4)} №${limited.slice(4)}`;
+};
+
+// Функция для удаления форматирования российского паспорта перед отправкой
+// Возвращает формат XXXXXXXXXXXX (10 цифр без пробелов и №)
+const normalizeRussianPassportNumber = (value) => {
+  if (!value) return value;
+  // Убираем пробелы и символ №, оставляем только цифры
+  return value.replace(/[\s№]/g, '');
+};
+
 // Маска для номера бланка: форматирует ввод в ПР1234567 (кириллица)
 const formatBlankNumber = (value) => {
   if (!value) return value;
@@ -757,6 +787,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
+        } else if (key === 'passportNumber') {
+          // Обработка номера паспорта в зависимости от типа
+          if (values.passportType === 'russian') {
+            // Для российского паспорта: убираем пробелы и символ №, оставляем только цифры
+            formattedValues[key] = normalizeRussianPassportNumber(value);
+          } else {
+            // Для иностранного паспорта: оставляем как есть
+            formattedValues[key] = value;
+          }
         } else if (uuidFields.includes(key)) {
           // Для UUID полей - убеждаемся что пустые строки становятся null
           formattedValues[key] = (value && String(value).trim()) ? value : null;
@@ -830,6 +869,15 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         } else if (key === 'inn' || key === 'snils') {
           // Убираем дефисы и пробелы из ИНН и СНИЛС (оставляем только цифры)
           formattedValues[key] = value ? value.replace(/[^\d]/g, '') : null;
+        } else if (key === 'passportNumber') {
+          // Обработка номера паспорта в зависимости от типа
+          if (values.passportType === 'russian') {
+            // Для российского паспорта: убираем пробелы и символ №, оставляем только цифры
+            formattedValues[key] = normalizeRussianPassportNumber(value);
+          } else {
+            // Для иностранного паспорта: оставляем как есть
+            formattedValues[key] = value;
+          }
         } else if (uuidFields.includes(key)) {
           // Для UUID полей - убеждаемся что пустые строки становятся null
           formattedValues[key] = (value && String(value).trim()) ? value : null;
@@ -1190,8 +1238,19 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   name="passportNumber" 
                   label="№ паспорта"
                   rules={[{ required: true, message: 'Введите номер паспорта' }]}
+                  normalize={(value) => {
+                    const passportType = form.getFieldValue('passportType');
+                    if (passportType === 'russian') {
+                      return formatRussianPassportNumber(value);
+                    }
+                    return value;
+                  }}
                 >
-                  <Input autoComplete="off" />
+                  <Input 
+                    autoComplete="off"
+                    placeholder={form.getFieldValue('passportType') === 'russian' ? '1234 №567890' : ''}
+                    maxLength={form.getFieldValue('passportType') === 'russian' ? 14 : undefined}
+                  />
                 </Form.Item>
               </Col>
               <Col span={8}>

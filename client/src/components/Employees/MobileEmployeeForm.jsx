@@ -12,6 +12,36 @@ const { TextArea } = Input;
 const { Option } = Select;
 const DATE_FORMAT = 'DD.MM.YYYY';
 
+// Маска для российского паспорта: форматирует ввод в 1234 №567890 (4 цифры, пробел, №, 6 цифр)
+const formatRussianPassportNumber = (value) => {
+  if (!value) return value;
+  
+  // Убираем все символы кроме цифр и №
+  const cleaned = value.replace(/[^\d№]/g, '');
+  
+  // Убираем все символы №, чтобы потом добавить один
+  const numbersOnly = cleaned.replace(/№/g, '');
+  
+  // Ограничиваем длину до 10 цифр (4 серия + 6 номер)
+  const limited = numbersOnly.slice(0, 10);
+  
+  // Если введено меньше 4 символов, просто возвращаем
+  if (limited.length <= 4) {
+    return limited;
+  }
+  
+  // Форматируем: XXXX №XXXXXX
+  return `${limited.slice(0, 4)} №${limited.slice(4)}`;
+};
+
+// Функция для удаления форматирования российского паспорта перед отправкой
+// Возвращает формат XXXXXXXXXXXX (10 цифр без пробелов и №)
+const normalizeRussianPassportNumber = (value) => {
+  if (!value) return value;
+  // Убираем пробелы и символ №, оставляем только цифры
+  return value.replace(/[\s№]/g, '');
+};
+
 /**
  * Мобильная форма сотрудника
  * Все поля в один столбец, блоки вместо вкладок
@@ -499,8 +529,19 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               label="Паспорт (серия и номер)"
               name="passportNumber"
               rules={[{ required: true, message: 'Введите серию и номер паспорта' }]}
+              getValueFromEvent={(e) => {
+                const passportType = form.getFieldValue('passportType');
+                if (passportType === 'russian') {
+                  return formatRussianPassportNumber(e.target.value);
+                }
+                return e.target.value;
+              }}
             >
-              <Input placeholder="1234 567890" size="large" />
+              <Input 
+                placeholder="1234 567890" 
+                size="large"
+                maxLength={form.getFieldValue('passportType') === 'russian' ? 14 : undefined}
+              />
             </Form.Item>
 
             <Form.Item
