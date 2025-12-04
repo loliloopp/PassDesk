@@ -76,6 +76,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
   const [employeeIdOnLoad, setEmployeeIdOnLoad] = useState(null); // Отслеживаем id сотрудника при загрузке
   const [fireLoading, setFireLoading] = useState(false); // Состояние загрузки для увольнения
   const [activateLoading, setActivateLoading] = useState(false); // Состояние загрузки для активации
+  const [passportType, setPassportType] = useState(null); // Отслеживаем тип паспорта
 
   // Инициализируем данные формы при изменении сотрудника или справочников
   useEffect(() => {
@@ -86,6 +87,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
         if (formData) {
           form.setFieldsValue(formData);
           
+          // Устанавливаем тип паспорта в state
+          if (formData.passportType) {
+            setPassportType(formData.passportType);
+          }
+          
           // Проверяем гражданство
           if (employee?.citizenshipId) {
             handleCitizenshipChange(employee.citizenshipId);
@@ -93,6 +99,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
         } else {
           // Новый сотрудник - очищаем форму
           form.resetFields();
+          setPassportType(null);
         }
         setEmployeeIdOnLoad(employee?.id);
       }
@@ -519,7 +526,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               name="passportType"
               rules={[{ required: true, message: 'Выберите тип паспорта' }]}
             >
-              <Select placeholder="Выберите тип паспорта" size="large">
+              <Select 
+                placeholder="Выберите тип паспорта" 
+                size="large"
+                onChange={(value) => setPassportType(value)}
+              >
                 <Option value="russian">Российский</Option>
                 <Option value="foreign">Иностранного гражданина</Option>
               </Select>
@@ -530,7 +541,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               name="passportNumber"
               rules={[{ required: true, message: 'Введите серию и номер паспорта' }]}
               getValueFromEvent={(e) => {
-                const passportType = form.getFieldValue('passportType');
                 if (passportType === 'russian') {
                   return formatRussianPassportNumber(e.target.value);
                 }
@@ -540,7 +550,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               <Input 
                 placeholder="1234 567890" 
                 size="large"
-                maxLength={form.getFieldValue('passportType') === 'russian' ? 14 : undefined}
+                maxLength={passportType === 'russian' ? 14 : undefined}
               />
             </Form.Item>
 
@@ -579,6 +589,15 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
             >
               <Input placeholder="ДД.ММ.ГГГГ" size="large" />
             </Form.Item>
+
+            {passportType === 'foreign' && (
+              <Form.Item
+                label="Дата окончания паспорта"
+                name="passportExpiryDate"
+              >
+                <Input placeholder="ДД.ММ.ГГГГ" size="large" />
+              </Form.Item>
+            )}
 
             <Form.Item
               label="Кем выдан паспорт"

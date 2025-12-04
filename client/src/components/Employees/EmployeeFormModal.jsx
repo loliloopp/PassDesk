@@ -772,7 +772,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         
         if (value === '' || value === undefined || value === null) {
           formattedValues[key] = null;
-        } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
+        } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate' || key === 'kigEndDate' || key === 'passportExpiryDate') {
           // Проверяем что это dayjs объект (имеет метод format), а не строка
           formattedValues[key] = (value && value.format) ? value.format('YYYY-MM-DD') : null;
         } else if (key === 'phone') {
@@ -854,7 +854,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         
         if (value === '' || value === undefined || value === null) {
           formattedValues[key] = null;
-        } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate') {
+        } else if (key === 'birthDate' || key === 'passportDate' || key === 'patentIssueDate' || key === 'kigEndDate' || key === 'passportExpiryDate') {
           // Проверяем что это dayjs объект (имеет метод format), а не строка
           formattedValues[key] = (value && value.format) ? value.format('YYYY-MM-DD') : null;
         } else if (key === 'phone') {
@@ -1239,7 +1239,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="№ паспорта"
                   rules={[{ required: true, message: 'Введите номер паспорта' }]}
                   normalize={(value) => {
-                    const passportType = form.getFieldValue('passportType');
+                    const passportType = form?.getFieldValue('passportType');
                     if (passportType === 'russian') {
                       return formatRussianPassportNumber(value);
                     }
@@ -1248,8 +1248,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                 >
                   <Input 
                     autoComplete="off"
-                    placeholder={form.getFieldValue('passportType') === 'russian' ? '1234 №567890' : ''}
-                    maxLength={form.getFieldValue('passportType') === 'russian' ? 14 : undefined}
+                    placeholder={form?.getFieldValue('passportType') === 'russian' ? '1234 №567890' : ''}
+                    maxLength={form?.getFieldValue('passportType') === 'russian' ? 14 : undefined}
                   />
                 </Form.Item>
               </Col>
@@ -1269,7 +1269,21 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             </Row>
 
             <Row gutter={16}>
-              <Col span={24}>
+              {form?.getFieldValue('passportType') === 'foreign' && (
+                <Col span={12}>
+                  <Form.Item 
+                    name="passportExpiryDate" 
+                    label="Дата окончания паспорта"
+                  >
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      format={DATE_FORMAT}
+                      placeholder="ДД.ММ.ГГГГ"
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+              <Col span={form?.getFieldValue('passportType') === 'foreign' ? 12 : 24}>
                 <Form.Item 
                   name="passportIssuer" 
                   label="Кем выдан паспорт"
