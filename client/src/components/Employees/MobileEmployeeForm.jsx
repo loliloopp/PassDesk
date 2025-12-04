@@ -446,6 +446,55 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               </Form.Item>
             )}
 
+            {requiresPatent && (
+              <Form.Item
+                label="Дата окончания КИГ"
+                name="kigEndDate"
+                rules={[
+                  { required: true, message: 'Укажите дату окончания КИГ' },
+                  {
+                    pattern: /^\d{2}\.\d{2}\.\d{4}$/,
+                    message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
+                  },
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+                      try {
+                        const dateObj = dayjs(value, DATE_FORMAT, true);
+                        if (!dateObj.isValid()) {
+                          return Promise.reject(new Error('Некорректная дата'));
+                        }
+                      } catch (e) {
+                        return Promise.reject(new Error('Некорректная дата'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+                normalize={(value) => {
+                  if (!value) return value;
+                  if (typeof value === 'string') return value;
+                  if (value && value.format) return value.format(DATE_FORMAT);
+                  return value;
+                }}
+              >
+                <Input placeholder="ДД.ММ.ГГГГ" size="large" />
+              </Form.Item>
+            )}
+
+            <Form.Item
+              label="Тип паспорта"
+              name="passportType"
+              rules={[{ required: true, message: 'Выберите тип паспорта' }]}
+            >
+              <Select placeholder="Выберите тип паспорта" size="large">
+                <Option value="russian">Российский</Option>
+                <Option value="foreign">Иностранного гражданина</Option>
+              </Select>
+            </Form.Item>
+
             <Form.Item
               label="Паспорт (серия и номер)"
               name="passportNumber"

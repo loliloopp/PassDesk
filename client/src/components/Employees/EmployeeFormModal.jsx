@@ -378,8 +378,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     const baseFields = {
       '1': ['inn', 'lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': requiresPatent 
-        ? ['snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
-        : ['snils', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
+        ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
+        : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
       '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
     };
     
@@ -406,8 +406,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
     const currentRequiredFieldsByTab = {
       '1': ['inn', 'lastName', 'firstName', 'positionId', 'citizenshipId', 'birthDate', 'registrationAddress', 'phone'],
       '2': currentRequiresPatent 
-        ? ['snils', 'kig', 'passportNumber', 'passportDate', 'passportIssuer']
-        : ['snils', 'passportNumber', 'passportDate', 'passportIssuer'],
+        ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
+        : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'],
       '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
     };
     
@@ -1117,7 +1117,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         children: (
           <>
             <Row gutter={16}>
-              <Col span={requiresPatent ? 12 : 24}>
+              <Col span={8}>
                 <Form.Item 
                   name="snils" 
                   label="СНИЛС"
@@ -1155,9 +1155,36 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Form.Item>
                 </Col>
               )}
+              {requiresPatent && (
+                <Col span={8}>
+                  <Form.Item 
+                    name="kigEndDate" 
+                    label="Дата окончания КИГ"
+                    rules={[{ required: true, message: 'Введите дату окончания КИГ' }]}
+                  >
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      format={DATE_FORMAT}
+                      placeholder="ДД.ММ.ГГГГ"
+                    />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
 
             <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item 
+                  name="passportType" 
+                  label="Тип паспорта"
+                  rules={[{ required: true, message: 'Выберите тип паспорта' }]}
+                >
+                  <Select placeholder="Выберите тип паспорта" allowClear>
+                    <Option value="russian">Российский</Option>
+                    <Option value="foreign">Иностранного гражданина</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
               <Col span={8}>
                 <Form.Item 
                   name="passportNumber" 
@@ -1180,7 +1207,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={24}>
                 <Form.Item 
                   name="passportIssuer" 
                   label="Кем выдан паспорт"
