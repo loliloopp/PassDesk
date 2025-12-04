@@ -40,7 +40,6 @@ const useAntiAutofillIds = () => ({
   middleName: `desktop_middle_${Math.random().toString(36).slice(2, 9)}`,
   phone: `desktop_phone_${Math.random().toString(36).slice(2, 9)}`,
   registrationAddress: `desktop_reg_addr_${Math.random().toString(36).slice(2, 9)}`,
-  birthCountry: `desktop_birth_country_${Math.random().toString(36).slice(2, 9)}`,
 });
 
 const useSelectAutoFillBlocker = (wrapperId) => {
@@ -456,7 +455,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
-  useSelectAutoFillBlocker(antiAutofillIds.birthCountry);
   const [citizenships, setCitizenships] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -625,6 +623,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             passportDate: employee.passportDate ? dayjs(employee.passportDate) : null,
             patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
             constructionSiteId: mapping?.constructionSiteId || null,
+            birthCountryId: employee.birthCountryId || null,
             isFired: isFired,
             isInactive: isInactive,
             // Форматируем ИНН, СНИЛС, телефон, КИГ, номер патента и номер бланка при загрузке
@@ -1215,23 +1214,30 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   name="birthCountryId" 
                   label="Страна рождения"
                   rules={[{ required: true, message: 'Выберите страну рождения' }]}
+                  trigger="onChange"
                 >
-                  <div id={antiAutofillIds.birthCountry}>
-                    <Select
-                      placeholder="Выберите страну рождения"
-                      allowClear
-                      showSearch
-                      optionFilterProp="children"
-                      virtual={false}
-                      autoComplete="off"
-                    >
-                      {citizenships.map((c) => (
-                        <Option key={c.id} value={c.id}>
-                          {c.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </div>
+                  <Select
+                    placeholder="Выберите страну рождения"
+                    allowClear
+                    showSearch
+                    optionFilterProp="children"
+                    virtual={false}
+                    onChange={() => {
+                      // После выбора гарантированно запускаем валидацию
+                      setTimeout(() => {
+                        if (dataLoaded) {
+                          scheduleValidation();
+                        }
+                      }, 0);
+                    }}
+                    autoComplete="off"
+                  >
+                    {citizenships.map((c) => (
+                      <Option key={c.id} value={c.id}>
+                        {c.name}
+                      </Option>
+                    ))}
+                  </Select>
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={16} lg={16}>

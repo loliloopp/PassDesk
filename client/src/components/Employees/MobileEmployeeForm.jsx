@@ -37,7 +37,6 @@ const useAntiAutofillIds = () => ({
   middleName: `employee_middle_${Math.random().toString(36).slice(2, 9)}`,
   phone: `employee_phone_${Math.random().toString(36).slice(2, 9)}`,
   registrationAddress: `employee_reg_addr_${Math.random().toString(36).slice(2, 9)}`,
-  birthCountry: `employee_birth_country_${Math.random().toString(36).slice(2, 9)}`,
 });
 
 const useSelectAutoFillBlocker = (wrapperId) => {
@@ -151,7 +150,6 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     formatBlankNumber,
   } = useEmployeeForm(employee, true, onSuccess);
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
-  useSelectAutoFillBlocker(antiAutofillIds.birthCountry);
 
   // Состояние для открытых панелей (по умолчанию все открыны)
   const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'statuses']);
@@ -543,28 +541,30 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               name="birthCountryId"
               rules={[{ required: true, message: 'Выберите страну рождения' }]}
             >
-              <div id={antiAutofillIds.birthCountry}>
-                <Select
-                  popupMatchSelectWidth
-                  placeholder="Выберите страну рождения"
-                  size="large"
-                  showSearch
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().includes(input.toLowerCase())
-                  }
-                  virtual={false}
-                  loading={loadingReferences}
-                  disabled={loadingReferences || citizenships.length === 0}
-                  autoComplete="off"
-                >
-                  {citizenships.map((c) => (
-                    <Option key={c.id} value={c.id}>
-                      {c.name}
-                    </Option>
-                  ))}
-                </Select>
-              </div>
+              <Select
+                popupMatchSelectWidth
+                placeholder="Выберите страну рождения"
+                size="large"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
+                virtual={false}
+                onChange={(value) => {
+                  // После выбора просто устанавливаем значение в форму
+                  // Form.Item сам срабатит на onChange
+                }}
+                loading={loadingReferences}
+                disabled={loadingReferences || citizenships.length === 0}
+                autoComplete="off"
+              >
+                {citizenships.map((c) => (
+                  <Option key={c.id} value={c.id}>
+                    {c.name}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
 
             <Form.Item

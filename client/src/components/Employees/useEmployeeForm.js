@@ -256,6 +256,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         passportDate: passportDateValue,
         patentIssueDate: patentIssueDateValue,
         constructionSiteId: mapping?.constructionSiteId || null,
+        birthCountryId: employee.birthCountryId || null,
         isFired: isFired,
         isInactive: isInactive,
         inn: employee.inn ? formatInn(employee.inn) : null,
