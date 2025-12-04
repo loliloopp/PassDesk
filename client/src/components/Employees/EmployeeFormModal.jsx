@@ -43,6 +43,57 @@ const useAntiAutofillIds = () => ({
   birthCountry: `desktop_birth_country_${Math.random().toString(36).slice(2, 9)}`,
 });
 
+const useSelectAutoFillBlocker = (wrapperId) => {
+  useEffect(() => {
+    if (!wrapperId) return;
+    let inputNode = null;
+    let intervalId = null;
+
+    const setupInput = () => {
+      const wrapper = document.getElementById(wrapperId);
+      if (!wrapper) return false;
+      const input = wrapper.querySelector('.ant-select-selection-search-input');
+      if (!input) return false;
+      inputNode = input;
+      const handleFocus = () => {
+        input.setAttribute('readonly', 'readonly');
+        setTimeout(() => {
+          input.removeAttribute('readonly');
+        }, 120);
+      };
+
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('autocorrect', 'off');
+      input.setAttribute('autocapitalize', 'off');
+      input.setAttribute('spellcheck', 'false');
+      input.setAttribute('data-form-type', 'other');
+      input.setAttribute('data-lpignore', 'true');
+      input.addEventListener('focus', handleFocus);
+      inputNode.__cleanupAutofill = () => {
+        input.removeEventListener('focus', handleFocus);
+      };
+      return true;
+    };
+
+    if (!setupInput()) {
+      intervalId = window.setInterval(() => {
+        if (setupInput()) {
+          clearInterval(intervalId);
+        }
+      }, 150);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      if (inputNode && inputNode.__cleanupAutofill) {
+        inputNode.__cleanupAutofill();
+      }
+    };
+  }, [wrapperId]);
+};
+
 // Маска для телефона: форматирует ввод в +7 (123) 456-78-90
 const formatPhoneNumber = (value) => {
   if (!value) return value;
@@ -405,6 +456,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
+  useSelectAutoFillBlocker(antiAutofillIds.birthCountry);
   const [citizenships, setCitizenships] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -1151,21 +1203,22 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Страна рождения"
                   rules={[{ required: true, message: 'Выберите страну рождения' }]}
                 >
-                  <Select
-                  id={antiAutofillIds.birthCountry}
-                    placeholder="Выберите страну рождения"
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                    virtual={false}
-                    autoComplete="off"
-                  >
-                    {citizenships.map((c) => (
-                      <Option key={c.id} value={c.id}>
-                        {c.name}
-                      </Option>
-                    ))}
-                  </Select>
+                  <div id={antiAutofillIds.birthCountry}>
+                    <Select
+                      placeholder="Выберите страну рождения"
+                      allowClear
+                      showSearch
+                      optionFilterProp="children"
+                      virtual={false}
+                      autoComplete="off"
+                    >
+                      {citizenships.map((c) => (
+                        <Option key={c.id} value={c.id}>
+                          {c.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={16} lg={16}>
