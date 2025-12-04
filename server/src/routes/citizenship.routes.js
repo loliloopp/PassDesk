@@ -5,7 +5,8 @@ import {
   updateCitizenship,
   addSynonym,
   updateSynonym,
-  deleteSynonym
+  deleteSynonym,
+  deleteCitizenship
 } from '../controllers/citizenship.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
@@ -17,9 +18,10 @@ router.use(authenticate);
 // Получить все гражданства (доступно всем)
 router.get('/', getAllCitizenships);
 
-// Создать/обновить гражданство (только admin)
+// Создать/обновить/удалить гражданство (только admin)
 router.post('/', authorize('admin'), createCitizenship);
 router.put('/:id', authorize('admin'), updateCitizenship);
+router.delete('/:id', authorize('admin'), deleteCitizenship);
 
 // Работа с синонимами (только admin)
 router.post('/:citizenshipId/synonyms', authorize('admin'), addSynonym);

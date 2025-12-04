@@ -10,6 +10,9 @@ const citizenshipService = {
 
   // Создать новое гражданство
   create: (data) => api.post('/citizenships', data),
+
+  // Удалить гражданство
+  delete: (id) => api.delete(`/citizenships/${id}`),
 };
 
 export { citizenshipService };

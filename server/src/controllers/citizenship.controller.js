@@ -255,3 +255,38 @@ export const deleteSynonym = async (req, res) => {
   }
 };
 
+// Удалить гражданство
+export const deleteCitizenship = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const citizenship = await Citizenship.findByPk(id);
+    
+    if (!citizenship) {
+      return res.status(404).json({
+        success: false,
+        message: 'Гражданство не найдено'
+      });
+    }
+    
+    // Удаляем все синонимы перед удалением гражданства
+    await CitizenshipSynonym.destroy({
+      where: { citizenshipId: id }
+    });
+    
+    await citizenship.destroy();
+    
+    res.json({
+      success: true,
+      message: 'Гражданство удалено'
+    });
+  } catch (error) {
+    console.error('Error deleting citizenship:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при удалении гражданства',
+      error: error.message
+    });
+  }
+};
+

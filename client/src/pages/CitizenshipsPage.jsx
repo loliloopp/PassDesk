@@ -133,6 +133,19 @@ const CitizenshipsPage = () => {
     }
   };
 
+  // Удалить гражданство
+  const handleDeleteCitizenship = async (citizenshipId) => {
+    try {
+      await api.delete(`/citizenships/${citizenshipId}`);
+      message.success('Гражданство удалено');
+      fetchCitizenships();
+    } catch (error) {
+      console.error('Error deleting citizenship:', error);
+      const errorMessage = error.response?.data?.message || 'Ошибка при удалении гражданства';
+      message.error(errorMessage);
+    }
+  };
+
   // Колонки таблицы
   const columns = [
     {
@@ -187,7 +200,7 @@ const CitizenshipsPage = () => {
     {
       title: 'Действия',
       key: 'actions',
-      width: 120,
+      width: 150,
       align: 'center',
       render: (_, record) => (
         <Space size={4}>
@@ -206,6 +219,23 @@ const CitizenshipsPage = () => {
               icon={<GlobalOutlined />}
               onClick={() => handleOpenSynonymModal(record)}
             />
+          </Tooltip>
+          <Tooltip title="Удалить">
+            <Popconfirm
+              title="Удалить гражданство?"
+              description="Это действие нельзя отменить. Все связанные синонимы также будут удалены."
+              onConfirm={() => handleDeleteCitizenship(record.id)}
+              okText="Удалить"
+              cancelText="Отмена"
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
           </Tooltip>
         </Space>
       ),
