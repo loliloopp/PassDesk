@@ -32,6 +32,10 @@ Employee.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
 Citizenship.hasMany(Employee, { foreignKey: 'citizenship_id', as: 'employees' });
 Employee.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship' });
 
+// Citizenship -> Employee (страна рождения -> сотрудники)
+Citizenship.hasMany(Employee, { foreignKey: 'birth_country_id', as: 'employeesByBirthCountry' });
+Employee.belongsTo(Citizenship, { foreignKey: 'birth_country_id', as: 'birthCountry' });
+
 // Citizenship -> CitizenshipSynonym (гражданство -> синонимы)
 Citizenship.hasMany(CitizenshipSynonym, { foreignKey: 'citizenship_id', as: 'synonyms' });
 CitizenshipSynonym.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'citizenship' });

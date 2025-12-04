@@ -66,13 +66,22 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
         // Получаем основного контрагента (первый в списке)
         const counterpartyMapping = emp.employeeCounterpartyMappings?.[0];
         
+        // Форматирование пола для экспорта
+        const formatGender = (gender) => {
+          if (!gender) return '-';
+          return gender === 'male' ? 'М' : gender === 'female' ? 'Ж' : gender;
+        };
+        
         return {
           'UUID': emp.id || '-',
           'Фамилия': emp.lastName || '-',
           'Имя': emp.firstName || '-',
           'Отчество': emp.middleName || '-',
+          'Пол': formatGender(emp.gender),
           'Телефон': emp.phone || '-',
           'Дата рождения': emp.birthDate ? dayjs(emp.birthDate).format('DD.MM.YYYY') : '-',
+          'Страна рождения': emp.birthCountry?.code || '-',
+          'Тип паспорта': emp.passportType || '-',
           'Номер паспорта': emp.passportNumber || '-',
           'Дата выдачи паспорта': emp.passportDate ? dayjs(emp.passportDate).format('DD.MM.YYYY') : '-',
           'Кем выдан паспорт': emp.passportIssuer || '-',
@@ -83,7 +92,8 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
           'ИНН': emp.inn || '-',
           'СНИЛС': emp.snils || '-',
           'КИГ': emp.kig || '-',
-          'Гражданство': emp.citizenship?.name || '-',
+          'Дата окончания КИГ': emp.kigEndDate ? dayjs(emp.kigEndDate).format('DD.MM.YYYY') : '-',
+          'Гражданство': emp.citizenship?.code || '-',
           'Организация': counterpartyMapping?.counterparty?.name || '-',
           'ИНН организации': counterpartyMapping?.counterparty?.inn || '-',
         };

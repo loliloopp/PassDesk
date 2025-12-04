@@ -107,6 +107,11 @@ export const getAllEmployees = async (req, res, next) => {
         attributes: ['id', 'name', 'code', 'requiresPatent']
       },
       {
+        model: Citizenship,
+        as: 'birthCountry',
+        attributes: ['id', 'name', 'code']
+      },
+      {
         model: User,
         as: 'creator',
         attributes: ['id', 'firstName', 'lastName']
@@ -338,6 +343,11 @@ export const getEmployeeById = async (req, res, next) => {
           model: Citizenship,
           as: 'citizenship',
           attributes: ['id', 'name', 'code', 'requiresPatent']
+        },
+        {
+          model: Citizenship,
+          as: 'birthCountry',
+          attributes: ['id', 'name', 'code']
         },
         {
           model: User,
