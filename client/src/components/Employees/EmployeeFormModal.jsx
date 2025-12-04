@@ -390,6 +390,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   });
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
+  const [passportType, setPassportType] = useState(null); // Состояние для типа паспорта
   const { user } = useAuthStore();
 
   // Обработчик для обновления при изменении файлов
@@ -491,6 +492,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         setDataLoaded(false);
         setCheckingCitizenship(false);
         setSelectedCitizenship(null);
+        setPassportType(null);
         return;
       }
 
@@ -554,6 +556,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
           };
           
           form.setFieldsValue(formData);
+          
+          // Инициализируем тип паспорта
+          setPassportType(employee.passportType || null);
           
           // Определяем гражданство используя загруженные данные напрямую
           setCheckingCitizenship(true);
@@ -728,6 +733,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const handleFieldsChange = () => {
     if (!dataLoaded) return; // Не запускаем валидацию, пока данные не загружены
     
+    // Обновляем тип паспорта
+    const currentPassportType = form.getFieldValue('passportType');
+    if (currentPassportType !== passportType) {
+      setPassportType(currentPassportType);
+    }
+    
     if (window.validationTimeout) {
       clearTimeout(window.validationTimeout);
     }
@@ -814,6 +825,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         setActiveTab('1');
         setTabsValidation({ '1': false, '2': false, '3': false });
         setSelectedCitizenship(null);
+        setPassportType(null);
       }
       // Если это редактирование - оставляем окно открытым с загруженными данными
     } catch (error) {
@@ -895,6 +907,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         setActiveTab('1');
         setTabsValidation({ '1': false, '2': false, '3': false });
         setSelectedCitizenship(null);
+        setPassportType(null);
       } else {
         // Если это редактирование - закрываем окно
         onCancel();
@@ -1238,18 +1251,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   name="passportNumber" 
                   label="№ паспорта"
                   rules={[{ required: true, message: 'Введите номер паспорта' }]}
-                  normalize={(value) => {
-                    const passportType = form?.getFieldValue('passportType');
-                    if (passportType === 'russian') {
-                      return formatRussianPassportNumber(value);
-                    }
-                    return value;
-                  }}
                 >
                   <Input 
                     autoComplete="off"
-                    placeholder={form?.getFieldValue('passportType') === 'russian' ? '1234 №567890' : ''}
-                    maxLength={form?.getFieldValue('passportType') === 'russian' ? 14 : undefined}
+                    placeholder="Номер паспорта"
                   />
                 </Form.Item>
               </Col>
@@ -1269,7 +1274,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             </Row>
 
             <Row gutter={16}>
-              {form?.getFieldValue('passportType') === 'foreign' && (
+              {passportType === 'foreign' && (
                 <Col span={12}>
                   <Form.Item 
                     name="passportExpiryDate" 
@@ -1283,7 +1288,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   </Form.Item>
                 </Col>
               )}
-              <Col span={form?.getFieldValue('passportType') === 'foreign' ? 12 : 24}>
+              <Col span={passportType === 'foreign' ? 12 : 24}>
                 <Form.Item 
                   name="passportIssuer" 
                   label="Кем выдан паспорт"
