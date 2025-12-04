@@ -296,10 +296,10 @@ const CitizenshipsPage = () => {
             name="code"
             label="Код страны"
             rules={[
-              { len: 2, message: 'Код должен состоять из 2 символов' }
+              { len: 3, message: 'Код должен состоять из 3 символов' }
             ]}
           >
-            <Input placeholder="Например: RU" maxLength={2} />
+            <Input placeholder="Например: RUS" maxLength={3} />
           </Form.Item>
 
           <Form.Item
