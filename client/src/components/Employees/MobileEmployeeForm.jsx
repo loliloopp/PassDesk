@@ -1,6 +1,6 @@
 import { Form, Input, Select, Button, Space, Typography, Checkbox, Spin, Collapse, App, Popconfirm, Radio } from 'antd';
 import { SaveOutlined, CaretRightOutlined, FileOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
@@ -11,6 +11,34 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 const DATE_FORMAT = 'DD.MM.YYYY';
+
+// Общие пропсы для отключения автозаполнения браузера
+const noAutoFillProps = {
+  autoComplete: 'off',
+  autoCorrect: 'off',
+  autoCapitalize: 'off',
+  spellCheck: false,
+  'data-form-type': 'other',
+  'data-lpignore': 'true',
+  onFocus: (e) => {
+    // Убираем readonly с небольшой задержкой
+    if (e.target.hasAttribute('readonly')) {
+      setTimeout(() => {
+        e.target.removeAttribute('readonly');
+      }, 120);
+    }
+  },
+  readOnly: true, // Начинаем с readonly чтобы предотвратить автозаполнение
+};
+
+const useAntiAutofillIds = () => ({
+  lastName: `employee_last_${Math.random().toString(36).slice(2, 9)}`,
+  firstName: `employee_first_${Math.random().toString(36).slice(2, 9)}`,
+  middleName: `employee_middle_${Math.random().toString(36).slice(2, 9)}`,
+  phone: `employee_phone_${Math.random().toString(36).slice(2, 9)}`,
+  registrationAddress: `employee_reg_addr_${Math.random().toString(36).slice(2, 9)}`,
+  birthCountry: `employee_birth_country_${Math.random().toString(36).slice(2, 9)}`,
+});
 
 // Маска для российского паспорта: форматирует ввод в 1234 №567890 (4 цифры, пробел, №, 6 цифр)
 const formatRussianPassportNumber = (value) => {
@@ -70,6 +98,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     formatPatentNumber,
     formatBlankNumber,
   } = useEmployeeForm(employee, true, onSuccess);
+  const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
 
   // Состояние для открытых панелей (по умолчанию все открыны)
   const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'statuses']);
@@ -287,7 +316,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               ]}
               getValueFromEvent={(e) => formatInn(e.target.value)}
             >
-              <Input placeholder="1234-567890-12" size="large" />
+              <Input 
+                placeholder="1234-567890-12" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
@@ -311,7 +344,13 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               name="lastName"
               rules={[{ required: true, message: 'Введите фамилию' }]}
             >
-              <Input placeholder="Иванов" size="large" />
+              <Input 
+                id={antiAutofillIds.lastName}
+                name={antiAutofillIds.lastName}
+                placeholder="Иванов" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             <Form.Item
@@ -319,11 +358,23 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               name="firstName"
               rules={[{ required: true, message: 'Введите имя' }]}
             >
-              <Input placeholder="Иван" size="large" />
+              <Input 
+                id={antiAutofillIds.firstName}
+                name={antiAutofillIds.firstName}
+                placeholder="Иван" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             <Form.Item label="Отчество" name="middleName">
-              <Input placeholder="Иванович" size="large" />
+              <Input 
+                id={antiAutofillIds.middleName}
+                name={antiAutofillIds.middleName}
+                placeholder="Иванович" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             <Form.Item
@@ -343,6 +394,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 listHeight={400}
                 loading={loadingReferences}
                 disabled={loadingReferences || positions.length === 0}
+                autoComplete="off"
               >
                 {positions.map((pos) => (
                   <Option key={pos.id} value={pos.id}>
@@ -369,6 +421,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 onChange={handleCitizenshipChange}
                 loading={loadingReferences}
                 disabled={loadingReferences || citizenships.length === 0}
+                autoComplete="off"
               >
                 {citizenships.map((c) => (
                   <Option key={c.id} value={c.id}>
@@ -420,7 +473,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 return value;
               }}
             >
-              <Input placeholder="ДД.ММ.ГГГГ" size="large" />
+              <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
             </Form.Item>
 
             <Form.Item
@@ -429,6 +482,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               rules={[{ required: true, message: 'Выберите страну рождения' }]}
             >
               <Select
+                id={antiAutofillIds.birthCountry}
+                dropdownMatchSelectWidth
                 placeholder="Выберите страну рождения"
                 size="large"
                 showSearch
@@ -439,6 +494,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 virtual={false}
                 loading={loadingReferences}
                 disabled={loadingReferences || citizenships.length === 0}
+                autoComplete="off"
               >
                 {citizenships.map((c) => (
                   <Option key={c.id} value={c.id}>
@@ -453,7 +509,14 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               name="registrationAddress"
               rules={[{ required: true, message: 'Введите адрес регистрации' }]}
             >
-              <TextArea placeholder="г. Москва, ул. Ленина, д. 1" rows={3} size="large" />
+              <TextArea 
+                id={antiAutofillIds.registrationAddress}
+                name={antiAutofillIds.registrationAddress}
+                placeholder="г. Москва, ул. Ленина, д. 1" 
+                rows={3} 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             <Form.Item
@@ -472,11 +535,22 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               ]}
               getValueFromEvent={(e) => formatPhoneNumber(e.target.value)}
             >
-              <Input placeholder="+7 (___) ___-__-__" size="large" />
+              <Input 
+                id={antiAutofillIds.phone}
+                name={antiAutofillIds.phone}
+                placeholder="+7 (___) ___-__-__" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             <Form.Item label="Примечание" name="note">
-              <TextArea rows={2} placeholder="Дополнительная информация" size="large" />
+              <TextArea 
+                rows={2} 
+                placeholder="Дополнительная информация" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
         </>
       ),
@@ -504,7 +578,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               ]}
               getValueFromEvent={(e) => formatSnils(e.target.value)}
             >
-              <Input placeholder="123-456-789 00" size="large" />
+              <Input 
+                placeholder="123-456-789 00" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             {requiresPatent && (
@@ -520,7 +598,12 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 ]}
                 getValueFromEvent={(e) => formatKig(e.target.value)}
               >
-                <Input placeholder="AF 1234567" size="large" maxLength={10} />
+                <Input 
+                  placeholder="AF 1234567" 
+                  size="large" 
+                  maxLength={10} 
+                  {...noAutoFillProps}
+                />
               </Form.Item>
             )}
 
@@ -558,7 +641,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                   return value;
                 }}
               >
-                <Input placeholder="ДД.ММ.ГГГГ" size="large" />
+                <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
               </Form.Item>
             )}
 
@@ -571,6 +654,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 placeholder="Выберите тип паспорта" 
                 size="large"
                 onChange={(value) => setPassportType(value)}
+                autoComplete="off"
               >
                 <Option value="russian">Российский</Option>
                 <Option value="foreign">Иностранного гражданина</Option>
@@ -592,6 +676,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 placeholder="1234 567890" 
                 size="large"
                 maxLength={passportType === 'russian' ? 14 : undefined}
+                {...noAutoFillProps}
               />
             </Form.Item>
 
@@ -628,7 +713,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 return value;
               }}
             >
-              <Input placeholder="ДД.ММ.ГГГГ" size="large" />
+              <Input 
+                placeholder="ДД.ММ.ГГГГ" 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
 
             {passportType === 'foreign' && (
@@ -636,7 +725,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 label="Дата окончания паспорта"
                 name="passportExpiryDate"
               >
-                <Input placeholder="ДД.ММ.ГГГГ" size="large" />
+                <Input 
+                  placeholder="ДД.ММ.ГГГГ" 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
               </Form.Item>
             )}
 
@@ -645,7 +738,12 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
               name="passportIssuer"
               rules={[{ required: true, message: 'Укажите орган выдачи' }]}
             >
-              <TextArea placeholder="Наименование органа выдачи" rows={3} size="large" />
+              <TextArea 
+                placeholder="Наименование органа выдачи" 
+                rows={3} 
+                size="large" 
+                {...noAutoFillProps}
+              />
             </Form.Item>
         </>
       ),
@@ -674,7 +772,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 ]}
                 getValueFromEvent={(e) => formatPatentNumber(e.target.value)}
               >
-                <Input placeholder="01 №1234567890" size="large" />
+                <Input 
+                  placeholder="01 №1234567890" 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
               </Form.Item>
 
               <Form.Item
@@ -710,7 +812,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                   return value;
                 }}
               >
-                <Input placeholder="ДД.ММ.ГГГГ" size="large" />
+                <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
               </Form.Item>
 
               <Form.Item
@@ -725,7 +827,12 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
                 ]}
                 getValueFromEvent={(e) => formatBlankNumber(e.target.value)}
               >
-                <Input placeholder="ПР1234567" size="large" maxLength={9} />
+                <Input 
+                  placeholder="ПР1234567" 
+                  size="large" 
+                  maxLength={9} 
+                  {...noAutoFillProps}
+                />
               </Form.Item>
         </>
       ),
@@ -880,6 +987,17 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel }) => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Скролируемая область с формой */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto', paddingBottom: 80, paddingLeft: 16, paddingRight: 16, paddingTop: 16 }}>
+        {/* Скрытые поля-ловушки для автозаполнения браузера */}
+        <div style={{ display: 'none' }} aria-hidden="true">
+          <input type="text" name="fakeusernameremember" autoComplete="username" />
+          <input type="text" name="fakefirstname" autoComplete="given-name" />
+          <input type="text" name="fakelastname" autoComplete="family-name" />
+          <input type="text" name="fakeaddress" autoComplete="street-address" />
+          <input type="text" name="fakecountry" autoComplete="country-name" />
+          <input type="tel" name="fakephone" autoComplete="tel" />
+          <input type="email" name="fakeemail" autoComplete="email" />
+          <input type="password" name="fakepasswordremember" autoComplete="current-password" />
+        </div>
         <Form
           form={form}
           layout="vertical"

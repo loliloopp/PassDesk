@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm, Radio } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { citizenshipService } from '../../services/citizenshipService';
@@ -14,6 +14,34 @@ import dayjs from 'dayjs';
 const { TextArea } = Input;
 const { Option } = Select;
 const DATE_FORMAT = 'DD.MM.YYYY';
+
+// Общие пропсы для отключения автозаполнения браузера
+const noAutoFillProps = {
+  autoComplete: 'off',
+  autoCorrect: 'off',
+  autoCapitalize: 'off',
+  spellCheck: false,
+  'data-form-type': 'other',
+  'data-lpignore': 'true',
+  onFocus: (e) => {
+    // Убираем readonly с небольшой задержкой
+    if (e.target.hasAttribute('readonly')) {
+      setTimeout(() => {
+        e.target.removeAttribute('readonly');
+      }, 120);
+    }
+  },
+  readOnly: true, // Начинаем с readonly чтобы предотвратить автозаполнение
+};
+
+const useAntiAutofillIds = () => ({
+  lastName: `desktop_last_${Math.random().toString(36).slice(2, 9)}`,
+  firstName: `desktop_first_${Math.random().toString(36).slice(2, 9)}`,
+  middleName: `desktop_middle_${Math.random().toString(36).slice(2, 9)}`,
+  phone: `desktop_phone_${Math.random().toString(36).slice(2, 9)}`,
+  registrationAddress: `desktop_reg_addr_${Math.random().toString(36).slice(2, 9)}`,
+  birthCountry: `desktop_birth_country_${Math.random().toString(36).slice(2, 9)}`,
+});
 
 // Маска для телефона: форматирует ввод в +7 (123) 456-78-90
 const formatPhoneNumber = (value) => {
@@ -376,6 +404,7 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
 const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
+  const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
   const [citizenships, setCitizenships] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -989,7 +1018,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     return formatInn(value);
                   }}
                 >
-                  <Input maxLength={14} placeholder="XXXX-XXXXX-X" autoComplete="off" />
+                  <Input maxLength={14} placeholder="XXXX-XXXXX-X" {...noAutoFillProps} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={3} md={3} lg={3}>
@@ -1010,7 +1039,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Фамилия"
                   rules={[{ required: true, message: 'Введите фамилию' }]}
                 >
-                  <Input autoComplete="off" />
+                  <Input id={antiAutofillIds.lastName} name={antiAutofillIds.lastName} {...noAutoFillProps} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={6} md={6} lg={6}>
@@ -1019,12 +1048,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Имя"
                   rules={[{ required: true, message: 'Введите имя' }]}
                 >
-                  <Input autoComplete="off" />
+                  <Input id={antiAutofillIds.firstName} name={antiAutofillIds.firstName} {...noAutoFillProps} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={6} md={6} lg={6}>
                 <Form.Item name="middleName" label="Отчество">
-                  <Input autoComplete="off" />
+                  <Input id={antiAutofillIds.middleName} name={antiAutofillIds.middleName} {...noAutoFillProps} />
                 </Form.Item>
               </Col>
             </Row>
@@ -1047,9 +1076,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     }
                     virtual={false}
                     listHeight={400}
-                    autoComplete="off"
                     popupMatchSelectWidth={false}
                     classNames={{ popup: { root: 'dropdown-wide' } }}
+                    autoComplete="off"
                   >
                     {positions.map((p) => (
                       <Option key={p.id} value={p.id}>
@@ -1123,6 +1152,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   rules={[{ required: true, message: 'Выберите страну рождения' }]}
                 >
                   <Select
+                  id={antiAutofillIds.birthCountry}
                     placeholder="Выберите страну рождения"
                     allowClear
                     showSearch
@@ -1144,7 +1174,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Адрес регистрации"
                   rules={[{ required: true, message: 'Введите адрес регистрации' }]}
                 >
-                  <Input placeholder="г. Москва, ул. Тверская, д.21, кв.11" autoComplete="off" />
+                <Input id={antiAutofillIds.registrationAddress} name={antiAutofillIds.registrationAddress} placeholder="г. Москва, ул. Тверская, д.21, кв.11" {...noAutoFillProps} />
                 </Form.Item>
               </Col>
             </Row>
@@ -1162,7 +1192,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     }
                   ]}
                 >
-                  <Input placeholder="ivanov@example.com" autoComplete="off" />
+                  <Input placeholder="ivanov@example.com" {...noAutoFillProps} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12} md={12} lg={12}>
@@ -1181,9 +1211,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   }}
                 >
                   <Input 
+                    id={antiAutofillIds.phone}
+                    name={antiAutofillIds.phone}
                     placeholder="+7 (999) 123-45-67"
                     maxLength={18}
-                    autoComplete="off"
+                    {...noAutoFillProps}
                   />
                 </Form.Item>
               </Col>
@@ -1193,7 +1225,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
             <Row gutter={16}>
               <Col span={24}>
                 <Form.Item name="notes" label="Примечания">
-                  <TextArea rows={2} autoComplete="off" />
+                  <TextArea rows={2} {...noAutoFillProps} />
                 </Form.Item>
               </Col>
             </Row>
@@ -1227,7 +1259,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                     return formatSnils(value);
                   }}
                 >
-                  <Input maxLength={14} placeholder="123-456-789 00" autoComplete="off" />
+                  <Input maxLength={14} placeholder="123-456-789 00" {...noAutoFillProps} />
                 </Form.Item>
               </Col>
               {requiresPatent && (
@@ -1246,7 +1278,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                       return formatKig(value);
                     }}
                   >
-                    <Input maxLength={10} placeholder="AF 1234567" autoComplete="off" />
+                    <Input maxLength={10} placeholder="AF 1234567" {...noAutoFillProps} />
                   </Form.Item>
                 </Col>
               )}
@@ -1274,7 +1306,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Тип паспорта"
                   rules={[{ required: true, message: 'Выберите тип паспорта' }]}
                 >
-                  <Select placeholder="Выберите тип паспорта" allowClear>
+                  <Select placeholder="Выберите тип паспорта" allowClear autoComplete="off">
                     <Option value="russian">Российский</Option>
                     <Option value="foreign">Иностранного гражданина</Option>
                   </Select>
@@ -1287,7 +1319,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   rules={[{ required: true, message: 'Введите номер паспорта' }]}
                 >
                   <Input 
-                    autoComplete="off"
+                    {...noAutoFillProps}
                     placeholder="Номер паспорта"
                   />
                 </Form.Item>
@@ -1328,7 +1360,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   label="Кем выдан паспорт"
                   rules={[{ required: true, message: 'Введите кем выдан паспорт' }]}
                 >
-                  <Input placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20" autoComplete="off" />
+                  <Input placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20" {...noAutoFillProps} />
                 </Form.Item>
               </Col>
             </Row>
@@ -1374,7 +1406,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Input 
                     placeholder="01 №1234567890 (код 01-99)"
                     maxLength={15}
-                    autoComplete="off"
+                    {...noAutoFillProps}
                   />
                 </Form.Item>
               </Col>
@@ -1409,7 +1441,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
                   <Input 
                     placeholder="ПР1234567 (буквы - кириллица)"
                     maxLength={9}
-                    autoComplete="off"
+                    {...noAutoFillProps}
                   />
                 </Form.Item>
               </Col>
@@ -1433,19 +1465,31 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
 
   // Контент формы
   const formContent = (
-    <Form 
-      form={form} 
-      layout="vertical"
-      onFieldsChange={handleFieldsChange}
-      validateTrigger={['onChange', 'onBlur']}
-      autoComplete="off"
-      requiredMark={(label, { required }) => (
-        <>
-          {label}
-          {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
-        </>
-      )}
-    >
+    <>
+      {/* Скрытые поля-ловушки для автозаполнения браузера */}
+      <div style={{ display: 'none' }} aria-hidden="true">
+        <input type="text" name="fakeusernameremember" autoComplete="username" />
+        <input type="text" name="fakefirstname" autoComplete="given-name" />
+        <input type="text" name="fakelastname" autoComplete="family-name" />
+        <input type="text" name="fakeaddress" autoComplete="street-address" />
+        <input type="text" name="fakecountry" autoComplete="country-name" />
+        <input type="tel" name="fakephone" autoComplete="tel" />
+        <input type="email" name="fakeemail" autoComplete="email" />
+        <input type="password" name="fakepasswordremember" autoComplete="current-password" />
+      </div>
+      <Form 
+        form={form} 
+        layout="vertical"
+        onFieldsChange={handleFieldsChange}
+        validateTrigger={['onChange', 'onBlur']}
+        autoComplete="off"
+        requiredMark={(label, { required }) => (
+          <>
+            {label}
+            {required && <span style={{ color: '#ff4d4f', marginLeft: 4 }}>*</span>}
+          </>
+        )}
+      >
       <Tabs 
         activeKey={activeTab}
         onChange={(key) => {
@@ -1456,7 +1500,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess }) => {
         destroyOnHidden={false} // Рендерим все вкладки сразу, чтобы форма видела все поля
         items={getTabsItems()}
       />
-    </Form>
+      </Form>
+    </>
   );
 
   // Футер с кнопками
