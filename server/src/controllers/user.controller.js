@@ -54,6 +54,7 @@ export const getAllUsers = async (req, res, next) => {
 
     const { count, rows: users } = await User.findAndCountAll({
       where,
+      attributes: ['id', 'email', 'firstName', 'lastName', 'role', 'counterpartyId', 'identificationNumber', 'isActive', 'createdAt'],
       limit: parseInt(limit),
       offset,
       order: [['createdAt', 'DESC']],

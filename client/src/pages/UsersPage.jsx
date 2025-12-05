@@ -60,7 +60,6 @@ const UsersPage = () => {
     setLoading(true)
     try {
       const response = await userService.getAll({ limit: 1000 })
-      // Правильный путь: response.data.users (Axios уже распаковывает один уровень data)
       setUsers(response?.data?.users || [])
     } catch (error) {
       console.error('Error fetching users:', error)
@@ -72,8 +71,9 @@ const UsersPage = () => {
 
   const fetchCounterparties = async () => {
     try {
-      const { data } = await counterpartyService.getAll({ limit: 100 })
-      setCounterparties(data.data.counterparties)
+      const response = await counterpartyService.getAll({ limit: 2000 })
+      const counterpartiesData = response?.data?.data?.counterparties || []
+      setCounterparties(counterpartiesData)
     } catch (error) {
       console.error('Error loading counterparties:', error)
     }
