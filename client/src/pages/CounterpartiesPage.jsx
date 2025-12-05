@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
@@ -26,11 +26,32 @@ const CounterpartiesPage = () => {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState({});
   const [form] = Form.useForm();
-  const [counterpartyObjects, setCounterpartyObjects] = useState({});
+  const debounceTimerRef = useRef(null);
 
+  // Debounced фильтры для отправки на сервер
+  const [debouncedFilters, setDebouncedFilters] = useState({});
+
+  // Debounce для фильтров (500мс)
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [filters]);
+
+  // Загрузка данных при изменении debounced фильтров или пагинации
   useEffect(() => {
     fetchData();
-  }, [pagination.current, filters]);
+  }, [pagination.current, debouncedFilters]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -38,31 +59,16 @@ const CounterpartiesPage = () => {
       const { data: response } = await counterpartyService.getAll({
         page: pagination.current,
         limit: pagination.pageSize,
-        ...filters
+        include: 'construction_sites', // Включаем construction sites в один запрос
+        ...debouncedFilters
       });
       setData(response.data.counterparties);
       setPagination(prev => ({ ...prev, total: response.data.pagination.total }));
-      
-      // Загружаем объекты для каждого контрагента
-      loadCounterpartyObjects(response.data.counterparties);
     } catch (error) {
       message.error('Ошибка при загрузке данных');
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadCounterpartyObjects = async (counterparties) => {
-    const objectsMap = {};
-    for (const cp of counterparties) {
-      try {
-        const { data: response } = await counterpartyService.getConstructionSites(cp.id);
-        objectsMap[cp.id] = response.data || [];
-      } catch (error) {
-        objectsMap[cp.id] = [];
-      }
-    }
-    setCounterpartyObjects(objectsMap);
   };
 
   const handleAdd = () => {
@@ -141,12 +147,8 @@ const CounterpartiesPage = () => {
   const handleSaveObjects = async (selectedIds) => {
     try {
       await counterpartyService.saveConstructionSites(selectedCounterpartyId, selectedIds);
-      // Обновляем локальные данные
-      const { data: response } = await counterpartyService.getConstructionSites(selectedCounterpartyId);
-      setCounterpartyObjects(prev => ({
-        ...prev,
-        [selectedCounterpartyId]: response.data || []
-      }));
+      // Перезагружаем данные после сохранения
+      await fetchData();
       message.success('Объекты сохранены');
     } catch (error) {
       message.error('Ошибка при сохранении объектов');
@@ -194,7 +196,7 @@ const CounterpartiesPage = () => {
       title: 'Объекты',
       key: 'objects',
       render: (_, record) => {
-        const objects = counterpartyObjects[record.id] || [];
+        const objects = record.constructionSites || [];
         return (
       <div
         onClick={() => handleOpenObjectsModal(record.id)}

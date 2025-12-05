@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 // Получить все контрагенты
 export const getAllCounterparties = async (req, res) => {
   try {
-    const { type, search, page = 1, limit = 10 } = req.query;
+    const { type, search, page = 1, limit = 10, include } = req.query;
     
     const where = {};
     
@@ -23,11 +23,26 @@ export const getAllCounterparties = async (req, res) => {
     
     const offset = (page - 1) * limit;
     
+    // Настройка include для связанных данных
+    const includeOptions = [];
+    
+    // Если запрошено включение construction_sites
+    if (include && include.includes('construction_sites')) {
+      includeOptions.push({
+        model: ConstructionSite,
+        as: 'constructionSites',
+        attributes: ['id', 'shortName', 'fullName'],
+        through: { attributes: [] } // Не включаем атрибуты промежуточной таблицы
+      });
+    }
+    
     const { count, rows } = await Counterparty.findAndCountAll({
       where,
+      include: includeOptions,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
+      distinct: true // Важно для правильного подсчета при JOIN
     });
     
     res.json({
