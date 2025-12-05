@@ -1589,9 +1589,6 @@ export const checkEmployeeByInn = async (req, res, next) => {
       });
     }
 
-    // Ищем сотрудника по ИНН
-    let where = { inn: normalizedInn };
-
     // Настраиваем include для маппинга контрагентов
     const mappingInclude = {
       model: EmployeeCounterpartyMapping,
@@ -1615,23 +1612,27 @@ export const checkEmployeeByInn = async (req, res, next) => {
       ]
     };
 
-    // Фильтруем по контрагенту в зависимости от роли
-    if (userRole !== 'admin') {
-      // Для user и manager - проверяем контрагент
-      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    // ЭТАП 1: Проверяем сотрудника в контрагенте пользователя
+    let where = { inn: normalizedInn };
+    let userAccessMapping = { ...mappingInclude };
 
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+
+    if (userRole !== 'admin') {
+      // Для user и manager - проверяем только свой контрагент
       if (userCounterpartyId === defaultCounterpartyId) {
         // Контрагент по умолчанию: ищем сотрудников, созданных пользователем
         where.createdBy = userId;
       } else {
         // Другие контрагенты: ищем через маппинг
-        mappingInclude.where = { counterpartyId: userCounterpartyId };
-        mappingInclude.required = true;
+        userAccessMapping.where = { counterpartyId: userCounterpartyId };
+        userAccessMapping.required = true;
       }
     }
     // Для админа - ограничений по контрагенту нет
 
-    const employee = await Employee.findOne({
+    // Ищем сотрудника в контрагенте пользователя
+    const employeeInUserAccess = await Employee.findOne({
       where,
       include: [
         {
@@ -1644,26 +1645,72 @@ export const checkEmployeeByInn = async (req, res, next) => {
           as: 'position',
           attributes: ['id', 'name']
         },
-        mappingInclude
+        userAccessMapping
       ]
     });
 
-    if (!employee) {
-      console.log('❌ Сотрудник не найден или нет доступа');
-      return res.status(404).json({
-        success: false,
-        message: 'Сотрудник не найден'
+    if (employeeInUserAccess) {
+      // Сотрудник найден в контрагенте пользователя
+      console.log('✅ Сотрудник найден в контрагенте пользователя:', employeeInUserAccess.id);
+      return res.json({
+        success: true,
+        data: {
+          employee: employeeInUserAccess.toJSON()
+        }
       });
     }
 
-    // Права доступа уже проверены в запросе через required: true и where.createdBy
-    console.log('✅ Сотрудник найден:', employee.id, employee.firstName, employee.lastName);
+    // ЭТАП 2: Если не админ и сотрудника нет в его контрагенте - проверяем есть ли он в других
+    if (userRole !== 'admin') {
+      const employeeInAnotherCounterparty = await Employee.findOne({
+        where: { inn: normalizedInn },
+        include: [
+          {
+            model: EmployeeCounterpartyMapping,
+            as: 'employeeCounterpartyMappings',
+            attributes: ['counterpartyId'],
+            required: true
+          }
+        ]
+      });
 
-    res.json({
-      success: true,
-      data: {
-        employee: employee.toJSON()
+      if (employeeInAnotherCounterparty) {
+        // Сотрудник найден в ДРУГОМ контрагенте - ошибка доступа
+        console.log('❌ Сотрудник найден в другом контрагенте:', employeeInAnotherCounterparty.id);
+        return res.status(409).json({
+          success: false,
+          message: 'Сотрудник с таким ИНН уже существует. Обратитесь к администратору.'
+        });
       }
+    } else {
+      // Для админа проверяем во всех контрагентах
+      const anyEmployee = await Employee.findOne({
+        where: { inn: normalizedInn },
+        include: [
+          {
+            model: EmployeeCounterpartyMapping,
+            as: 'employeeCounterpartyMappings',
+            attributes: ['counterpartyId'],
+            required: true
+          }
+        ]
+      });
+
+      if (anyEmployee) {
+        // Сотрудник найден где-то - ошибка дублирования
+        console.log('❌ Сотрудник с таким ИНН уже существует в системе:', anyEmployee.id);
+        return res.status(409).json({
+          success: false,
+          message: 'Сотрудник с таким ИНН уже существует в системе'
+        });
+      }
+    }
+
+    // ЭТАП 3: Сотрудник не найден вообще
+    console.log('ℹ️ Сотрудник не найден');
+    return res.status(404).json({
+      success: false,
+      message: 'Сотрудник не найден'
     });
   } catch (error) {
     console.error('Error checking employee by inn:', error);

@@ -93,23 +93,36 @@ const EmployeesPage = () => {
 
   // Обработчик проверки ИНН с показом модального окна
   const handleCheckInn = async (innValue) => {
-    const foundEmployee = await checkInn(innValue);
-    if (foundEmployee) {
-      const fullName = [foundEmployee.lastName, foundEmployee.firstName, foundEmployee.middleName]
-        .filter(Boolean)
-        .join(' ');
-      
-      modal.confirm({
-        title: 'Сотрудник с таким ИНН уже существует',
-        content: `Перейти к редактированию?\n\n${fullName}`,
-        okText: 'ОК',
-        cancelText: 'Отмена',
-        onOk: () => {
-          setIsModalOpen(false);
-          setEditingEmployee(null);
-          navigate(`/employees/edit/${foundEmployee.id}`);
-        },
-      });
+    try {
+      const foundEmployee = await checkInn(innValue);
+      if (foundEmployee) {
+        const fullName = [foundEmployee.lastName, foundEmployee.firstName, foundEmployee.middleName]
+          .filter(Boolean)
+          .join(' ');
+        
+        modal.confirm({
+          title: 'Сотрудник с таким ИНН уже существует',
+          content: `Перейти к редактированию?\n\n${fullName}`,
+          okText: 'ОК',
+          cancelText: 'Отмена',
+          onOk: () => {
+            setIsModalOpen(false);
+            setEditingEmployee(null);
+            navigate(`/employees/edit/${foundEmployee.id}`);
+          },
+        });
+      }
+    } catch (error) {
+      // Обработка ошибки 409 - сотрудник найден в другом контрагенте
+      if (error.response?.status === 409) {
+        modal.error({
+          title: 'Ошибка',
+          content: error.response?.data?.message || 'Сотрудник с таким ИНН уже существует. Обратитесь к администратору.',
+          okText: 'ОК'
+        });
+      } else {
+        console.error('Ошибка при проверке ИНН:', error);
+      }
     }
   };
 

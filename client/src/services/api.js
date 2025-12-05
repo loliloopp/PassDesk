@@ -157,14 +157,19 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Логируем ошибку для отладки
-    console.error('API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      message: error.message,
-      data: error.response?.data
-    });
+    // Логируем ошибку для отладки (кроме 404 для check-inn, это нормально)
+    const isCheckInnNotFound = error.response?.status === 404 && 
+                               error.config?.url?.includes('/check-inn');
+    
+    if (!isCheckInnNotFound) {
+      console.error('API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+    }
 
     // Обработка 401 ошибки (неавторизован / истек токен)
     if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/logout')) {

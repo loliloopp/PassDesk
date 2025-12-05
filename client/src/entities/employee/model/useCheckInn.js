@@ -50,6 +50,15 @@ export const useCheckInn = () => {
         lastCheckedInnRef.current = null;
         return null;
       }
+
+      // 409 — сотрудник найден в другом контрагенте, нужно пробросить ошибку
+      if (error.response?.status === 409) {
+        console.error('❌ Сотрудник найден в другом контрагенте:', error.response?.data?.message);
+        lastCheckedInnRef.current = null;
+        // Пробрасываем ошибку, чтобы компонент мог показать сообщение
+        throw error;
+      }
+
       // Для остальных ошибок — логируем
       console.error('❌ Ошибка проверки ИНН:', error);
       lastCheckedInnRef.current = null;
