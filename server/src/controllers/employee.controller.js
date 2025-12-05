@@ -179,10 +179,11 @@ export const getAllEmployees = async (req, res, next) => {
         });
       } else {
         // Другие контрагенты: показываем всех сотрудников контрагента
-        employeeInclude[3].where = {
+        // Фильтруем по EmployeeCounterpartyMapping (индекс 4)
+        employeeInclude[4].where = {
           counterpartyId: userCounterpartyId
         };
-        employeeInclude[3].required = true;
+        employeeInclude[4].required = true;
       }
     }
     // Для админа и manager - ограничений по контрагенту нет (видят всех)
