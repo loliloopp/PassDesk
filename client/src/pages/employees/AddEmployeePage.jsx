@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Typography, Grid, App } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useEmployeeActions, useCheckInn } from '@/entities/employee';
 import { employeeService } from '@/services/employeeService';
 import MobileEmployeeForm from '@/components/Employees/MobileEmployeeForm';
@@ -25,6 +25,7 @@ const AddEmployeePage = () => {
   
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [loading, setLoading] = useState(false);
+  const employeeLoadedRef = useRef(false); // 🔗 Флаг что сотрудник уже загружен
 
   const { createEmployee, updateEmployee } = useEmployeeActions(() => {
     // Не нужно refetch, так как мы уходим со страницы
@@ -41,15 +42,36 @@ const AddEmployeePage = () => {
           .filter(Boolean)
           .join(' ');
         
-        modal.confirm({
-          title: 'Сотрудник с таким ИНН уже существует',
-          content: `Перейти к редактированию?\n\n${fullName}`,
-          okText: 'ОК',
-          cancelText: 'Отмена',
-          onOk: () => {
-            navigate(`/employees/edit/${foundEmployee.id}`);
-          },
-        });
+        // 🎯 Проверяем флаги от API
+        const isOwner = foundEmployee.isOwner !== false; // По умолчанию true
+        const canLink = foundEmployee.canLink === true;
+
+        // 🔗 Если это сотрудник другого пользователя в default контрагенте
+        if (canLink && !isOwner) {
+          modal.confirm({
+            title: 'Привязать существующего сотрудника?',
+            content: `${fullName}\n\nПривязать этого сотрудника к своему профилю?`,
+            okText: 'Привязать',
+            cancelText: 'Отмена',
+            onOk: () => {
+              // 📋 Устанавливаем сотрудника с флагом linkingMode
+              console.log('✅ Modal OK clicked: setting employee with linkingMode = true');
+              employeeLoadedRef.current = true; // Помечаем что сотрудник уже загружен
+              setEditingEmployee({ ...foundEmployee, linkingMode: true });
+            },
+          });
+        } else {
+          // Стандартное поведение: редактирование своего сотрудника
+          modal.confirm({
+            title: 'Сотрудник с таким ИНН уже существует',
+            content: `Перейти к редактированию?\n\n${fullName}`,
+            okText: 'ОК',
+            cancelText: 'Отмена',
+            onOk: () => {
+              navigate(`/employees/edit/${foundEmployee.id}`);
+            },
+          });
+        }
       }
     } catch (error) {
       // Обработка ошибки 409 - сотрудник найден в другом контрагенте
@@ -67,12 +89,19 @@ const AddEmployeePage = () => {
 
   // Загружаем сотрудника при редактировании
   useEffect(() => {
+    // 🎯 Если сотрудник уже загружен (через linkingMode) - не загружаем повторно
+    if (employeeLoadedRef.current) {
+      console.log('🔗 useEffect: Employee already loaded, skipping getById');
+      return;
+    }
+
     if (id) {
       setLoading(true);
       employeeService
         .getById(id)
         .then((response) => {
           setEditingEmployee(response.data);
+          employeeLoadedRef.current = true;
         })
         .catch((error) => {
           message.error('Ошибка загрузки данных сотрудника');
@@ -83,11 +112,40 @@ const AddEmployeePage = () => {
           setLoading(false);
         });
     }
+
+    // Cleanup: сбрасываем флаг при размонтировании
+    return () => {
+      employeeLoadedRef.current = false;
+    };
   }, [id, navigate, message]);
 
   const handleFormSuccess = async (values) => {
+    console.log('🔍 handleFormSuccess called with values:', {
+      hasEmployeeId: !!values.employeeId,
+      hasEditingEmployee: !!editingEmployee,
+      employeeId: values.employeeId,
+      editingEmployeeId: editingEmployee?.id,
+      editingEmployeeLinkingMode: editingEmployee?.linkingMode
+    });
+    
     try {
+      // 🔗 РЕЖИМ ПРИВЯЗКИ: если в values есть employeeId - это привязка существующего сотрудника
+      if (values.employeeId) {
+        console.log('✅ LINKING MODE: calling createEmployee with employeeId:', values.employeeId);
+        // Вызываем createEmployee с employeeId для создания связи
+        const linked = await createEmployee(values);
+        
+        message.success('Сотрудник успешно привязан!');
+        
+        setTimeout(() => {
+          navigate('/employees');
+        }, 1000);
+        
+        return;
+      }
+      
       if (editingEmployee) {
+        console.log('⚠️ UPDATE MODE: calling updateEmployee for id:', editingEmployee.id);
         // Обновление существующего сотрудника
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
@@ -128,6 +186,8 @@ const AddEmployeePage = () => {
 
   // Устанавливаем название страницы для мобильной версии
   usePageTitle(id ? 'Редактирование' : 'Добавление', isMobile);
+
+  console.log('🔍 AddEmployeePage render: editingEmployee.id =', editingEmployee?.id, 'editingEmployee.linkingMode =', editingEmployee?.linkingMode);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>

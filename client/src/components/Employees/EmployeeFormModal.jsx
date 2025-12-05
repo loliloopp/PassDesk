@@ -470,6 +470,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
   const [passportType, setPassportType] = useState(null); // Состояние для типа паспорта
+  const [linkingMode, setLinkingMode] = useState(false); // 🎯 Режим привязки существующего сотрудника
   const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
   const { user } = useAuthStore();
 
@@ -594,6 +595,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         }
 
         if (employee) {
+          // 🎯 Используем linkingMode из employee напрямую
+          const shouldUseLinkingMode = employee.linkingMode === true;
+          console.log('🔍 EmployeeFormModal useEffect: employee.linkingMode=', employee.linkingMode, 'shouldUseLinkingMode=', shouldUseLinkingMode);
+          setLinkingMode(shouldUseLinkingMode);
+          
           // Сразу устанавливаем данные сотрудника в форму
           const mapping = employee.employeeCounterpartyMappings?.[0];
           
@@ -1000,10 +1006,36 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         }
       });
 
+      formattedValues.isDraft = false; // Флаг для бэкенда
+      
+      // 🎯 РЕЖИМ ПРИВЯЗКИ: отправляем ID сотрудника вместо его данных
+      console.log('🔍 EmployeeFormModal before onSuccess:', {
+        linkingMode,
+        employeeId: employee?.id,
+        willAddEmployeeId: linkingMode && employee?.id
+      });
+      
+      if (linkingMode && employee?.id) {
+        formattedValues.employeeId = employee.id; // Указываем, что привязываем существующего сотрудника
+        delete formattedValues.id; // ❌ Удаляем id, чтобы не конфликтовал с employeeId
+        console.log('✅ EmployeeFormModal: Added employeeId to formattedValues:', formattedValues.employeeId);
+      }
+
+      console.log('📤 EmployeeFormModal: Calling onSuccess with formattedValues.employeeId=', formattedValues.employeeId);
       await onSuccess(formattedValues);
       
-      // Если это добавление нового сотрудника - НЕ закрываем окно
-      if (!employee) {
+      // 🎯 Если это режим привязки - остаемся на странице с сообщением
+      if (linkingMode) {
+        message.success('Сотрудник успешно привязан к вашему профилю');
+        // Сбрасываем форму и режим привязки
+        form.resetFields();
+        setActiveTab('1');
+        setTabsValidation({ '1': false, '2': false, '3': false });
+        setSelectedCitizenship(null);
+        setPassportType(null);
+        setLinkingMode(false);
+      } else if (!employee) {
+        // Если это добавление нового сотрудника - НЕ закрываем окно
         // Сбрасываем форму для добавления следующего сотрудника
         form.resetFields();
         setActiveTab('1');
@@ -1011,7 +1043,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         setSelectedCitizenship(null);
         setPassportType(null);
       } else {
-        // Если это редактирование - закрываем окно
+        // Если это редактирование своего сотрудника - закрываем окно
         onCancel();
       }
     } catch (error) {

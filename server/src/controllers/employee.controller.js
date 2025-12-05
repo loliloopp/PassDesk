@@ -420,8 +420,8 @@ export const getEmployeeById = async (req, res, next) => {
       });
     }
 
-    // ПРОВЕРКА ПРАВ ДОСТУПА
-    await checkEmployeeAccess(req.user, employee);
+    // ПРОВЕРКА ПРАВ ДОСТУПА (операция READ - разрешаем чтение для привязки)
+    await checkEmployeeAccess(req.user, employee, 'read');
 
     // Пересчитываем statusCard
     const employeeData = employee.toJSON();
@@ -445,6 +445,121 @@ export const createEmployee = async (req, res, next) => {
       console.log('User ID:', req.user?.id);
     }
     
+    // 🎯 РЕЖИМ ПРИВЯЗКИ: проверяем наличие employeeId
+    const { employeeId } = req.body;
+    
+    // Если передан employeeId - это режим привязки существующего сотрудника
+    if (employeeId) {
+      console.log('🔗 LINKING MODE: Привязка существующего сотрудника', employeeId);
+      
+      // Проверяем, что сотрудник существует
+      const existingEmployee = await Employee.findByPk(employeeId);
+      if (!existingEmployee) {
+        return res.status(404).json({
+          success: false,
+          message: 'Сотрудник не найден'
+        });
+      }
+      
+      // Проверяем только для пользователей default контрагента
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      if (req.user.counterpartyId !== defaultCounterpartyId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Привязка сотрудников доступна только в контрагенте по умолчанию'
+        });
+      }
+      
+      // Проверяем, есть ли уже связь в user_employee_mapping
+      const existingMapping = await UserEmployeeMapping.findOne({
+        where: {
+          userId: req.user.id,
+          employeeId: employeeId
+        }
+      });
+      
+      if (existingMapping) {
+        return res.status(400).json({
+          success: false,
+          message: 'Этот сотрудник уже привязан к вашему профилю'
+        });
+      }
+      
+      // ✅ ШАГ 1: Создаем новую связь в user_employee_mapping
+      await UserEmployeeMapping.create({
+        userId: req.user.id,
+        employeeId: employeeId,
+        counterpartyId: null // Для контрагента по умолчанию counterpartyId = NULL
+      });
+      
+      console.log('✓ User-Employee mapping created (linking mode)');
+      
+      // ✅ ШАГ 2: Обновляем данные сотрудника (если они были изменены)
+      // Удаляем служебные поля и employeeId
+      const { 
+        employeeId: _, 
+        counterpartyId, 
+        constructionSiteId, 
+        statusActive, 
+        status, 
+        statusCard, 
+        statusSecure,
+        isDraft,
+        ...cleanEmployeeData 
+      } = req.body;
+      
+      // Обновляем сотрудника
+      await existingEmployee.update({
+        ...cleanEmployeeData,
+        updatedBy: req.user.id
+      });
+      
+      console.log('✓ Employee data updated after linking');
+      
+      // Возвращаем обновленного сотрудника
+      const linkedEmployee = await Employee.findByPk(employeeId, {
+        include: [
+          {
+            model: Citizenship,
+            as: 'citizenship',
+            attributes: ['id', 'name', 'code', 'requiresPatent']
+          },
+          {
+            model: Position,
+            as: 'position',
+            attributes: ['id', 'name']
+          },
+          {
+            model: EmployeeCounterpartyMapping,
+            as: 'employeeCounterpartyMappings',
+            include: [
+              {
+                model: Counterparty,
+                as: 'counterparty',
+                attributes: ['id', 'name']
+              },
+              {
+                model: Department,
+                as: 'department',
+                attributes: ['id', 'name']
+              }
+            ]
+          }
+        ]
+      });
+      
+      const employeeData = linkedEmployee.toJSON();
+      const calculatedStatusCard = calculateStatusCard(employeeData);
+      employeeData.statusCard = calculatedStatusCard;
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Сотрудник успешно привязан',
+        data: employeeData
+      });
+    }
+    
+    // 🔄 СТАНДАРТНЫЙ РЕЖИМ: создание нового сотрудника
     // Удаляем counterpartyId, constructionSiteId, и все поля статусов из данных сотрудника
     const { counterpartyId, constructionSiteId, statusActive, status, statusCard, statusSecure, ...cleanEmployeeData } = req.body;
     
@@ -1655,13 +1770,73 @@ export const checkEmployeeByInn = async (req, res, next) => {
       return res.json({
         success: true,
         data: {
-          employee: employeeInUserAccess.toJSON()
+          employee: employeeInUserAccess.toJSON(),
+          exists: true,
+          isOwner: true // Сотрудник создан этим пользователем или найден в его контрагенте
         }
       });
     }
 
     // ЭТАП 2: Если не админ и сотрудника нет в его контрагенте - проверяем есть ли он в других
     if (userRole !== 'admin') {
+      // 🎯 СПЕЦИАЛЬНАЯ ЛОГИКА ДЛЯ USER В DEFAULT КОНТРАГЕНТЕ
+      if (userRole === 'user' && userCounterpartyId === defaultCounterpartyId) {
+        // Ищем сотрудника В DEFAULT контрагенте (неважно, есть ли он в других)
+        const employeeInSameCounterparty = await Employee.findOne({
+          where: { inn: normalizedInn },
+          include: [
+            {
+              model: Citizenship,
+              as: 'citizenship',
+              attributes: ['id', 'name', 'code', 'requiresPatent']
+            },
+            {
+              model: Position,
+              as: 'position',
+              attributes: ['id', 'name']
+            },
+            {
+              model: EmployeeCounterpartyMapping,
+              as: 'employeeCounterpartyMappings',
+              where: { counterpartyId: defaultCounterpartyId },
+              required: true,
+              include: [
+                {
+                  model: Counterparty,
+                  as: 'counterparty',
+                  attributes: ['id', 'name', 'type', 'inn', 'kpp']
+                },
+                {
+                  model: Department,
+                  as: 'department',
+                  attributes: ['id', 'name']
+                },
+                {
+                  model: ConstructionSite,
+                  as: 'constructionSite',
+                  attributes: ['id', 'shortName', 'fullName']
+                }
+              ]
+            }
+          ]
+        });
+
+        if (employeeInSameCounterparty) {
+          // ✅ Сотрудник найден в default контрагенте - можно привязать
+          console.log('✅ Сотрудник найден в default контрагенте (создан другим пользователем):', employeeInSameCounterparty.id);
+          return res.json({
+            success: true,
+            data: {
+              employee: employeeInSameCounterparty.toJSON(),
+              exists: true,
+              isOwner: false, // Сотрудник создан другим пользователем
+              canLink: true // Разрешить привязать к текущему пользователю
+            }
+          });
+        }
+      }
+
+      // ❌ СТАНДАРТНАЯ ЛОГИКА ДЛЯ ОСТАЛЬНЫХ
       const employeeInAnotherCounterparty = await Employee.findOne({
         where: { inn: normalizedInn },
         include: [
