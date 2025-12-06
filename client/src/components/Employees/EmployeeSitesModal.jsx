@@ -46,7 +46,8 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
       // Отправляем выбранные объекты на сервер
       await employeeApi.updateConstructionSites(employee.id, selectedSites);
       message.success('Объекты обновлены');
-      onSuccess();
+      onCancel(); // Закрываем модальное окно
+      onSuccess(); // Обновляем данные в родительском компоненте
     } catch (error) {
       message.error('Ошибка при сохранении объектов');
     } finally {

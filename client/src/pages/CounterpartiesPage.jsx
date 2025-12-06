@@ -147,11 +147,11 @@ const CounterpartiesPage = () => {
   const handleSaveObjects = async (selectedIds) => {
     try {
       await counterpartyService.saveConstructionSites(selectedCounterpartyId, selectedIds);
-      // Перезагружаем данные после сохранения
       await fetchData();
       message.success('Объекты сохранены');
     } catch (error) {
       message.error('Ошибка при сохранении объектов');
+      throw error;
     }
   };
 

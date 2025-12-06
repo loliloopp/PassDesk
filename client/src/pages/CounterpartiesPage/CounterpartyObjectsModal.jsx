@@ -59,17 +59,15 @@ export const CounterpartyObjectsModal = ({
     setSaving(true);
     try {
       await onSave(selectedIds);
-      msg.success('Объекты сохранены');
-      handleCancel();
+      setSaving(false);
+      onCancel();
     } catch (error) {
       msg.error('Ошибка при сохранении');
-    } finally {
       setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    setSelectedIds([]);
     onCancel();
   };
 
