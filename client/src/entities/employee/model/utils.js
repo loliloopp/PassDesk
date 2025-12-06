@@ -52,6 +52,13 @@ export const getEmployeeFullName = (employee) => {
  */
 export const getUniqueFilterValues = (employees) => {
   const positions = [...new Set(employees.map((e) => e.position?.name).filter(Boolean))];
+  const fullNames = [
+    ...new Set(
+      employees
+        .map((e) => `${e.lastName} ${e.firstName} ${e.middleName || ''}`.trim())
+        .filter(Boolean)
+    ),
+  ];
   const departments = [
     ...new Set(
       employees
@@ -80,6 +87,7 @@ export const getUniqueFilterValues = (employees) => {
 
   return {
     positions: positions.sort(),
+    fullNames: fullNames.sort(),
     departments: departments.sort(),
     counterparties: counterparties.sort(),
     constructionSites: constructionSites.sort(),

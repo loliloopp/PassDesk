@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { getStatusPriority } from '@/entities/employee';
 import { PositionFilterDropdown } from './PositionFilterDropdown';
+import { FullNameFilterDropdown } from './FullNameFilterDropdown';
 
 /**
  * Создание конфигурации колонок для таблицы сотрудников
@@ -54,6 +55,23 @@ export const useEmployeeColumns = ({
           </div>
         ),
         sorter: (a, b) => a.lastName.localeCompare(b.lastName),
+        filterDropdown: (props) => (
+          <FullNameFilterDropdown
+            {...props}
+            uniqueFilterFullNames={uniqueFilters.fullNames}
+            resetTrigger={resetTrigger}
+          />
+        ),
+        filterIcon: (filtered) => (
+          <div style={{ color: filtered ? '#1890ff' : undefined }}>
+            ☰
+          </div>
+        ),
+        filteredValue: filters.fullName || [],
+        onFilter: (value, record) => {
+          const fullName = `${record.lastName} ${record.firstName} ${record.middleName || ''}`.trim();
+          return fullName === value;
+        },
       },
       {
         title: 'Должность',
