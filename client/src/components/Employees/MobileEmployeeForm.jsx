@@ -346,17 +346,20 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               </Button>
             </Popconfirm>
           ) : (
-            <Popconfirm
-              title="Деактивировать сотрудника?"
-              description={`Вы уверены, что ${employee.lastName} ${employee.firstName} деактивируется?`}
-              onConfirm={handleDeactivate}
-              okText="Да"
-              cancelText="Нет"
-            >
-              <Button type="default" block loading={fireLoading}>
-                Деактивировать
-              </Button>
-            </Popconfirm>
+            // Скрываем кнопку для пользователей контрагента default
+            user?.counterpartyId !== defaultCounterpartyId && (
+              <Popconfirm
+                title="Сотрудник не работает на объектах СУ-10?"
+                description={`Вы уверены, что ${employee.lastName} ${employee.firstName} не работает на объектах СУ-10?`}
+                onConfirm={handleDeactivate}
+                okText="Да"
+                cancelText="Нет"
+              >
+                <Button type="default" block loading={fireLoading}>
+                  Не работает на объектах СУ-10
+                </Button>
+              </Popconfirm>
+            )
           )}
         </Space>
       ),

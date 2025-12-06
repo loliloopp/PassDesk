@@ -311,7 +311,7 @@ const formatBlankNumber = (value) => {
 /**
  * Компонент кнопок для действий со статусом уволен/неактивен
  */
-const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
+const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounterpartyUser }) => {
   const [loadingFire, setLoadingFire] = useState(false);
   const [loadingReinstate, setLoadingReinstate] = useState(false);
 
@@ -435,17 +435,20 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel }) => {
           </Button>
         </Popconfirm>
       ) : (
-        <Popconfirm
-          title="Деактивировать сотрудника?"
-          description={`Вы уверены, что ${employee.lastName} ${employee.firstName} деактивируется?`}
-          onConfirm={handleDeactivate}
-          okText="Да"
-          cancelText="Нет"
-        >
-          <Button type="default" loading={loadingFire}>
-            Деактивировать
-          </Button>
-        </Popconfirm>
+        // Скрываем кнопку для пользователей контрагента default
+        !isDefaultCounterpartyUser && (
+          <Popconfirm
+            title="Сотрудник не работает на объектах СУ-10?"
+            description={`Вы уверены, что ${employee.lastName} ${employee.firstName} не работает на объектах СУ-10?`}
+            onConfirm={handleDeactivate}
+            okText="Да"
+            cancelText="Нет"
+          >
+            <Button type="default" loading={loadingFire}>
+              Не работает на объектах СУ-10
+            </Button>
+          </Popconfirm>
+        )
       )}
     </Space>
   );
@@ -1131,6 +1134,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                       employee={employee}
                       messageApi={message}
                       onCancel={onCancel}
+                      isDefaultCounterpartyUser={user?.counterpartyId === defaultCounterpartyId}
                     />
                   </Space>
                 </Col>
