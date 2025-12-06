@@ -78,8 +78,12 @@ export const useCheckInn = () => {
           const response = await employeeApi.checkByInn(normalizedInn);
           
           if (response.success && response.data?.employee) {
-            // ✅ Возвращаем сотрудника с флагами
-            resolve(response.data.employee);
+            // ✅ Возвращаем сотрудника с флагами isOwner и canLink
+            resolve({
+              ...response.data.employee,
+              isOwner: response.data.isOwner,
+              canLink: response.data.canLink
+            });
             return;
           }
           

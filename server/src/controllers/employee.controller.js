@@ -763,6 +763,42 @@ export const updateEmployee = async (req, res, next) => {
       });
     }
 
+    // 🔗 ВАРИАНТ Б: АВТОМАТИЧЕСКАЯ ПРИВЯЗКА
+    // Если пользователь из default контрагента пытается обновить существующего сотрудника,
+    // которого он не создавал, но который находится в том же контрагенте - автоматически привяжем его
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    if (req.user.counterpartyId === defaultCounterpartyId && req.user.role === 'user') {
+      // Проверяем, есть ли уже связь в user_employee_mapping
+      const existingMapping = await UserEmployeeMapping.findOne({
+        where: {
+          userId: req.user.id,
+          employeeId: id,
+          counterpartyId: null // Для default контрагента
+        }
+      });
+
+      // Если связи нет, проверяем что сотрудник в default контрагенте
+      if (!existingMapping) {
+        const employeeInDefaultCounterparty = await EmployeeCounterpartyMapping.findOne({
+          where: {
+            employeeId: id,
+            counterpartyId: defaultCounterpartyId
+          }
+        });
+
+        // Если сотрудник в default контрагенте - автоматически привязываем его
+        if (employeeInDefaultCounterparty) {
+          console.log(`🔗 АВТОМАТИЧЕСКАЯ ПРИВЯЗКА: Привязываем сотрудника ${id} к пользователю ${req.user.id}`);
+          await UserEmployeeMapping.create({
+            userId: req.user.id,
+            employeeId: id,
+            counterpartyId: null // Для default контрагента
+          });
+          console.log(`✅ Сотрудник успешно привязан к пользователю`);
+        }
+      }
+    }
+
     // ПРОВЕРКА ПРАВ ДОСТУПА
     await checkEmployeeAccess(req.user, employee);
 
