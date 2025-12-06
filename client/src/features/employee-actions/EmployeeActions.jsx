@@ -13,7 +13,7 @@ export const EmployeeActions = ({
   return (
     <Space size="middle">
       <Button type="primary" icon={<FileExcelOutlined />} onClick={onRequest}>
-        Заявка
+        Заявка Excel
       </Button>
       {canExport && (
         <Button type="default" icon={<LockOutlined />} onClick={onSecurity}>

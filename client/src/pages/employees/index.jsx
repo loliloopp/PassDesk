@@ -402,7 +402,7 @@ const EmployeesPage = () => {
               size="large"
               style={{ flex: 1, background: '#52c41a', borderColor: '#52c41a' }}
             >
-              Заявка
+              Заявка Excel
             </Button>
           </div>
         </div>
