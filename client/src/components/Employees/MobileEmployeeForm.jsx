@@ -158,6 +158,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
   const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
   const [activateLoading, setActivateLoading] = useState(false); // Состояние загрузки для активации
   const [passportType, setPassportType] = useState(null); // Отслеживаем тип паспорта
+  const isFormResetRef = useRef(false); // 🎯 Флаг для предотвращения проверки ИНН при сбросе формы
 
   // Инициализируем данные формы при изменении сотрудника или справочников
   useEffect(() => {
@@ -187,8 +188,24 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     }
   }, [employee?.id, citizenships.length, positions.length]);
 
-  // Проверяем права доступа
-  const canEditConstructionSite = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
+  // 🎯 Обертки для обработки сохранения с очисткой таймера ИНН
+  const handleSaveWithReset = async () => {
+    // Очищаем таймер проверки ИНН ДО сброса
+    if (innCheckTimeoutRef.current) {
+      clearTimeout(innCheckTimeoutRef.current);
+    }
+    isFormResetRef.current = true;
+    await handleSave();
+  };
+
+  const handleSaveDraftWithReset = async () => {
+    // Очищаем таймер проверки ИНН ДО сброса
+    if (innCheckTimeoutRef.current) {
+      clearTimeout(innCheckTimeoutRef.current);
+    }
+    isFormResetRef.current = true;
+    await handleSaveDraft();
+  };
 
   // Функция для обработки отмены с подтверждением
   const handleCancelWithConfirm = () => {
@@ -1057,11 +1074,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
           form={form}
           layout="vertical"
           autoComplete="off"
-          onFieldsChange={(changedFields) => {
+          onFieldsChange={          (changedFields) => {
             // Проверяем, изменилось ли поле ИНН
             const innField = changedFields.find(field => field.name && field.name[0] === 'inn');
             
-            if (innField && !employee && onCheckInn) {
+            if (innField && !employee && onCheckInn && !isFormResetRef.current) {
               // Очищаем предыдущий таймер, если он есть
               if (innCheckTimeoutRef.current) {
                 clearTimeout(innCheckTimeoutRef.current);
@@ -1077,6 +1094,9 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                 }
               }, 1000); // Увеличил до 1000мс, чтобы дать пользователю время ввести весь ИНН
             }
+            
+            // Сбрасываем флаг после обработки
+            isFormResetRef.current = false;
           }}
           requiredMark={(label, { required }) => (
             <>
@@ -1118,7 +1138,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
           size="small"
           block
           icon={<FileOutlined />}
-          onClick={handleSaveDraft}
+          onClick={handleSaveDraftWithReset}
           loading={loading}
         >
           Черновик
@@ -1131,7 +1151,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
             size="small"
             style={{ flex: 1 }}
             icon={<SaveOutlined />}
-            onClick={handleSave}
+            onClick={handleSaveWithReset}
             loading={loading}
           >
             Сохранить

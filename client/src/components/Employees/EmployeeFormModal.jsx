@@ -472,6 +472,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const [passportType, setPassportType] = useState(null); // Состояние для типа паспорта
   const [linkingMode, setLinkingMode] = useState(false); // 🎯 Режим привязки существующего сотрудника
   const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
+  const isFormResetRef = useRef(false); // 🎯 Флаг для предотвращения проверки ИНН при сбросе формы
   const { user } = useAuthStore();
 
   // Обработчик для обновления при изменении файлов
@@ -837,7 +838,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     // Проверяем ИНН если поле изменилось
     const innField = changedFields.find(field => field.name && field.name[0] === 'inn');
     
-    if (innField && !employee && onCheckInn) {
+    if (innField && !employee && onCheckInn && !isFormResetRef.current) {
       // Очищаем предыдущий таймер, если он есть
       if (innCheckTimeoutRef.current) {
         clearTimeout(innCheckTimeoutRef.current);
@@ -853,6 +854,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         }
       }, 1000); // Увеличил до 1000мс, чтобы дать пользователю время ввести весь ИНН
     }
+    
+    // Сбрасываем флаг после обработки
+    isFormResetRef.current = false;
   };
 
   // Переход на следующую вкладку
@@ -929,6 +933,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       // При сохранении черновика модальное окно НЕ закрывается
       // Если это добавление нового сотрудника - сбрасываем форму
       if (!employee) {
+        // 🎯 ВАЖНО: очищаем таймер проверки ИНН ДО сброса формы
+        if (innCheckTimeoutRef.current) {
+          clearTimeout(innCheckTimeoutRef.current);
+        }
+        isFormResetRef.current = true;
         form.resetFields();
         setActiveTab('1');
         setTabsValidation({ '1': false, '2': false, '3': false });
@@ -1027,7 +1036,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       // 🎯 Если это режим привязки - остаемся на странице с сообщением
       if (linkingMode) {
         message.success('Сотрудник успешно привязан к вашему профилю');
+        // 🎯 ВАЖНО: очищаем таймер проверки ИНН ДО сброса формы
+        if (innCheckTimeoutRef.current) {
+          clearTimeout(innCheckTimeoutRef.current);
+        }
         // Сбрасываем форму и режим привязки
+        isFormResetRef.current = true;
         form.resetFields();
         setActiveTab('1');
         setTabsValidation({ '1': false, '2': false, '3': false });
@@ -1036,7 +1050,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         setLinkingMode(false);
       } else if (!employee) {
         // Если это добавление нового сотрудника - НЕ закрываем окно
+        // 🎯 ВАЖНО: очищаем таймер проверки ИНН ДО сброса формы
+        if (innCheckTimeoutRef.current) {
+          clearTimeout(innCheckTimeoutRef.current);
+        }
         // Сбрасываем форму для добавления следующего сотрудника
+        isFormResetRef.current = true;
         form.resetFields();
         setActiveTab('1');
         setTabsValidation({ '1': false, '2': false, '3': false });
