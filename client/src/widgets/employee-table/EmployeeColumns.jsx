@@ -436,9 +436,9 @@ export const useEmployeeColumns = ({
 
           const statusMap = {
             'status_draft': { text: 'Черновик', color: 'default' },
-            'status_new': { text: 'Новый', color: 'default' },
-            'status_tb_passed': { text: 'Проведен ТБ', color: 'green' },
-            'status_processed': { text: 'Обработан', color: 'success' },
+            'status_new': { text: 'Действующий', color: 'green' },
+            'status_tb_passed': { text: 'Действующий', color: 'green' },
+            'status_processed': { text: 'Действующий', color: 'success' },
           };
 
           const statusInfo = statusMap[mainStatus] || { text: '-', color: 'default' };
@@ -450,9 +450,7 @@ export const useEmployeeColumns = ({
           { text: 'Уволен', value: 'fired' },
           { text: 'Неактивный', value: 'inactive' },
           { text: 'Черновик', value: 'draft' },
-          { text: 'Новый', value: 'new' },
-          { text: 'Проведен ТБ', value: 'tb_passed' },
-          { text: 'Обработан', value: 'processed' },
+          { text: 'Действующий', value: 'active' },
         ],
         filteredValue: filters.status || [],
         onFilter: (value, record) => {
@@ -479,6 +477,10 @@ export const useEmployeeColumns = ({
           }
           if (value === 'inactive') {
             return activeStatus === 'status_active_inactive';
+          }
+          if (value === 'active') {
+            // Действующий = status_new или status_tb_passed или status_processed
+            return mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
           }
           
           return (
