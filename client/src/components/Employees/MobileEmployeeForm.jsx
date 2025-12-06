@@ -1076,6 +1076,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
         <Form
           form={form}
           layout="vertical"
+          initialValues={{ gender: 'male' }}
           autoComplete="off"
           onFieldsChange={          (changedFields) => {
             // Проверяем, изменилось ли поле ИНН

@@ -1655,6 +1655,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       <Form 
         form={form} 
         layout="vertical"
+        initialValues={{ gender: 'male' }}
         onFieldsChange={handleFieldsChange}
         validateTrigger={['onChange', 'onBlur']}
         autoComplete="off"
