@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, Table, Checkbox, Space, Button, App, Select, Spin } from 'antd';
-import { FileExcelOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, SettingOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { constructionSiteService } from '../../services/constructionSiteService';
+import { useExcelColumns, AVAILABLE_COLUMNS } from '../../hooks/useExcelColumns';
+import ExcelColumnsModal from './ExcelColumnsModal';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
@@ -16,6 +18,9 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   const [selectedSite, setSelectedSite] = useState(null);
   const [includeFired, setIncludeFired] = useState(false);
   const [availableSites, setAvailableSites] = useState([]);
+  const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
+
+  const { columns: selectedColumns, toggleColumn, selectAll, deselectAll } = useExcelColumns();
 
   // Загружаем доступные объекты строительства
   useEffect(() => {
@@ -131,7 +136,55 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
     },
   };
 
-  // Создание и экспорт Excel файла
+  // Функция для форматирования значения столбца
+  const formatCellValue = (employee, columnKey) => {
+    switch (columnKey) {
+      case 'number':
+        return '';  // Будет добавляться как индекс
+      case 'lastName':
+        return employee.lastName || '-';
+      case 'firstName':
+        return employee.firstName || '-';
+      case 'middleName':
+        return employee.middleName || '-';
+      case 'kig':
+        return formatKig(employee.kig) || '-';
+      case 'citizenship':
+        return employee.citizenship?.name || '-';
+      case 'birthDate':
+        return employee.birthDate ? dayjs(employee.birthDate).format('DD.MM.YYYY') : '-';
+      case 'snils':
+        return formatSnils(employee.snils) || '-';
+      case 'position':
+        return employee.position?.name || '-';
+      case 'inn':
+        return formatInn(employee.inn) || '-';
+      case 'passport':
+        return employee.passportNumber || '-';
+      case 'passportDate':
+        return employee.passportDate ? dayjs(employee.passportDate).format('DD.MM.YYYY') : '-';
+      case 'passportIssuer':
+        return employee.passportIssuer || '-';
+      case 'registrationAddress':
+        return employee.registrationAddress || '-';
+      case 'phone':
+        return employee.phone || '-';
+      case 'department':
+        const deptNames = employee.employeeCounterpartyMappings?.map(m => m.department?.name) || [];
+        return deptNames.join(', ') || '-';
+      case 'counterparty':
+        const counterpartyName = employee.employeeCounterpartyMappings?.[0]?.counterparty?.name;
+        return counterpartyName || '-';
+      default:
+        return '-';
+    }
+  };
+
+  // Получить активные столбцы (без 'number', его добавим отдельно как индекс)
+  const activeColumns = AVAILABLE_COLUMNS.filter(col => selectedColumns[col.key] && col.key !== 'number');
+  const hasNumberColumn = selectedColumns['number'];
+
+  // Функция для создания заявки с выбранными столбцами
   const handleCreateRequest = async () => {
     if (selectedEmployees.length === 0) {
       message.warning('Выберите хотя бы одного сотрудника для заявки');
@@ -144,40 +197,36 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       // Создаем заявку в БД
       await applicationService.create({
         employeeIds: selectedEmployees,
-        // constructionSiteId и passValidUntil теперь необязательны
       });
 
       // Фильтруем только выбранных сотрудников
       const employeesToExport = availableEmployees.filter(emp => selectedEmployees.includes(emp.id));
 
-      // Формируем данные для Excel
+      // Формируем данные для Excel с учетом выбранных столбцов
       const excelData = employeesToExport.map((emp, index) => {
-        return {
-          '№': index + 1,
-          'Ф.И.О.': `${emp.lastName} ${emp.firstName} ${emp.middleName || ''}`,
-          'КИГ': formatKig(emp.kig),
-          'Гражданство': emp.citizenship?.name || '-',
-          'Дата рождения': emp.birthDate ? dayjs(emp.birthDate).format('DD.MM.YYYY') : '-',
-          'СНИЛС': formatSnils(emp.snils),
-          'Должность': emp.position?.name || '-',
-          'ИНН сотрудника': formatInn(emp.inn),
-        };
+        const row = {};
+        
+        // Добавляем номер строки если выбран
+        if (hasNumberColumn) {
+          row['№'] = index + 1;
+        }
+
+        // Добавляем остальные столбцы
+        activeColumns.forEach(col => {
+          row[col.label] = formatCellValue(emp, col.key);
+        });
+
+        return row;
       });
 
       // Создаем Excel файл
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       
-      // Устанавливаем ширину столбцов (в символах, где 1 символ ≈ 7px)
-      worksheet['!cols'] = [
-        { wch: 6 },    // A: 40px
-        { wch: 43 },   // B: 300px
-        { wch: 17 },   // C: 120px
-        { wch: 17 },   // D: 120px
-        { wch: 17 },   // E: 120px
-        { wch: 17 },   // F: 120px
-        { wch: 20 },   // G: 140px
-        { wch: 17 },   // H: 120px
-      ];
+      // Устанавливаем ширину столбцов
+      const colWidths = [];
+      if (hasNumberColumn) colWidths.push({ wch: 6 });
+      activeColumns.forEach(() => colWidths.push({ wch: 20 }));
+      worksheet['!cols'] = colWidths;
       
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Заявка');
@@ -269,6 +318,15 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
           >
             Включить уволенных
           </Checkbox>
+
+          {/* Кнопка настройки столбцов */}
+          <Button
+            icon={<SettingOutlined />}
+            onClick={() => setIsColumnsModalOpen(true)}
+            title="Выбрать столбцы для экспорта"
+          >
+            Столбцы
+          </Button>
         </div>
 
         {/* Чекбокс "Выделить все / Снять все" */}
@@ -302,6 +360,16 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
           </div>
         )}
       </Space>
+
+      {/* Модальное окно для выбора столбцов */}
+      <ExcelColumnsModal
+        visible={isColumnsModalOpen}
+        onCancel={() => setIsColumnsModalOpen(false)}
+        columns={selectedColumns}
+        toggleColumn={toggleColumn}
+        selectAll={selectAll}
+        deselectAll={deselectAll}
+      />
     </Modal>
   );
 };
