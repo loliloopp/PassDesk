@@ -99,11 +99,11 @@ export const uploadEmployeeFiles = async (req, res, next) => {
         throw new AppError(`Превышен лимит файлов. Максимум 10 файлов. У вас уже ${existingFilesCount} файлов.`, 400);
       }
       
-      // Проверяем размер каждого файла (макс 5MB)
+      // Проверяем размер каждого файла (макс 100MB)
       for (const file of req.files) {
         const fileSizeMB = file.size / (1024 * 1024);
-        if (fileSizeMB > 5) {
-          throw new AppError(`Файл "${file.originalname}" слишком большой (${fileSizeMB.toFixed(2)}MB). Максимум 5MB.`, 400);
+        if (fileSizeMB > 100) {
+          throw new AppError(`Файл "${file.originalname}" слишком большой (${fileSizeMB.toFixed(2)}MB). Максимум 100MB.`, 400);
         }
       }
     }

@@ -212,10 +212,10 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange, hideU
     accept: '.jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx',
     fileList: fileList,
     beforeUpload: (file) => {
-      // Проверка размера файла (макс. 10 МБ)
-      const isLt10M = file.size / 1024 / 1024 < 10;
+      // Проверка размера файла (макс. 100 МБ)
+      const isLt10M = file.size / 1024 / 1024 < 100;
       if (!isLt10M) {
-        message.error(`${file.name}: размер файла превышает 10 МБ`);
+        message.error(`${file.name}: размер файла превышает 100 МБ`);
         return Upload.LIST_IGNORE;
       }
 

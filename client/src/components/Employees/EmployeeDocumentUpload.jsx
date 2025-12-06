@@ -65,10 +65,10 @@ const EmployeeDocumentUpload = ({
 
   // Загрузка файла (универсальная функция)
   const uploadFile = async (file) => {
-    // Проверка размера файла (макс. 10 МБ)
-    const isLt10M = file.size / 1024 / 1024 < 10;
+    // Проверка размера файла (макс. 100 МБ)
+    const isLt10M = file.size / 1024 / 1024 < 100;
     if (!isLt10M) {
-      message.error('Размер файла превышает 10 МБ');
+      message.error('Размер файла превышает 100 МБ');
       return;
     }
 
