@@ -1064,6 +1064,11 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
       }
     });
     
+    // Сохраняем существующий departmentId перед обновлением
+    const existingDepartmentId = existingMappings.length > 0 
+      ? existingMappings[0].departmentId 
+      : null;
+    
     // Если нет маппингов, создаем базовый
     if (existingMappings.length === 0) {
       // Создаем маппинги для каждого выбранного объекта
@@ -1084,13 +1089,13 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
         }
       });
       
-      // Создаем новые маппинги для каждого выбранного объекта
+      // Создаем новые маппинги для каждого выбранного объекта, сохраняя departmentId
       for (const siteId of siteIds) {
         await EmployeeCounterpartyMapping.create({
           employeeId: id,
           counterpartyId: req.user.counterpartyId,
           constructionSiteId: siteId,
-          departmentId: null
+          departmentId: existingDepartmentId // Сохраняем подразделение
         });
       }
     }
@@ -1126,34 +1131,40 @@ export const updateEmployeeDepartment = async (req, res, next) => {
     // ПРОВЕРКА ПРАВ ДОСТУПА
     await checkEmployeeAccess(req.user, employee);
     
-    // Получаем первый маппинг сотрудника для текущего контрагента
-    let mapping = await EmployeeCounterpartyMapping.findOne({
+    // Получаем ВСЕ маппинги сотрудника для текущего контрагента
+    const mappings = await EmployeeCounterpartyMapping.findAll({
       where: {
         employeeId: id,
         counterpartyId: req.user.counterpartyId
       }
     });
     
-    // Если маппинга нет, создаем новый
-    if (!mapping) {
-      mapping = await EmployeeCounterpartyMapping.create({
+    // Если маппингов нет, создаем новый
+    if (mappings.length === 0) {
+      await EmployeeCounterpartyMapping.create({
         employeeId: id,
         counterpartyId: req.user.counterpartyId,
         departmentId: departmentId || null,
         constructionSiteId: null
       });
     } else {
-      // Обновляем departmentId в существующем маппинге
-      await mapping.update({
-        departmentId: departmentId || null
-      });
+      // Обновляем departmentId во ВСЕХ маппингах сотрудника
+      await EmployeeCounterpartyMapping.update(
+        { departmentId: departmentId || null },
+        {
+          where: {
+            employeeId: id,
+            counterpartyId: req.user.counterpartyId
+          }
+        }
+      );
     }
     
     res.json({
       success: true,
       message: 'Подразделение обновлено',
       data: {
-        departmentId: mapping.departmentId
+        departmentId: departmentId || null
       }
     });
   } catch (error) {

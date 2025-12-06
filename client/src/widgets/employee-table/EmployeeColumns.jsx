@@ -121,7 +121,7 @@ export const useEmployeeColumns = ({
                     style={{ width: '100%' }}
                     className="department-select"
                     popupMatchSelectWidth={false}
-                    onChange={(option) => onDepartmentChange(record.id, option.value)}
+                    onChange={(option) => onDepartmentChange(record.id, option?.value || null)}
                     allowClear
                     showSearch
                     optionFilterProp="children"
