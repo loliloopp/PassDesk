@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Typography, Button, Checkbox, Space, App, Spin, Empty, Input, Segmented } from 'antd';
-import { ArrowLeftOutlined, FileExcelOutlined, SearchOutlined, UserAddOutlined, TeamOutlined } from '@ant-design/icons';
+import { Typography, Button, Checkbox, Space, App, Spin, Empty, Input, Select } from 'antd';
+import { ArrowLeftOutlined, FileExcelOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees } from '@/entities/employee';
-import { employeeService } from '@/services/employeeService';
-import { employeeStatusService } from '@/services/employeeStatusService';
+import { useSettings } from '@/entities/settings';
+import { useAuthStore } from '@/store/authStore';
 import { applicationService } from '@/services/applicationService';
+import { constructionSiteService } from '@/services/constructionSiteService';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '@/utils/formatters';
@@ -16,17 +17,90 @@ const ApplicationRequestPage = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [sitesLoading, setSitesLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
-  const [employeeFilter, setEmployeeFilter] = useState('new'); // 'new' или 'all'
+  const [selectedSite, setSelectedSite] = useState(null);
+  const [includeFired, setIncludeFired] = useState(false);
+  const [availableSites, setAvailableSites] = useState([]);
+
+  const { user } = useAuthStore();
+  const { defaultCounterpartyId } = useSettings();
 
   // Получаем список сотрудников
   const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees();
 
-  // Фильтруем сотрудников в зависимости от выбранного режима
+  // Загружаем доступные объекты строительства
+  useEffect(() => {
+    setSitesLoading(true);
+    
+    // Для пользователя контрагента по умолчанию - все объекты
+    // Для остальных - только назначенные объекты контрагента
+    const isDefaultCounterparty = user?.counterpartyId === defaultCounterpartyId;
+    
+    if (isDefaultCounterparty) {
+      // Все объекты
+      constructionSiteService.getAll()
+        .then(response => {
+          const rawSites = response?.data?.data?.constructionSites || response?.data?.constructionSites || [];
+          const sites = Array.isArray(rawSites) ? rawSites : [];
+          setAvailableSites(sites);
+        })
+        .catch(error => {
+          console.error('Error loading construction sites:', error);
+          setAvailableSites([]);
+        })
+        .finally(() => setSitesLoading(false));
+    } else {
+      // Объекты контрагента
+      constructionSiteService.getCounterpartyObjects(user?.counterpartyId)
+        .then(response => {
+          const rawSites = response?.data?.data?.constructionSites || response?.data?.constructionSites || [];
+          const sites = Array.isArray(rawSites) ? rawSites : [];
+          setAvailableSites(sites);
+        })
+        .catch(error => {
+          console.error('Error loading counterparty construction sites:', error);
+          setAvailableSites([]);
+        })
+        .finally(() => setSitesLoading(false));
+    }
+  }, [user?.counterpartyId, defaultCounterpartyId]);
+
+  // Функция для определения статуса сотрудника
+  const getEmployeeStatus = (employee) => {
+    const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
+    const activeStatusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_active' || m.status_group === 'status_active');
+    
+    const cardStatus = statusMapping?.status?.name;
+    const activeStatus = activeStatusMapping?.status?.name;
+    
+    return { cardStatus, activeStatus };
+  };
+
+  // Фильтруем сотрудников
   const availableEmployees = useMemo(() => {
     let filtered = employees;
+    
+    // Исключаем черновики, деактивированных, заблокированных
+    filtered = filtered.filter(emp => {
+      const { cardStatus, activeStatus } = getEmployeeStatus(emp);
+      
+      // Исключаем черновики (status_card_draft)
+      if (cardStatus === 'status_card_draft') return false;
+      
+      // Исключаем деактивированных (status_active_inactive)
+      if (activeStatus === 'status_active_inactive') return false;
+      
+      // Исключаем заблокированных (status_active_blocked)
+      if (activeStatus === 'status_active_blocked') return false;
+      
+      // Исключаем уволенных если не включена опция
+      if (!includeFired && activeStatus === 'status_active_fired') return false;
+      
+      return true;
+    });
     
     // Применяем поиск если есть
     if (searchText) {
@@ -43,20 +117,18 @@ const ApplicationRequestPage = () => {
       });
     }
     
-    // Фильтруем по статусам в зависимости от режима
-    return filtered.filter(emp => {
-      const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
-      const statusName = statusMapping?.status?.name;
-      
-      if (employeeFilter === 'new') {
-        // Только новые: status_new и status_tb_passed
-        return statusName === 'status_new' || statusName === 'status_tb_passed';
-      } else {
-        // Все: status_new, status_tb_passed, status_processed
-        return statusName === 'status_new' || statusName === 'status_tb_passed' || statusName === 'status_processed';
-      }
-    });
-  }, [employees, searchText, employeeFilter]);
+    // Фильтр по объекту строительства
+    if (selectedSite) {
+      filtered = filtered.filter(emp => {
+        const siteNames = emp.employeeCounterpartyMappings
+          ?.filter(m => m.constructionSite)
+          .map(m => m.constructionSite?.id) || [];
+        return siteNames.includes(selectedSite);
+      });
+    }
+    
+    return filtered;
+  }, [employees, searchText, selectedSite, includeFired]);
 
   // Инициализируем выбор при загрузке
   useEffect(() => {
@@ -183,44 +255,48 @@ const ApplicationRequestPage = () => {
         gap: 12,
         flexShrink: 0
       }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <Button 
-              type="text" 
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/employees')}
-              size="large"
-            />
-            <Title level={3} style={{ margin: 0 }}>Создать заявку</Title>
-          </div>
-          <Input
-            placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-            style={{ width: 300 }}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Button 
+            type="text" 
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/employees')}
+            size="large"
           />
+          <Title level={3} style={{ margin: 0 }}>Создать заявку</Title>
         </div>
         
-        {/* Переключатель режима фильтрации */}
-        <Segmented
-          value={employeeFilter}
-          onChange={setEmployeeFilter}
-          options={[
-            {
-              label: 'Новые сотрудники',
-              value: 'new',
-              icon: <UserAddOutlined />
-            },
-            {
-              label: 'Все сотрудники',
-              value: 'all',
-              icon: <TeamOutlined />
-            }
-          ]}
-          style={{ alignSelf: 'flex-start' }}
+        {/* Поиск */}
+        <Input
+          placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
+          prefix={<SearchOutlined />}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          allowClear
         />
+        
+        {/* Фильтры */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Фильтр по объекту строительства */}
+          <Select
+            placeholder="Объект строительства (опционально)"
+            allowClear
+            value={selectedSite}
+            onChange={setSelectedSite}
+            loading={sitesLoading}
+            options={availableSites.map(site => ({
+              label: site.shortName || site.name,
+              value: site.id
+            }))}
+          />
+
+          {/* Чекбокс уволенные */}
+          <Checkbox
+            checked={includeFired}
+            onChange={(e) => setIncludeFired(e.target.checked)}
+          >
+            Включить уволенных
+          </Checkbox>
+        </div>
       </div>
 
       {/* Контент */}
@@ -264,20 +340,6 @@ const ApplicationRequestPage = () => {
                     <div style={{ fontSize: '12px', color: '#999', marginTop: 4 }}>
                       {employee.position?.name && <span>{employee.position.name}</span>}
                       {employee.kig && <span> • КИГ: {formatKig(employee.kig)}</span>}
-                      {(() => {
-                        const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
-                        const statusName = statusMapping?.status?.name;
-                        if (statusName === 'status_new') {
-                          return <span style={{ marginLeft: 8, color: '#faad14' }}>● Новый</span>;
-                        }
-                        if (statusName === 'status_tb_passed') {
-                          return <span style={{ marginLeft: 8, color: '#52c41a' }}>● Прошел ТБ</span>;
-                        }
-                        if (statusName === 'status_processed') {
-                          return <span style={{ marginLeft: 8, color: '#1890ff' }}>● Обработан</span>;
-                        }
-                        return null;
-                      })()}
                     </div>
                   </div>
                 ))}
@@ -285,7 +347,7 @@ const ApplicationRequestPage = () => {
             </Space>
           ) : (
             <Empty
-              description="Нет доступных сотрудников"
+              description="Нет доступных сотрудников по выбранным фильтрам"
               style={{ marginTop: '40px' }}
             />
           )}

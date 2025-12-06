@@ -1,94 +1,115 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Modal, Table, Checkbox, Space, Button, App, Segmented } from 'antd';
-import { FileExcelOutlined, UserAddOutlined, TeamOutlined } from '@ant-design/icons';
-import { employeeService } from '../../services/employeeService';
-import { employeeStatusService } from '../../services/employeeStatusService';
+import { Modal, Table, Checkbox, Space, Button, App, Select, Spin } from 'antd';
+import { FileExcelOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
+import { constructionSiteService } from '../../services/constructionSiteService';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
 
-const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, tableFilters = {} }) => {
+const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, tableFilters = {}, userCounterpartyId, defaultCounterpartyId }) => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [sitesLoading, setSitesLoading] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
-  const [employeeFilter, setEmployeeFilter] = useState('new'); // 'new' или 'all'
+  const [selectedSite, setSelectedSite] = useState(null);
+  const [includeFired, setIncludeFired] = useState(false);
+  const [availableSites, setAvailableSites] = useState([]);
 
-  // Применяем фильтры таблицы + фильтруем по статусам
+  // Загружаем доступные объекты строительства
+  useEffect(() => {
+    if (visible) {
+      setSitesLoading(true);
+      
+      // Для пользователя контрагента по умолчанию - все объекты
+      // Для остальных - только назначенные объекты контрагента
+      const isDefaultCounterparty = userCounterpartyId === defaultCounterpartyId;
+      
+      if (isDefaultCounterparty) {
+        // Все объекты
+        constructionSiteService.getAll()
+          .then(response => {
+            const rawSites = response?.data?.data?.constructionSites || response?.data?.constructionSites || [];
+            const sites = Array.isArray(rawSites) ? rawSites : [];
+            setAvailableSites(sites);
+          })
+          .catch(error => {
+            console.error('Error loading construction sites:', error);
+            setAvailableSites([]);
+          })
+          .finally(() => setSitesLoading(false));
+      } else {
+        // Объекты контрагента
+        constructionSiteService.getCounterpartyObjects(userCounterpartyId)
+          .then(response => {
+            const rawSites = response?.data?.data?.constructionSites || response?.data?.constructionSites || [];
+            const sites = Array.isArray(rawSites) ? rawSites : [];
+            setAvailableSites(sites);
+          })
+          .catch(error => {
+            console.error('Error loading counterparty construction sites:', error);
+            setAvailableSites([]);
+          })
+          .finally(() => setSitesLoading(false));
+      }
+    }
+  }, [visible, userCounterpartyId, defaultCounterpartyId]);
+
+  // Функция для определения статуса сотрудника
+  const getEmployeeStatus = (employee) => {
+    const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
+    const activeStatusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_active' || m.status_group === 'status_active');
+    
+    const cardStatus = statusMapping?.status?.name;
+    const activeStatus = activeStatusMapping?.status?.name;
+    
+    return { cardStatus, activeStatus };
+  };
+
+  // Применяем фильтры
   const availableEmployees = useMemo(() => {
     let filtered = allEmployees;
     
-    // Применяем фильтры таблицы (по подрядчику, должности и т.д.)
-    if (tableFilters && Object.keys(tableFilters).length > 0) {
+    // Исключаем черновики, деактивированных, заблокированных
+    filtered = filtered.filter(emp => {
+      const { cardStatus, activeStatus } = getEmployeeStatus(emp);
+      
+      // Исключаем черновики (status_card_draft)
+      if (cardStatus === 'status_card_draft') return false;
+      
+      // Исключаем деактивированных (status_active_inactive)
+      if (activeStatus === 'status_active_inactive') return false;
+      
+      // Исключаем заблокированных (status_active_blocked)
+      if (activeStatus === 'status_active_blocked') return false;
+      
+      // Исключаем уволенных если не включена опция
+      if (!includeFired && activeStatus === 'status_active_fired') return false;
+      
+      return true;
+    });
+    
+    // Фильтр по объекту строительства
+    if (selectedSite) {
       filtered = filtered.filter(emp => {
-        // Фильтр по подрядчику (Counterparty)
-        if (tableFilters.counterparty && tableFilters.counterparty.length > 0) {
-          const counterpartyName = emp.employeeCounterpartyMappings?.[0]?.counterparty?.name;
-          if (!tableFilters.counterparty.includes(counterpartyName)) {
-            return false;
-          }
-        }
-        
-        // Фильтр по должности (Position)
-        if (tableFilters.position && tableFilters.position.length > 0) {
-          const positionName = emp.position?.name;
-          if (!tableFilters.position.includes(positionName)) {
-            return false;
-          }
-        }
-        
-        // Фильтр по гражданству (Citizenship)
-        if (tableFilters.citizenship && tableFilters.citizenship.length > 0) {
-          const citizenshipName = emp.citizenship?.name;
-          if (!tableFilters.citizenship.includes(citizenshipName)) {
-            return false;
-          }
-        }
-        
-        // Фильтр по подразделению (Department)
-        if (tableFilters.department && tableFilters.department.length > 0) {
-          const deptNames = emp.employeeCounterpartyMappings?.map(m => m.department?.name) || [];
-          if (!deptNames.some(dept => tableFilters.department.includes(dept))) {
-            return false;
-          }
-        }
-        
-        // Фильтр по объекту (Construction Site)
-        if (tableFilters.constructionSite && tableFilters.constructionSite.length > 0) {
-          const siteNames = emp.employeeCounterpartyMappings
-            ?.filter(m => m.constructionSite)
-            .map(m => m.constructionSite?.shortName || m.constructionSite?.name) || [];
-          if (!siteNames.some(site => tableFilters.constructionSite.includes(site))) {
-            return false;
-          }
-        }
-        
-        return true;
+        const siteNames = emp.employeeCounterpartyMappings
+          ?.filter(m => m.constructionSite)
+          .map(m => m.constructionSite?.id) || [];
+        return siteNames.includes(selectedSite);
       });
     }
     
-    // Фильтруем по статусам в зависимости от режима
-    return filtered.filter(emp => {
-      const statusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
-      const statusName = statusMapping?.status?.name;
-      
-      if (employeeFilter === 'new') {
-        // Только новые: status_new и status_tb_passed
-        return statusName === 'status_new' || statusName === 'status_tb_passed';
-      } else {
-        // Все: status_new, status_tb_passed, status_processed
-        return statusName === 'status_new' || statusName === 'status_tb_passed' || statusName === 'status_processed';
-      }
-    });
-  }, [allEmployees, tableFilters, employeeFilter]);
+    return filtered;
+  }, [allEmployees, selectedSite, includeFired]);
 
+  // При открытии модала - выбираем всех доступных сотрудников
   useEffect(() => {
-    if (visible) {
+    if (visible && availableEmployees.length > 0) {
       setSelectedEmployees(availableEmployees.map(emp => emp.id));
       setAllSelected(true);
     }
-  }, [visible]);
+  }, [visible, availableEmployees]);
 
   // Обработчик выбора/снятия всех
   const handleSelectAll = (e) => {
@@ -221,23 +242,34 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       }
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        {/* Переключатель режима фильтрации */}
-        <Segmented
-          value={employeeFilter}
-          onChange={setEmployeeFilter}
-          options={[
-            {
-              label: 'Новые сотрудники',
-              value: 'new',
-              icon: <UserAddOutlined />
-            },
-            {
-              label: 'Все сотрудники',
-              value: 'all',
-              icon: <TeamOutlined />
-            }
-          ]}
-        />
+        {/* Фильтры */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          {/* Фильтр по объекту строительства */}
+          <div style={{ flex: 1, minWidth: 250 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 500 }}>
+              Объект строительства
+            </label>
+            <Select
+              placeholder="Выберите объект (опционально)"
+              allowClear
+              value={selectedSite}
+              onChange={setSelectedSite}
+              loading={sitesLoading}
+              options={availableSites.map(site => ({
+                label: site.shortName || site.name,
+                value: site.id
+              }))}
+            />
+          </div>
+
+          {/* Чекбокс уволенные */}
+          <Checkbox
+            checked={includeFired}
+            onChange={(e) => setIncludeFired(e.target.checked)}
+          >
+            Включить уволенных
+          </Checkbox>
+        </div>
 
         {/* Чекбокс "Выделить все / Снять все" */}
         {availableEmployees.length > 0 && (
@@ -266,7 +298,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
 
         {availableEmployees.length === 0 && !loading && (
           <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-            Нет доступных сотрудников (требуются статусы: новый или прошедший ТБ)
+            Нет доступных сотрудников по выбранным фильтрам
           </div>
         )}
       </Space>

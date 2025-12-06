@@ -516,6 +516,8 @@ const EmployeesPage = () => {
         employees={filteredEmployees}
         tableFilters={tableFilters}
         userRole={user?.role}
+        userCounterpartyId={user?.counterpartyId}
+        defaultCounterpartyId={defaultCounterpartyId}
       />
 
       <ExportToExcelModal
