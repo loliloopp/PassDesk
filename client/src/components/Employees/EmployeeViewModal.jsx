@@ -75,6 +75,9 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
             <Descriptions.Item label="Отчество" span={1}>
               {employee.middleName || '-'}
             </Descriptions.Item>
+            <Descriptions.Item label="Пол" span={1}>
+              {employee.gender === 'male' ? 'Мужской' : employee.gender === 'female' ? 'Женский' : '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="Должность" span={1}>
               {employee.position?.name || '-'}
             </Descriptions.Item>
@@ -84,7 +87,10 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
             <Descriptions.Item label="Дата рождения" span={1}>
               {employee.birthDate ? dayjs(employee.birthDate).format(DATE_FORMAT) : '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="Адрес регистрации" span={3}>
+            <Descriptions.Item label="Страна рождения" span={1}>
+              {employee.birthCountry?.name || '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="Адрес регистрации" span={1}>
               {employee.registrationAddress || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Email" span={1}>
@@ -113,13 +119,26 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
                 {formatKig(employee.kig)}
               </Descriptions.Item>
             )}
+            {requiresPatent && (
+              <Descriptions.Item label="Дата окончания КИГ" span={1}>
+                {employee.kigEndDate ? dayjs(employee.kigEndDate).format(DATE_FORMAT) : '-'}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item label="Тип паспорта" span={1}>
+              {employee.passportType === 'russian' ? 'Российский' : employee.passportType === 'foreign' ? 'Иностранного гражданина' : '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="№ паспорта" span={1}>
               {employee.passportNumber || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="Дата выдачи паспорта" span={1}>
               {employee.passportDate ? dayjs(employee.passportDate).format(DATE_FORMAT) : '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="Кем выдан паспорт" span={1}>
+            {employee.passportType === 'foreign' && (
+              <Descriptions.Item label="Дата окончания паспорта" span={1}>
+                {employee.passportExpiryDate ? dayjs(employee.passportExpiryDate).format(DATE_FORMAT) : '-'}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item label="Кем выдан паспорт" span={employee.passportType === 'foreign' ? 2 : 3}>
               {employee.passportIssuer || '-'}
             </Descriptions.Item>
           </Descriptions>
