@@ -518,6 +518,7 @@ const EmployeesPage = () => {
         userRole={user?.role}
         userCounterpartyId={user?.counterpartyId}
         defaultCounterpartyId={defaultCounterpartyId}
+        userId={user?.id}
       />
 
       <ExportToExcelModal

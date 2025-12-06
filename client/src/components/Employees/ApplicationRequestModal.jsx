@@ -3,21 +3,26 @@ import { Modal, Table, Checkbox, Space, Button, App, Select, Spin } from 'antd';
 import { FileExcelOutlined, SettingOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { constructionSiteService } from '../../services/constructionSiteService';
+import { counterpartyService } from '../../services/counterpartyService';
 import { useExcelColumns, AVAILABLE_COLUMNS } from '../../hooks/useExcelColumns';
 import ExcelColumnsModal from './ExcelColumnsModal';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
 
-const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, tableFilters = {}, userCounterpartyId, defaultCounterpartyId }) => {
+const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, tableFilters = {}, userRole, userCounterpartyId, defaultCounterpartyId, userId }) => {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(false);
+  const [counterpartiesLoading, setCounterpartiesLoading] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
   const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedCounterparty, setSelectedCounterparty] = useState(null);
   const [includeFired, setIncludeFired] = useState(false);
   const [availableSites, setAvailableSites] = useState([]);
+  const [availableCounterparties, setAvailableCounterparties] = useState([]);
+  const [counterpartySearchText, setCounterpartySearchText] = useState('');
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
 
   const { columns: selectedColumns, toggleColumn, selectAll, deselectAll } = useExcelColumns();
@@ -61,6 +66,24 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
     }
   }, [visible, userCounterpartyId, defaultCounterpartyId]);
 
+  // Загружаем список контрагентов для admin
+  useEffect(() => {
+    if (visible && userRole === 'admin') {
+      setCounterpartiesLoading(true);
+      counterpartyService.getAll()
+        .then(response => {
+          const rawCounterparties = response?.data?.data?.counterparties || response?.data?.counterparties || [];
+          const counterparties = Array.isArray(rawCounterparties) ? rawCounterparties : [];
+          setAvailableCounterparties(counterparties);
+        })
+        .catch(error => {
+          console.error('Error loading counterparties:', error);
+          setAvailableCounterparties([]);
+        })
+        .finally(() => setCounterpartiesLoading(false));
+    }
+  }, [visible, userRole]);
+
   // Функция для определения статуса сотрудника
   const getEmployeeStatus = (employee) => {
     const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
@@ -75,6 +98,25 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   // Применяем фильтры
   const availableEmployees = useMemo(() => {
     let filtered = allEmployees;
+    
+    // Применяем логику доступа по ролям
+    if (userRole === 'user') {
+      const isDefaultCounterparty = userCounterpartyId === defaultCounterpartyId;
+      
+      if (isDefaultCounterparty) {
+        // User контрагента default - только собственные сотрудники
+        filtered = filtered.filter(emp => emp.createdBy === userId);
+      }
+      // Для user других контрагентов - показываем всех контрагента (уже отфильтровано на уровне allEmployees)
+    } else if (userRole === 'admin') {
+      // Admin видит всех, применяем фильтр по контрагенту если выбран
+      if (selectedCounterparty) {
+        filtered = filtered.filter(emp => {
+          const counterpartyId = emp.employeeCounterpartyMappings?.[0]?.counterpartyId;
+          return counterpartyId === selectedCounterparty;
+        });
+      }
+    }
     
     // Исключаем черновики, деактивированных, заблокированных
     filtered = filtered.filter(emp => {
@@ -106,7 +148,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
     }
     
     return filtered;
-  }, [allEmployees, selectedSite, includeFired]);
+  }, [allEmployees, selectedSite, includeFired, selectedCounterparty, userRole, userCounterpartyId, userId, defaultCounterpartyId]);
 
   // При открытии модала - выбираем всех доступных сотрудников
   useEffect(() => {
@@ -293,6 +335,35 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         {/* Фильтры */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          {/* Фильтр по контрагентам (только для admin) */}
+          {userRole === 'admin' && (
+            <div style={{ flex: 1, minWidth: 250 }}>
+              <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 500 }}>
+                Контрагент
+              </label>
+              <Select
+                placeholder="Все контрагенты"
+                allowClear
+                value={selectedCounterparty}
+                onChange={setSelectedCounterparty}
+                loading={counterpartiesLoading}
+                showSearch
+                filterOption={(input, option) => {
+                  const text = input.toLowerCase();
+                  return (
+                    option?.label?.toLowerCase().includes(text) ||
+                    option?.children?.toLowerCase().includes(text)
+                  );
+                }}
+                options={availableCounterparties.map(counterparty => ({
+                  label: `${counterparty.name} (ИНН: ${counterparty.identificationNumber || '-'})`,
+                  value: counterparty.id,
+                  children: counterparty.name
+                }))}
+              />
+            </div>
+          )}
+
           {/* Фильтр по объекту строительства */}
           <div style={{ flex: 1, minWidth: 250 }}>
             <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 500 }}>

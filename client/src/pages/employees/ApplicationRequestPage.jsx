@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useExcelColumns, AVAILABLE_COLUMNS } from '@/hooks/useExcelColumns';
 import { applicationService } from '@/services/applicationService';
 import { constructionSiteService } from '@/services/constructionSiteService';
+import { counterpartyService } from '@/services/counterpartyService';
 import ExcelColumnsModal from '@/components/Employees/ExcelColumnsModal';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
@@ -20,12 +21,15 @@ const ApplicationRequestPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(false);
+  const [counterpartiesLoading, setCounterpartiesLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
   const [selectedSite, setSelectedSite] = useState(null);
+  const [selectedCounterparty, setSelectedCounterparty] = useState(null);
   const [includeFired, setIncludeFired] = useState(false);
   const [availableSites, setAvailableSites] = useState([]);
+  const [availableCounterparties, setAvailableCounterparties] = useState([]);
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
 
   const { user } = useAuthStore();
@@ -72,6 +76,24 @@ const ApplicationRequestPage = () => {
     }
   }, [user?.counterpartyId, defaultCounterpartyId]);
 
+  // Загружаем список контрагентов для admin
+  useEffect(() => {
+    if (user?.role === 'admin') {
+      setCounterpartiesLoading(true);
+      counterpartyService.getAll()
+        .then(response => {
+          const rawCounterparties = response?.data?.data?.counterparties || response?.data?.counterparties || [];
+          const counterparties = Array.isArray(rawCounterparties) ? rawCounterparties : [];
+          setAvailableCounterparties(counterparties);
+        })
+        .catch(error => {
+          console.error('Error loading counterparties:', error);
+          setAvailableCounterparties([]);
+        })
+        .finally(() => setCounterpartiesLoading(false));
+    }
+  }, [user?.role]);
+
   // Функция для определения статуса сотрудника
   const getEmployeeStatus = (employee) => {
     const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
@@ -86,6 +108,25 @@ const ApplicationRequestPage = () => {
   // Фильтруем сотрудников
   const availableEmployees = useMemo(() => {
     let filtered = employees;
+    
+    // Применяем логику доступа по ролям
+    if (user?.role === 'user') {
+      const isDefaultCounterparty = user?.counterpartyId === defaultCounterpartyId;
+      
+      if (isDefaultCounterparty) {
+        // User контрагента default - только собственные сотрудники
+        filtered = filtered.filter(emp => emp.createdBy === user?.id);
+      }
+      // Для user других контрагентов - показываем всех контрагента (уже отфильтровано на уровне allEmployees)
+    } else if (user?.role === 'admin') {
+      // Admin видит всех, применяем фильтр по контрагенту если выбран
+      if (selectedCounterparty) {
+        filtered = filtered.filter(emp => {
+          const counterpartyId = emp.employeeCounterpartyMappings?.[0]?.counterpartyId;
+          return counterpartyId === selectedCounterparty;
+        });
+      }
+    }
     
     // Исключаем черновики, деактивированных, заблокированных
     filtered = filtered.filter(emp => {
@@ -132,7 +173,7 @@ const ApplicationRequestPage = () => {
     }
     
     return filtered;
-  }, [employees, searchText, selectedSite, includeFired]);
+  }, [employees, searchText, selectedSite, includeFired, selectedCounterparty, user?.role, user?.counterpartyId, user?.id, defaultCounterpartyId]);
 
   // Инициализируем выбор при загрузке
   useEffect(() => {
@@ -324,6 +365,30 @@ const ApplicationRequestPage = () => {
         
         {/* Фильтры */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Фильтр по контрагентам (только для admin) */}
+          {user?.role === 'admin' && (
+            <Select
+              placeholder="Все контрагенты"
+              allowClear
+              value={selectedCounterparty}
+              onChange={setSelectedCounterparty}
+              loading={counterpartiesLoading}
+              showSearch
+              filterOption={(input, option) => {
+                const text = input.toLowerCase();
+                return (
+                  option?.label?.toLowerCase().includes(text) ||
+                  option?.children?.toLowerCase().includes(text)
+                );
+              }}
+              options={availableCounterparties.map(counterparty => ({
+                label: `${counterparty.name} (ИНН: ${counterparty.identificationNumber || '-'})`,
+                value: counterparty.id,
+                children: counterparty.name
+              }))}
+            />
+          )}
+
           {/* Фильтр по объекту строительства */}
           <Select
             placeholder="Объект строительства (опционально)"
