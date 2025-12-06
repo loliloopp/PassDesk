@@ -850,7 +850,19 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
         
         if ((normalized.length === 10 || normalized.length === 12) && innValue) {
-          await onCheckInn(innValue);
+          try {
+            await onCheckInn(innValue);
+          } catch (error) {
+            // 🎯 Обработка ошибок проверки ИНН (409, 404 и т.д.)
+            // Ошибки из checkInn пробрасываются здесь
+            if (error.response?.status === 409) {
+              // Сотрудник найден в другом контрагенте
+              message.error(error.response?.data?.message || 'Сотрудник с таким ИНН уже существует. Обратитесь к администратору.');
+            } else if (error.response?.status !== 404) {
+              // 404 это нормально (сотрудник не найден)
+              console.error('Ошибка при проверке ИНН:', error);
+            }
+          }
         }
       }, 1000); // Увеличил до 1000мс, чтобы дать пользователю время ввести весь ИНН
     }

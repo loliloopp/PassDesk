@@ -47,7 +47,7 @@ export const useCheckInn = () => {
     }
 
     // 🎯 DEBOUNCE: Ждем 300ms перед выполнением запроса
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       debounceTimeoutRef.current = setTimeout(async () => {
         // Не запускаем новую проверку, если предыдущая еще выполняется
         if (checkingRef.current) {
@@ -106,8 +106,9 @@ export const useCheckInn = () => {
           if (error.response?.status === 409) {
             console.error('❌ Сотрудник найден в другом контрагенте:', error.response?.data?.message);
             lastCheckedInnRef.current = null;
-            // Пробрасываем ошибку, чтобы компонент мог показать сообщение
-            throw error;
+            // 🎯 Используем Promise.reject() вместо throw для корректной обработки ошибки
+            reject(error);
+            return;
           }
 
           // Для остальных ошибок — логируем
