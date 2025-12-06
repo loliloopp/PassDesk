@@ -757,12 +757,27 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   const fetchConstructionSites = async () => {
     try {
-      const { data } = await constructionSiteService.getAll();
-      const loadedSites = data.data.constructionSites || [];
+      if (!user?.counterpartyId || !defaultCounterpartyId) {
+        return [];
+      }
+
+      let loadedSites = [];
+      if (user.counterpartyId === defaultCounterpartyId) {
+        // Для default контрагента - все объекты
+        const { data } = await constructionSiteService.getAll();
+        loadedSites = data.data.constructionSites || [];
+      } else {
+        // Для остальных контрагентов - только назначенные объекты
+        const { data } = await constructionSiteService.getCounterpartyObjects(user.counterpartyId);
+        loadedSites = data.data || [];
+      }
+      
       setConstructionSites(loadedSites);
       return loadedSites;
     } catch (error) {
       console.error('Error loading construction sites:', error);
+      // Не показываем ошибку, просто возвращаем пустой массив
+      setConstructionSites([]);
       return [];
     }
   };

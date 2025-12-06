@@ -25,6 +25,18 @@ const settingsService = {
   },
 
   /**
+   * Получить настройку по ключу
+   * @param {string} key - Ключ настройки
+   */
+  getSetting: async (key) => {
+    const keyString = `settings:get:${key}`;
+    return deduplicateRequest(keyString, async () => {
+      const response = await api.get(`/settings/${key}`);
+      return response;
+    });
+  },
+
+  /**
    * Обновить настройку по ключу
    * @param {string} key - Ключ настройки
    * @param {string} value - Значение настройки

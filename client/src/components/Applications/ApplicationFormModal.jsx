@@ -17,6 +17,7 @@ import { FileTextOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { counterpartyService } from '../../services/counterpartyService';
 import { constructionSiteService } from '../../services/constructionSiteService';
+import settingsService from '../../services/settingsService';
 import { useAuthStore } from '../../store/authStore';
 import ApplicationFileUpload from './ApplicationFileUpload';
 import dayjs from 'dayjs';
@@ -40,7 +41,6 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
 
   useEffect(() => {
     if (visible) {
-      fetchSites();
       loadUserCounterparty();
       if (editingId) {
         fetchApplication();
@@ -49,6 +49,13 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
       }
     }
   }, [visible, editingId]);
+
+  // Загружаем объекты при выборе контрагента
+  useEffect(() => {
+    if (visible && selectedCounterparty) {
+      fetchSites();
+    }
+  }, [visible, selectedCounterparty]);
 
   const loadUserCounterparty = async () => {
     try {
@@ -75,10 +82,29 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
 
   const fetchSites = async () => {
     try {
-      const { data } = await constructionSiteService.getAll({ limit: 100 });
-      setSites(data.data.constructionSites);
+      // Если контрагент еще не выбран, не загружаем объекты
+      if (!selectedCounterparty) {
+        setSites([]);
+        return;
+      }
+
+      // Получаем публичные настройки (доступно всем пользователям)
+      const settingsResponse = await settingsService.getPublicSettings();
+      const defaultCounterpartyId = settingsResponse?.data?.defaultCounterpartyId;
+
+      // Если это default контрагент - загружаем все объекты
+      if (selectedCounterparty === defaultCounterpartyId) {
+        const { data } = await constructionSiteService.getAll({ limit: 100 });
+        setSites(data.data.constructionSites);
+      } else {
+        // Для остальных контрагентов - только назначенные объекты
+        const { data } = await constructionSiteService.getCounterpartyObjects(selectedCounterparty);
+        setSites(data.data || []);
+      }
     } catch (error) {
       console.error('Error loading sites:', error);
+      // Не показываем ошибку, если просто нет объектов
+      setSites([]);
     }
   };
 
@@ -201,21 +227,33 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
             name="constructionSiteId"
             label="Объект строительства"
           >
-            <Select
-              placeholder="Выберите объект"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-              onChange={handleSiteChange}
-            >
-              {sites.map(s => (
-                <Select.Option key={s.id} value={s.id}>
-                  {s.shortName}
-                </Select.Option>
-              ))}
-            </Select>
+            {sites.length === 0 && selectedCounterparty ? (
+              <div style={{ 
+                padding: '12px', 
+                background: '#f0f5ff', 
+                border: '1px solid #adc6ff',
+                borderRadius: '6px',
+                color: '#1890ff'
+              }}>
+                Обратитесь к администратору для назначения доступных объектов
+              </div>
+            ) : (
+              <Select
+                placeholder="Выберите объект"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
+                onChange={handleSiteChange}
+              >
+                {sites.map(s => (
+                  <Select.Option key={s.id} value={s.id}>
+                    {s.shortName}
+                  </Select.Option>
+                ))}
+              </Select>
+            )}
           </Form.Item>
 
           {isContractor && contracts.subcontracts.length > 0 && (

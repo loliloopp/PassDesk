@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { Modal, Checkbox, Space, App } from 'antd';
 import { employeeApi } from '@/entities/employee';
 import api from '@/services/api';
+import settingsService from '@/services/settingsService';
+import { constructionSiteService } from '@/services/constructionSiteService';
+import { useAuthStore } from '@/store/authStore';
 
 const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
   const { message } = App.useApp();
+  const { user } = useAuthStore();
   const [constructionSites, setConstructionSites] = useState([]);
   const [selectedSites, setSelectedSites] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,11 +28,29 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
 
   const fetchConstructionSites = async () => {
     try {
-      const response = await api.get('/construction-sites');
-      const sites = response.data.data.constructionSites || [];
-      setConstructionSites(sites);
+      if (!user?.counterpartyId) {
+        setConstructionSites([]);
+        return;
+      }
+
+      // Получаем публичные настройки (доступно всем пользователям)
+      const settingsResponse = await settingsService.getPublicSettings();
+      const defaultCounterpartyId = settingsResponse?.data?.defaultCounterpartyId;
+
+      // Если это default контрагент - загружаем все объекты
+      if (user.counterpartyId === defaultCounterpartyId) {
+        const response = await api.get('/construction-sites');
+        const sites = response.data.data.constructionSites || [];
+        setConstructionSites(sites);
+      } else {
+        // Для остальных контрагентов - только назначенные объекты
+        const { data } = await constructionSiteService.getCounterpartyObjects(user.counterpartyId);
+        setConstructionSites(data.data || []);
+      }
     } catch (error) {
-      message.error('Ошибка загрузки объектов');
+      console.error('Error loading construction sites:', error);
+      // Не показываем ошибку, если просто нет объектов
+      setConstructionSites([]);
     }
   };
 
@@ -67,17 +89,30 @@ const EmployeeSitesModal = ({ visible, employee, onCancel, onSuccess }) => {
       width={600}
     >
       <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
-          {constructionSites.map((site) => (
-            <Checkbox
-              key={site.id}
-              checked={selectedSites.includes(site.id)}
-              onChange={(e) => handleSiteChange(site.id, e.target.checked)}
-            >
-              {site.shortName || site.name}
-            </Checkbox>
-          ))}
-        </Space>
+        {constructionSites.length === 0 ? (
+          <div style={{ 
+            padding: '20px', 
+            background: '#f0f5ff', 
+            border: '1px solid #adc6ff',
+            borderRadius: '6px',
+            textAlign: 'center',
+            color: '#1890ff'
+          }}>
+            Обратитесь к администратору для назначения доступных объектов
+          </div>
+        ) : (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            {constructionSites.map((site) => (
+              <Checkbox
+                key={site.id}
+                checked={selectedSites.includes(site.id)}
+                onChange={(e) => handleSiteChange(site.id, e.target.checked)}
+              >
+                {site.shortName || site.name}
+              </Checkbox>
+            ))}
+          </Space>
+        )}
       </div>
     </Modal>
   );

@@ -17,6 +17,7 @@ import {
 } from '@ant-design/icons';
 import { departmentService } from '../services/departmentService';
 import { constructionSiteService } from '../services/constructionSiteService';
+import settingsService from '../services/settingsService';
 import { useAuthStore } from '../store/authStore';
 
 const DepartmentsPage = () => {
@@ -48,21 +49,29 @@ const DepartmentsPage = () => {
     }
   };
 
-  // Загрузка объектов (для генподрядчика - все, для подрядчиков - только привязанные)
+  // Загрузка объектов (для default контрагента - все, для остальных - только привязанные)
   const fetchConstructionSites = async () => {
     try {
       let sites = [];
-      // general_contractor (генподрядчик) видит все объекты, contractor (подрядчик) - только привязанные
-      if (user.counterpartyType === 'general_contractor') {
+      
+      // Получаем публичные настройки (доступно всем пользователям)
+      const settingsResponse = await settingsService.getPublicSettings();
+      const defaultCounterpartyId = settingsResponse?.data?.defaultCounterpartyId;
+
+      // Если это default контрагент - загружаем все объекты
+      if (user.counterpartyId === defaultCounterpartyId) {
         const response = await constructionSiteService.getAll();
         sites = response.data.data?.constructionSites || response.data.data || [];
       } else {
+        // Для остальных контрагентов - только назначенные объекты
         const response = await constructionSiteService.getCounterpartyObjects(user.counterpartyId);
         sites = response.data.data || [];
       }
       setConstructionSites(sites);
     } catch (error) {
       console.error('Error fetching construction sites:', error);
+      // Не показываем ошибку, если просто нет объектов
+      setConstructionSites([]);
     }
   };
 
@@ -208,21 +217,33 @@ const DepartmentsPage = () => {
             name="constructionSiteId"
             label="Связанный объект"
           >
-            <Select
-              placeholder="Выберите объект (необязательно)"
-              allowClear
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {constructionSites.map(site => (
-                <Select.Option key={site.id} value={site.id}>
-                  {site.shortName}
-                </Select.Option>
-              ))}
-            </Select>
+            {constructionSites.length === 0 ? (
+              <div style={{ 
+                padding: '12px', 
+                background: '#f0f5ff', 
+                border: '1px solid #adc6ff',
+                borderRadius: '6px',
+                color: '#1890ff'
+              }}>
+                Обратитесь к администратору для назначения доступных объектов
+              </div>
+            ) : (
+              <Select
+                placeholder="Выберите объект (необязательно)"
+                allowClear
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
+              >
+                {constructionSites.map(site => (
+                  <Select.Option key={site.id} value={site.id}>
+                    {site.shortName}
+                  </Select.Option>
+                ))}
+              </Select>
+            )}
           </Form.Item>
         </Form>
       </Modal>

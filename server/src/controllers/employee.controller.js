@@ -1071,14 +1071,24 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
     
     // Если нет маппингов, создаем базовый
     if (existingMappings.length === 0) {
-      // Создаем маппинги для каждого выбранного объекта
-      for (const siteId of siteIds) {
+      // Если нет выбранных объектов - создаем маппинг с NULL
+      if (!siteIds || siteIds.length === 0) {
         await EmployeeCounterpartyMapping.create({
           employeeId: id,
           counterpartyId: req.user.counterpartyId,
-          constructionSiteId: siteId,
+          constructionSiteId: null,
           departmentId: null
         });
+      } else {
+        // Создаем маппинги для каждого выбранного объекта
+        for (const siteId of siteIds) {
+          await EmployeeCounterpartyMapping.create({
+            employeeId: id,
+            counterpartyId: req.user.counterpartyId,
+            constructionSiteId: siteId,
+            departmentId: null
+          });
+        }
       }
     } else {
       // Удаляем все старые маппинги с объектами для этого контрагента
@@ -1089,14 +1099,24 @@ export const updateEmployeeConstructionSites = async (req, res, next) => {
         }
       });
       
-      // Создаем новые маппинги для каждого выбранного объекта, сохраняя departmentId
-      for (const siteId of siteIds) {
+      // Если нет выбранных объектов - создаем маппинг с NULL (сохраняем связь с контрагентом)
+      if (!siteIds || siteIds.length === 0) {
         await EmployeeCounterpartyMapping.create({
           employeeId: id,
           counterpartyId: req.user.counterpartyId,
-          constructionSiteId: siteId,
+          constructionSiteId: null,
           departmentId: existingDepartmentId // Сохраняем подразделение
         });
+      } else {
+        // Создаем новые маппинги для каждого выбранного объекта, сохраняя departmentId
+        for (const siteId of siteIds) {
+          await EmployeeCounterpartyMapping.create({
+            employeeId: id,
+            counterpartyId: req.user.counterpartyId,
+            constructionSiteId: siteId,
+            departmentId: existingDepartmentId // Сохраняем подразделение
+          });
+        }
       }
     }
     

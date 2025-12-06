@@ -33,9 +33,8 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   const loadReferences = async (abortSignal) => {
     setLoadingReferences(true);
     try {
-      const [citizenshipsRes, sitesRes, positionsRes, settingsRes] = await Promise.all([
+      const [citizenshipsRes, positionsRes, settingsRes] = await Promise.all([
         citizenshipService.getAll(),
-        constructionSiteService.getAll(),
         positionService.getAll({ limit: 1000 }), // Загружаем все должности
         settingsService.getPublicSettings(),
       ]);
@@ -47,16 +46,36 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
 
       // Извлекаем данные с учетом структуры API
       const citizenshipsData = citizenshipsRes.data?.data?.citizenships || [];
-      const sitesData = sitesRes.data?.data?.constructionSites || [];
       const positionsData = positionsRes.data?.data?.positions || [];
       const settingsData = settingsRes.data || {};
 
       setCitizenships(citizenshipsData);
-      setConstructionSites(sitesData);
       setPositions(positionsData);
-      if (settingsData.defaultCounterpartyId) {
-        setDefaultCounterpartyId(settingsData.defaultCounterpartyId);
+      
+      const dcId = settingsData.defaultCounterpartyId;
+      setDefaultCounterpartyId(dcId);
+
+      // Загружаем объекты строительства с учетом контрагента
+      let sitesData = [];
+      if (user?.counterpartyId) {
+        try {
+          if (user.counterpartyId === dcId) {
+            // Для default контрагента - все объекты
+            const sitesRes = await constructionSiteService.getAll();
+            sitesData = sitesRes.data?.data?.constructionSites || [];
+          } else {
+            // Для остальных - только назначенные
+            const sitesRes = await constructionSiteService.getCounterpartyObjects(user.counterpartyId);
+            sitesData = sitesRes.data?.data || [];
+          }
+        } catch (sitesError) {
+          console.error('Error loading construction sites:', sitesError);
+          // Не показываем ошибку, просто оставляем пустой массив
+          sitesData = [];
+        }
       }
+      setConstructionSites(sitesData);
+
     } catch (error) {
       // Игнорируем ошибки отмены запроса
       if (error.name === 'AbortError' || error.name === 'CanceledError') {
