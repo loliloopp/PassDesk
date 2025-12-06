@@ -172,10 +172,15 @@ export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Находим пользователя (включая поле password)
+    // Находим пользователя (включая поле password) с контрагентом
     const user = await User.findOne({
       where: { email },
       attributes: { include: ['password'] },
+      include: [{
+        model: Counterparty,
+        as: 'counterparty',
+        attributes: ['id', 'name', 'type']
+      }]
     });
 
     if (!user) {
@@ -209,6 +214,7 @@ export const login = async (req, res, next) => {
           lastName: user.lastName,
           role: user.role,
           counterpartyId: user.counterpartyId,
+          counterpartyType: user.counterparty?.type || null,
           identificationNumber: user.identificationNumber,
           isActive: user.isActive,
         },
@@ -279,7 +285,13 @@ export const getCurrentUser = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(userId, {
+      include: [{
+        model: Counterparty,
+        as: 'counterparty',
+        attributes: ['id', 'name', 'type']
+      }]
+    });
     if (!user) {
       throw new AppError('Пользователь не найден', 404);
     }
@@ -296,6 +308,7 @@ export const getCurrentUser = async (req, res, next) => {
           isActive: user.isActive,
           identificationNumber: user.identificationNumber,
           counterpartyId: user.counterpartyId,
+          counterpartyType: user.counterparty?.type || null,
           lastLogin: user.lastLogin,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,

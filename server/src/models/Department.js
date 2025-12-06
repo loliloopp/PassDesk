@@ -30,6 +30,16 @@ Department.init(
         key: 'id'
       },
       comment: 'ID контрагента, к которому относится подразделение'
+    },
+    constructionSiteId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'construction_site_id',
+      references: {
+        model: 'construction_sites',
+        key: 'id'
+      },
+      comment: 'ID связанного объекта строительства (необязательно)'
     }
   },
   {

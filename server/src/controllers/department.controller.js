@@ -1,4 +1,4 @@
-import { Department, Counterparty } from '../models/index.js';
+import { Department, Counterparty, ConstructionSite } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Получить все подразделения (с фильтрацией по контрагенту пользователя)
@@ -22,6 +22,12 @@ export const getAllDepartments = async (req, res, next) => {
           model: Counterparty,
           as: 'counterparty',
           attributes: ['id', 'name']
+        },
+        {
+          model: ConstructionSite,
+          as: 'constructionSite',
+          attributes: ['id', 'shortName', 'fullName'],
+          required: false
         }
       ],
       order: [['name', 'ASC']]
@@ -53,6 +59,12 @@ export const getDepartmentById = async (req, res, next) => {
           model: Counterparty,
           as: 'counterparty',
           attributes: ['id', 'name']
+        },
+        {
+          model: ConstructionSite,
+          as: 'constructionSite',
+          attributes: ['id', 'shortName', 'fullName'],
+          required: false
         }
       ]
     });
@@ -77,7 +89,7 @@ export const getDepartmentById = async (req, res, next) => {
 // Создать подразделение
 export const createDepartment = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, constructionSiteId } = req.body;
     const userCounterpartyId = req.user.counterpartyId;
     
     if (!name || name.trim() === '') {
@@ -89,7 +101,8 @@ export const createDepartment = async (req, res, next) => {
     
     const department = await Department.create({
       name: name.trim(),
-      counterpartyId: userCounterpartyId
+      counterpartyId: userCounterpartyId,
+      constructionSiteId: constructionSiteId || null
     });
     
     res.status(201).json({
@@ -126,7 +139,7 @@ export const createDepartment = async (req, res, next) => {
 export const updateDepartment = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, constructionSiteId } = req.body;
     const userCounterpartyId = req.user.counterpartyId;
     
     if (!name || name.trim() === '') {
@@ -150,7 +163,10 @@ export const updateDepartment = async (req, res, next) => {
       });
     }
     
-    await department.update({ name: name.trim() });
+    await department.update({ 
+      name: name.trim(),
+      constructionSiteId: constructionSiteId !== undefined ? (constructionSiteId || null) : department.constructionSiteId
+    });
     
     res.json({
       success: true,

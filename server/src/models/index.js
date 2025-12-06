@@ -44,6 +44,10 @@ CitizenshipSynonym.belongsTo(Citizenship, { foreignKey: 'citizenship_id', as: 'c
 Counterparty.hasMany(Department, { foreignKey: 'counterparty_id', as: 'departments' });
 Department.belongsTo(Counterparty, { foreignKey: 'counterparty_id', as: 'counterparty' });
 
+// ConstructionSite -> Department (объект -> подразделения, необязательная связь)
+ConstructionSite.hasMany(Department, { foreignKey: 'construction_site_id', as: 'departments' });
+Department.belongsTo(ConstructionSite, { foreignKey: 'construction_site_id', as: 'constructionSite' });
+
 // Employee <-> Counterparty (many-to-many через EmployeeCounterpartyMapping)
 Employee.belongsToMany(Counterparty, {
   through: EmployeeCounterpartyMapping,

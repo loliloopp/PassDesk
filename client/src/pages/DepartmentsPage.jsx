@@ -7,7 +7,8 @@ import {
   Input,
   Space,
   message,
-  Popconfirm
+  Popconfirm,
+  Select
 } from 'antd';
 import {
   PlusOutlined,
@@ -15,10 +16,12 @@ import {
   DeleteOutlined
 } from '@ant-design/icons';
 import { departmentService } from '../services/departmentService';
+import { constructionSiteService } from '../services/constructionSiteService';
 import { useAuthStore } from '../store/authStore';
 
 const DepartmentsPage = () => {
   const [departments, setDepartments] = useState([]);
+  const [constructionSites, setConstructionSites] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
@@ -28,6 +31,7 @@ const DepartmentsPage = () => {
   useEffect(() => {
     if (user?.counterpartyId) {
       fetchDepartments();
+      fetchConstructionSites();
     }
   }, [user?.counterpartyId]);
 
@@ -44,10 +48,31 @@ const DepartmentsPage = () => {
     }
   };
 
+  // Загрузка объектов (для генподрядчика - все, для подрядчиков - только привязанные)
+  const fetchConstructionSites = async () => {
+    try {
+      let sites = [];
+      // general_contractor (генподрядчик) видит все объекты, contractor (подрядчик) - только привязанные
+      if (user.counterpartyType === 'general_contractor') {
+        const response = await constructionSiteService.getAll();
+        sites = response.data.data?.constructionSites || response.data.data || [];
+      } else {
+        const response = await constructionSiteService.getCounterpartyObjects(user.counterpartyId);
+        sites = response.data.data || [];
+      }
+      setConstructionSites(sites);
+    } catch (error) {
+      console.error('Error fetching construction sites:', error);
+    }
+  };
+
   const handleOpenModal = (department = null) => {
     setEditingDepartment(department);
     if (department) {
-      form.setFieldsValue({ name: department.name });
+      form.setFieldsValue({ 
+        name: department.name,
+        constructionSiteId: department.constructionSiteId || null
+      });
     } else {
       form.resetFields();
     }
@@ -98,6 +123,12 @@ const DepartmentsPage = () => {
       dataIndex: 'name',
       key: 'name',
       sorter: (a, b) => a.name.localeCompare(b.name),
+    },
+    {
+      title: 'Объект',
+      dataIndex: ['constructionSite', 'shortName'],
+      key: 'constructionSite',
+      render: (text) => text || '—',
     },
     {
       title: 'Действия',
@@ -163,6 +194,7 @@ const DepartmentsPage = () => {
         onCancel={handleCloseModal}
         okText="Сохранить"
         cancelText="Отмена"
+        width={500}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -171,6 +203,26 @@ const DepartmentsPage = () => {
             rules={[{ required: true, message: 'Введите название подразделения' }]}
           >
             <Input placeholder="Например: Отдел продаж" />
+          </Form.Item>
+          <Form.Item
+            name="constructionSiteId"
+            label="Связанный объект"
+          >
+            <Select
+              placeholder="Выберите объект (необязательно)"
+              allowClear
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {constructionSites.map(site => (
+                <Select.Option key={site.id} value={site.id}>
+                  {site.shortName}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>
