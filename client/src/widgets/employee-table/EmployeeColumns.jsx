@@ -347,6 +347,20 @@ export const useEmployeeColumns = ({
         onFilter: (value, record) => record.statusCard === value,
       },
       {
+        title: 'Дата создания',
+        key: 'createdAt',
+        width: 120,
+        render: (_, record) => {
+          if (!record.createdAt) return '-';
+          const date = new Date(record.createdAt);
+          return date.toLocaleDateString('ru-RU');
+        },
+        sorter: (a, b) => {
+          if (!a.createdAt || !b.createdAt) return 0;
+          return new Date(a.createdAt) - new Date(b.createdAt);
+        },
+      },
+      {
         title: 'Файлы',
         key: 'files',
         width: 80,
