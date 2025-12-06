@@ -81,3 +81,29 @@ textarea:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px white inset !important;
   -webkit-text-fill-color: #000000 !important;
 }
+
+/* Полноэкранные модальные окна (90% высоты) */
+.full-height-modal .ant-modal {
+  display: flex !important;
+  flex-direction: column;
+}
+
+.full-height-modal .ant-modal-content {
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+}
+
+.full-height-modal .ant-modal-header {
+  flex-shrink: 0;
+}
+
+.full-height-modal .ant-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.full-height-modal .ant-modal-footer {
+  flex-shrink: 0;
+}

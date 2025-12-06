@@ -34,7 +34,7 @@ const ApplicationRequestPage = () => {
 
   const { user } = useAuthStore();
   const { defaultCounterpartyId } = useSettings();
-  const { columns: selectedColumns, toggleColumn, selectAll, deselectAll } = useExcelColumns();
+  const { columns: selectedColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
 
   // Получаем список сотрудников
   const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees();
@@ -255,8 +255,8 @@ const ApplicationRequestPage = () => {
   };
 
   // Получить активные столбцы
-  const activeColumns = AVAILABLE_COLUMNS.filter(col => selectedColumns[col.key] && col.key !== 'number');
-  const hasNumberColumn = selectedColumns['number'];
+  const activeColumns = selectedColumns.filter(col => col.enabled && col.key !== 'number');
+  const hasNumberColumn = selectedColumns.find(col => col.key === 'number')?.enabled;
 
   // Создание и экспорт Excel файла
   const handleCreateRequest = async () => {
@@ -516,6 +516,8 @@ const ApplicationRequestPage = () => {
         onCancel={() => setIsColumnsModalOpen(false)}
         columns={selectedColumns}
         toggleColumn={toggleColumn}
+        moveColumnUp={moveColumnUp}
+        moveColumnDown={moveColumnDown}
         selectAll={selectAll}
         deselectAll={deselectAll}
       />

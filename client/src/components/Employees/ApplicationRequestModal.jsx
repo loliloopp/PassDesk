@@ -25,7 +25,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   const [counterpartySearchText, setCounterpartySearchText] = useState('');
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
 
-  const { columns: selectedColumns, toggleColumn, selectAll, deselectAll } = useExcelColumns();
+  const { columns: selectedColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
 
   // Загружаем доступные объекты строительства
   useEffect(() => {
@@ -223,8 +223,8 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   };
 
   // Получить активные столбцы (без 'number', его добавим отдельно как индекс)
-  const activeColumns = AVAILABLE_COLUMNS.filter(col => selectedColumns[col.key] && col.key !== 'number');
-  const hasNumberColumn = selectedColumns['number'];
+  const activeColumns = selectedColumns.filter(col => col.enabled && col.key !== 'number');
+  const hasNumberColumn = selectedColumns.find(col => col.key === 'number')?.enabled;
 
   // Функция для создания заявки с выбранными столбцами
   const handleCreateRequest = async () => {
@@ -317,6 +317,12 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       open={visible}
       onCancel={onCancel}
       width={1200}
+      wrapClassName="full-height-modal"
+      style={{ top: '5vh', height: '90vh', display: 'flex', flexDirection: 'column' }}
+      styles={{ 
+        body: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflowY: 'auto' },
+        content: { display: 'flex', flexDirection: 'column', height: '100%' }
+      }}
       footer={
         <Space>
           <Button onClick={onCancel}>Отмена</Button>
@@ -438,6 +444,8 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
         onCancel={() => setIsColumnsModalOpen(false)}
         columns={selectedColumns}
         toggleColumn={toggleColumn}
+        moveColumnUp={moveColumnUp}
+        moveColumnDown={moveColumnDown}
         selectAll={selectAll}
         deselectAll={deselectAll}
       />
