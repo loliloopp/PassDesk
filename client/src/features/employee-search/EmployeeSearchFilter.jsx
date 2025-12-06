@@ -16,6 +16,12 @@ export const EmployeeSearchFilter = ({
   const screens = useBreakpoint();
   const isMobile = !screens.md;
 
+  // Нормализация значения: удаление черточек, тире, минусов и пробелов на конце/начале
+  const handleSearchChange = (value) => {
+    const normalized = value.replace(/[-–—]/g, '').trim();
+    onSearchChange(normalized);
+  };
+
   // Опции фильтра по статусу
   const statusFilterItems = [
     {
@@ -95,7 +101,7 @@ export const EmployeeSearchFilter = ({
         placeholder="Поиск по ФИО, должности, ИНН, СНИЛС..."
         prefix={<SearchOutlined />}
         value={searchText}
-        onChange={(e) => onSearchChange(e.target.value)}
+        onChange={(e) => handleSearchChange(e.target.value)}
         style={{ width: isMobile ? '100%' : 350, flex: isMobile ? 1 : 'auto' }}
         allowClear
       />

@@ -19,24 +19,13 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
   // Проверяем, требуется ли патент для данного гражданства
   const requiresPatent = employee.citizenship?.requiresPatent !== false;
 
-  return (
-    <Modal
-      title="Карточка сотрудника"
-      open={visible}
-      onCancel={onCancel}
-      width={1200}
-      footer={[
-        <Button key="cancel" onClick={onCancel}>
-          Закрыть
-        </Button>,
-        <Button key="edit" type="primary" icon={<EditOutlined />} onClick={onEdit}>
-          Редактировать
-        </Button>,
-      ]}
-    >
-      <Tabs defaultActiveKey="1" style={{ marginTop: 16 }}>
-        {/* Вкладка: Основная информация */}
-        <Tabs.TabPane tab="Основная информация" key="1">
+  // Построение элементов вкладок новым API
+  const tabItems = [
+    {
+      key: '1',
+      label: 'Основная информация',
+      children: (
+        <>
           {/* Чекбоксы статусов */}
           <Row gutter={16} style={{ marginBottom: 16 }}>
             <Col span={24}>
@@ -103,69 +92,96 @@ const EmployeeViewModal = ({ visible, employee, onCancel, onEdit }) => {
               {employee.notes || '-'}
             </Descriptions.Item>
           </Descriptions>
-        </Tabs.TabPane>
+        </>
+      )
+    },
+    {
+      key: '2',
+      label: 'Документы',
+      children: (
+        <Descriptions bordered column={2} size="small">
+          <Descriptions.Item label="ИНН" span={1}>
+            {formatInn(employee.inn)}
+          </Descriptions.Item>
+          <Descriptions.Item label="СНИЛС" span={1}>
+            {formatSnils(employee.snils)}
+          </Descriptions.Item>
+          {requiresPatent && (
+            <Descriptions.Item label="КИГ" span={1}>
+              {formatKig(employee.kig)}
+            </Descriptions.Item>
+          )}
+          {requiresPatent && (
+            <Descriptions.Item label="Дата окончания КИГ" span={1}>
+              {employee.kigEndDate ? dayjs(employee.kigEndDate).format(DATE_FORMAT) : '-'}
+            </Descriptions.Item>
+          )}
+          <Descriptions.Item label="Тип паспорта" span={1}>
+            {employee.passportType === 'russian' ? 'Российский' : employee.passportType === 'foreign' ? 'Иностранного гражданина' : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="№ паспорта" span={1}>
+            {employee.passportNumber || '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Дата выдачи паспорта" span={1}>
+            {employee.passportDate ? dayjs(employee.passportDate).format(DATE_FORMAT) : '-'}
+          </Descriptions.Item>
+          {employee.passportType === 'foreign' && (
+            <Descriptions.Item label="Дата окончания паспорта" span={1}>
+              {employee.passportExpiryDate ? dayjs(employee.passportExpiryDate).format(DATE_FORMAT) : '-'}
+            </Descriptions.Item>
+          )}
+          <Descriptions.Item label="Кем выдан паспорт" span={1}>
+            {employee.passportIssuer || '-'}
+          </Descriptions.Item>
+        </Descriptions>
+      )
+    }
+  ];
 
-        {/* Вкладка: Документы */}
-        <Tabs.TabPane tab="Документы" key="2">
-          <Descriptions bordered column={3} size="small">
-            <Descriptions.Item label="ИНН" span={1}>
-              {formatInn(employee.inn)}
-            </Descriptions.Item>
-            <Descriptions.Item label="СНИЛС" span={1}>
-              {formatSnils(employee.snils)}
-            </Descriptions.Item>
-            {requiresPatent && (
-              <Descriptions.Item label="КИГ" span={1}>
-                {formatKig(employee.kig)}
-              </Descriptions.Item>
-            )}
-            {requiresPatent && (
-              <Descriptions.Item label="Дата окончания КИГ" span={1}>
-                {employee.kigEndDate ? dayjs(employee.kigEndDate).format(DATE_FORMAT) : '-'}
-              </Descriptions.Item>
-            )}
-            <Descriptions.Item label="Тип паспорта" span={1}>
-              {employee.passportType === 'russian' ? 'Российский' : employee.passportType === 'foreign' ? 'Иностранного гражданина' : '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="№ паспорта" span={1}>
-              {employee.passportNumber || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="Дата выдачи паспорта" span={1}>
-              {employee.passportDate ? dayjs(employee.passportDate).format(DATE_FORMAT) : '-'}
-            </Descriptions.Item>
-            {employee.passportType === 'foreign' && (
-              <Descriptions.Item label="Дата окончания паспорта" span={1}>
-                {employee.passportExpiryDate ? dayjs(employee.passportExpiryDate).format(DATE_FORMAT) : '-'}
-              </Descriptions.Item>
-            )}
-            <Descriptions.Item label="Кем выдан паспорт" span={employee.passportType === 'foreign' ? 2 : 3}>
-              {employee.passportIssuer || '-'}
-            </Descriptions.Item>
-          </Descriptions>
-        </Tabs.TabPane>
+  // Добавляем вкладку Патент если требуется
+  if (requiresPatent) {
+    tabItems.push({
+      key: '3',
+      label: 'Патент',
+      children: (
+        <Descriptions bordered column={3} size="small">
+          <Descriptions.Item label="Номер патента" span={1}>
+            {formatPatentNumber(employee.patentNumber)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Дата выдачи патента" span={1}>
+            {employee.patentIssueDate ? dayjs(employee.patentIssueDate).format(DATE_FORMAT) : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Номер бланка" span={1}>
+            {formatBlankNumber(employee.blankNumber)}
+          </Descriptions.Item>
+        </Descriptions>
+      )
+    });
+  }
 
-        {/* Вкладка: Патент (только если требуется) */}
-        {requiresPatent && (
-          <Tabs.TabPane tab="Патент" key="3">
-            <Descriptions bordered column={3} size="small">
-              <Descriptions.Item label="Номер патента" span={1}>
-                {formatPatentNumber(employee.patentNumber)}
-              </Descriptions.Item>
-              <Descriptions.Item label="Дата выдачи патента" span={1}>
-                {employee.patentIssueDate ? dayjs(employee.patentIssueDate).format(DATE_FORMAT) : '-'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Номер бланка" span={1}>
-                {formatBlankNumber(employee.blankNumber)}
-              </Descriptions.Item>
-            </Descriptions>
-          </Tabs.TabPane>
-        )}
+  // Добавляем вкладку Файлы
+  tabItems.push({
+    key: '4',
+    label: 'Файлы',
+    children: <EmployeeFileUpload employeeId={employee.id} readonly={true} />
+  });
 
-        {/* Вкладка: Файлы */}
-        <Tabs.TabPane tab="Файлы" key="4">
-          <EmployeeFileUpload employeeId={employee.id} readonly={true} />
-        </Tabs.TabPane>
-      </Tabs>
+  return (
+    <Modal
+      title="Карточка сотрудника"
+      open={visible}
+      onCancel={onCancel}
+      width={1200}
+      footer={[
+        <Button key="cancel" onClick={onCancel}>
+          Закрыть
+        </Button>,
+        <Button key="edit" type="primary" icon={<EditOutlined />} onClick={onEdit}>
+          Редактировать
+        </Button>,
+      ]}
+    >
+      <Tabs defaultActiveKey="1" style={{ marginTop: 16 }} items={tabItems} />
     </Modal>
   );
 };
