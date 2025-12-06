@@ -8,7 +8,7 @@ import { employeeService } from '../../services/employeeService';
  * Модальное окно для перевода сотрудника в другую компанию
  * Позволяет искать контрагента по названию или ИНН
  */
-const TransferEmployeeModal = ({ visible, employee, onCancel, onSuccess }) => {
+const TransferEmployeeModal = ({ visible, employee, onCancel }) => {
   const { message, modal } = App.useApp();
   const [searchText, setSearchText] = useState('');
   const [counterparties, setCounterparties] = useState([]);
@@ -118,7 +118,6 @@ const TransferEmployeeModal = ({ visible, employee, onCancel, onSuccess }) => {
           
           if (response.success) {
             message.success(response.message || 'Сотрудник успешно переведен');
-            onSuccess?.();
             onCancel();
           }
         } catch (error) {

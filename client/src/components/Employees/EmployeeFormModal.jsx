@@ -1712,7 +1712,6 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         visible={transferModalVisible}
         employee={employee}
         onCancel={() => setTransferModalVisible(false)}
-        onSuccess={onSuccess}
       />
     </>
   );
