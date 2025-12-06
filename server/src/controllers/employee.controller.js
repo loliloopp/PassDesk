@@ -2163,4 +2163,66 @@ export const updateMyProfile = async (req, res, next) => {
   }
 };
 
+/**
+ * Перевести сотрудника в другую компанию (контрагента)
+ * Создает запись в employee_counterparty_mapping
+ * Доступно только для admin
+ */
+export const transferEmployeeToCounterparty = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { counterpartyId } = req.body;
+    const userId = req.user.id;
+
+    // Проверяем, что сотрудник существует
+    const employee = await Employee.findByPk(id);
+    if (!employee) {
+      throw new AppError('Сотрудник не найден', 404);
+    }
+
+    // Проверяем, что контрагент существует
+    const counterparty = await Counterparty.findByPk(counterpartyId);
+    if (!counterparty) {
+      throw new AppError('Контрагент не найден', 404);
+    }
+
+    // Проверяем, нет ли уже такой связи
+    const existingMapping = await EmployeeCounterpartyMapping.findOne({
+      where: {
+        employeeId: id,
+        counterpartyId: counterpartyId
+      }
+    });
+
+    if (existingMapping) {
+      throw new AppError('Сотрудник уже привязан к этому контрагенту', 400);
+    }
+
+    // Создаем новую запись в маппинге
+    const mapping = await EmployeeCounterpartyMapping.create({
+      employeeId: id,
+      counterpartyId: counterpartyId,
+      departmentId: null,
+      constructionSiteId: null
+    });
+
+    console.log(`✅ Сотрудник ${id} переведен в контрагента ${counterpartyId} пользователем ${userId}`);
+
+    res.json({
+      success: true,
+      message: `Сотрудник успешно переведен в компанию "${counterparty.name}"`,
+      data: {
+        mapping,
+        counterparty: {
+          id: counterparty.id,
+          name: counterparty.name,
+          inn: counterparty.inn
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error transferring employee to counterparty:', error);
+    next(error);
+  }
+};
 

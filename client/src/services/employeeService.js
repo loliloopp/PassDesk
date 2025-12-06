@@ -95,6 +95,12 @@ export const employeeService = {
   updateDepartment: async (employeeId, departmentId) => {
     const response = await api.put(`/employees/${employeeId}/department`, { departmentId })
     return response.data
+  },
+
+  // Перевести сотрудника в другую компанию (только для admin)
+  transferToCounterparty: async (employeeId, counterpartyId) => {
+    const response = await api.post(`/employees/${employeeId}/transfer`, { counterpartyId })
+    return response.data
   }
 }
 

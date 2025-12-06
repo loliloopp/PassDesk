@@ -89,6 +89,7 @@ router.post('/:id/action/fire', employeeController.fireEmployee); // Уволи�
 router.post('/:id/action/reinstate', employeeController.reinstateEmployee); // Принять уволенного сотрудника
 router.post('/:id/action/deactivate', employeeController.deactivateEmployee); // Деактивировать сотрудника
 router.post('/:id/action/activate', employeeController.activateEmployee); // Активировать сотрудника
+router.post('/:id/transfer', authorize('admin'), employeeController.transferEmployeeToCounterparty); // Перевести сотрудника в другую компанию (только admin)
 router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере
 router.get('/search', employeeController.searchEmployees);
 

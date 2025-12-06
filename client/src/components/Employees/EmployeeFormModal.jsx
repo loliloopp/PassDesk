@@ -9,6 +9,7 @@ import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
 import { useAuthStore } from '../../store/authStore';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
+import TransferEmployeeModal from './TransferEmployeeModal.jsx';
 import dayjs from 'dayjs';
 
 const { TextArea } = Input;
@@ -311,7 +312,7 @@ const formatBlankNumber = (value) => {
 /**
  * Компонент кнопок для действий со статусом уволен/неактивен
  */
-const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounterpartyUser }) => {
+const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounterpartyUser, isAdmin, onTransfer }) => {
   const [loadingFire, setLoadingFire] = useState(false);
   const [loadingReinstate, setLoadingReinstate] = useState(false);
 
@@ -450,6 +451,16 @@ const EmployeeActionButtons = ({ employee, messageApi, onCancel, isDefaultCounte
           </Popconfirm>
         )
       )}
+      
+      {/* Кнопка перевода в другую компанию (только для admin) */}
+      {isAdmin && onTransfer && (
+        <Button 
+          onClick={onTransfer}
+          style={{ borderColor: '#1890ff', color: '#1890ff' }}
+        >
+          Перевести в другую компанию
+        </Button>
+      )}
     </Space>
   );
 };
@@ -477,6 +488,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
   const isFormResetRef = useRef(false); // 🎯 Флаг для предотвращения проверки ИНН при сбросе формы
   const { user } = useAuthStore();
+  const [transferModalVisible, setTransferModalVisible] = useState(false); // Модальное окно перевода сотрудника
 
   // Обработчик для обновления при изменении файлов
   // filesCount - количество файлов (используется только для информации)
@@ -1135,6 +1147,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                       messageApi={message}
                       onCancel={onCancel}
                       isDefaultCounterpartyUser={user?.counterpartyId === defaultCounterpartyId}
+                      isAdmin={user?.role === 'admin'}
+                      onTransfer={() => setTransferModalVisible(true)}
                     />
                   </Space>
                 </Col>
@@ -1680,17 +1694,27 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   // Модальное окно
   return (
-    <Modal
-      title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
-      open={visible}
-      onCancel={handleModalCancel}
-      maskClosable={false}
-      width={1350}
-      footer={footer}
-      styles={{ body: { maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' } }}
-    >
-      {formContent}
-    </Modal>
+    <>
+      <Modal
+        title={employee ? 'Редактировать сотрудника' : 'Добавить сотрудника'}
+        open={visible}
+        onCancel={handleModalCancel}
+        maskClosable={false}
+        width={1350}
+        footer={footer}
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto', overflowX: 'hidden' } }}
+      >
+        {formContent}
+      </Modal>
+
+      {/* Модальное окно перевода сотрудника в другую компанию */}
+      <TransferEmployeeModal
+        visible={transferModalVisible}
+        employee={employee}
+        onCancel={() => setTransferModalVisible(false)}
+        onSuccess={onSuccess}
+      />
+    </>
   );
 };
 
