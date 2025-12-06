@@ -748,9 +748,9 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               }}
             >
               <Input 
-                placeholder="1234 567890" 
+                placeholder={passportType === 'russian' ? '1234 №123456' : 'Номер паспорта'} 
                 size="large"
-                maxLength={passportType === 'russian' ? 14 : undefined}
+                maxLength={passportType === 'russian' ? 13 : undefined}
                 {...noAutoFillProps}
               />
             </Form.Item>

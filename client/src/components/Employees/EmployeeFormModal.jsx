@@ -1468,7 +1468,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   label="Тип паспорта"
                   rules={[{ required: true, message: 'Выберите тип паспорта' }]}
                 >
-                  <Select placeholder="Выберите тип паспорта" allowClear autoComplete="off">
+                  <Select 
+                    placeholder="Выберите тип паспорта" 
+                    allowClear 
+                    autoComplete="off"
+                    onChange={(value) => setPassportType(value)}
+                  >
                     <Option value="russian">Российский</Option>
                     <Option value="foreign">Иностранного гражданина</Option>
                   </Select>
@@ -1479,10 +1484,18 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   name="passportNumber" 
                   label="№ паспорта"
                   rules={[{ required: true, message: 'Введите номер паспорта' }]}
+                  getValueFromEvent={(e) => {
+                    // Применяем маску только для российского паспорта
+                    if (passportType === 'russian') {
+                      return formatRussianPassportNumber(e.target.value);
+                    }
+                    return e.target.value;
+                  }}
                 >
                   <Input 
                     {...noAutoFillProps}
-                    placeholder="Номер паспорта"
+                    placeholder={passportType === 'russian' ? '1234 №123456' : 'Номер паспорта'}
+                    maxLength={passportType === 'russian' ? 13 : undefined}
                   />
                 </Form.Item>
               </Col>
