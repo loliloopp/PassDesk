@@ -70,7 +70,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   useEffect(() => {
     if (visible && userRole === 'admin') {
       setCounterpartiesLoading(true);
-      counterpartyService.getAll()
+      counterpartyService.getAll({ limit: 1000 })
         .then(response => {
           const rawCounterparties = response?.data?.data?.counterparties || response?.data?.counterparties || [];
           const counterparties = Array.isArray(rawCounterparties) ? rawCounterparties : [];
@@ -343,7 +343,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           {/* Фильтр по контрагентам (только для admin) */}
           {userRole === 'admin' && (
-            <div style={{ flex: 1, minWidth: 250 }}>
+            <div style={{ width: 250 }}>
               <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 500 }}>
                 Контрагент
               </label>
@@ -354,6 +354,8 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
                 onChange={setSelectedCounterparty}
                 loading={counterpartiesLoading}
                 showSearch
+                popupMatchSelectWidth={false}
+                classNames={{ popup: 'counterparty-select-popup' }}
                 filterOption={(input, option) => {
                   const text = input.toLowerCase();
                   return (
@@ -362,10 +364,11 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
                   );
                 }}
                 options={availableCounterparties.map(counterparty => ({
-                  label: `${counterparty.name} (ИНН: ${counterparty.identificationNumber || '-'})`,
+                  label: `${counterparty.name} (ИНН: ${counterparty.inn || '-'})`,
                   value: counterparty.id,
                   children: counterparty.name
                 }))}
+                style={{ width: '100%' }}
               />
             </div>
           )}

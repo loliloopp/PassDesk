@@ -80,7 +80,7 @@ const ApplicationRequestPage = () => {
   useEffect(() => {
     if (user?.role === 'admin') {
       setCounterpartiesLoading(true);
-      counterpartyService.getAll()
+      counterpartyService.getAll({ limit: 1000 })
         .then(response => {
           const rawCounterparties = response?.data?.data?.counterparties || response?.data?.counterparties || [];
           const counterparties = Array.isArray(rawCounterparties) ? rawCounterparties : [];
@@ -367,26 +367,29 @@ const ApplicationRequestPage = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* Фильтр по контрагентам (только для admin) */}
           {user?.role === 'admin' && (
-            <Select
-              placeholder="Все контрагенты"
-              allowClear
-              value={selectedCounterparty}
-              onChange={setSelectedCounterparty}
-              loading={counterpartiesLoading}
-              showSearch
-              filterOption={(input, option) => {
-                const text = input.toLowerCase();
-                return (
-                  option?.label?.toLowerCase().includes(text) ||
-                  option?.children?.toLowerCase().includes(text)
-                );
-              }}
-              options={availableCounterparties.map(counterparty => ({
-                label: `${counterparty.name} (ИНН: ${counterparty.identificationNumber || '-'})`,
-                value: counterparty.id,
-                children: counterparty.name
-              }))}
-            />
+            <div>
+              <Select
+                placeholder="Все контрагенты"
+                allowClear
+                value={selectedCounterparty}
+                onChange={setSelectedCounterparty}
+                loading={counterpartiesLoading}
+                showSearch
+                filterOption={(input, option) => {
+                  const text = input.toLowerCase();
+                  return (
+                    option?.label?.toLowerCase().includes(text) ||
+                    option?.children?.toLowerCase().includes(text)
+                  );
+                }}
+                options={availableCounterparties.map(counterparty => ({
+                  label: `${counterparty.name} (ИНН: ${counterparty.inn || '-'})`,
+                  value: counterparty.id,
+                  children: counterparty.name
+                }))}
+                style={{ width: '100%' }}
+              />
+            </div>
           )}
 
           {/* Фильтр по объекту строительства */}

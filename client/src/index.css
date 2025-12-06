@@ -107,3 +107,9 @@ textarea:-webkit-autofill:focus {
 .full-height-modal .ant-modal-footer {
   flex-shrink: 0;
 }
+
+/* Ширина выпадающего списка контрагентов */
+.counterparty-select-popup {
+  min-width: 500px !important;
+  width: 500px !important;
+}
