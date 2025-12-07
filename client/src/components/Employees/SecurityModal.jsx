@@ -36,6 +36,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
   const [selectedCounterparty, setSelectedCounterparty] = useState(null);
   const [statusFilters, setStatusFilters] = useState([]);
   const [allStatuses, setAllStatuses] = useState([]); // Кэш статусов
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
   useEffect(() => {
     if (visible) {
@@ -69,7 +70,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       setLoading(true);
       
       // Загружаем список сотрудников
-      const response = await employeeService.getAll();
+      const response = await employeeService.getAll({ limit: 10000 });
       let allEmployees = response.data.employees || [];
 
       // Загружаем статусы для всех сотрудников одним batch запросом
@@ -257,47 +258,6 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
       render: (text) => text || '-',
     },
     {
-      title: 'Инструктаж ТБ',
-      key: 'tbStatus',
-      align: 'center',
-      width: 120,
-      render: (_, record) => {
-        const statusMapping = record.statusMappings?.find(m => m.statusGroup === 'status' || m.status_group === 'status');
-        const statusName = statusMapping?.status?.name;
-        
-        // Если статус "Новый" - показываем "НЕТ" с оранжевым контуром
-        if (statusName === 'status_new') {
-          return (
-            <Button
-              size="small"
-              onClick={() => handleTbPassed(record.id)}
-              style={{
-                color: '#fa8c16',
-                borderColor: '#fa8c16',
-                backgroundColor: 'transparent',
-              }}
-            >
-              НЕТ
-            </Button>
-          );
-        }
-        // Если статус "Проведен ТБ" или "Обработан" - показываем "ДА" с зеленым контуром
-        return (
-          <Button
-            size="small"
-            onClick={() => handleTbRevoke(record.id)}
-            style={{
-              color: '#52c41a',
-              borderColor: '#52c41a',
-              backgroundColor: 'transparent',
-            }}
-          >
-            ДА
-          </Button>
-        );
-      },
-    },
-    {
       title: 'Блокировка',
       key: 'action',
       width: 120,
@@ -345,11 +305,13 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
 
   return (
     <Modal
-      title="Блокировка и Инструктаж ТБ"
+      title="Блокировка"
       open={visible}
       onCancel={onCancel}
       width={1200}
       maskClosable={false}
+      centered={false}
+      modalStyle={{ top: '30px' }}
       footer={[
         <Button key="close" onClick={onCancel}>
           Закрыть
@@ -402,9 +364,14 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
         loading={loading}
         size="small"
         pagination={{
-          pageSize: 10,
+          current: pagination.current,
+          pageSize: pagination.pageSize,
           showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
+          pageSizeOptions: [10, 20, 50, 100],
+          total: employees.length,
+          onChange: (page, pageSize) => {
+            setPagination({ current: page, pageSize });
+          },
         }}
         rowClassName={(record, index) => 
           index % 2 === 0 ? 'table-row-light' : 'table-row-dark'

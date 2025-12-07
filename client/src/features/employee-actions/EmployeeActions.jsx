@@ -17,7 +17,7 @@ export const EmployeeActions = ({
       </Button>
       {canExport && (
         <Button type="default" icon={<LockOutlined />} onClick={onSecurity}>
-          Блокировка и ТБ
+          Блокировка
         </Button>
       )}
       <Button type="default" icon={<PlusOutlined />} onClick={onAdd}>

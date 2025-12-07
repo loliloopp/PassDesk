@@ -784,7 +784,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   const fetchPositions = async () => {
     try {
-      const { data } = await positionService.getAll({ limit: 1000 });
+      const { data } = await positionService.getAll({ limit: 10000 });
       const loadedPositions = data.data.positions || [];
       setPositions(loadedPositions);
       return loadedPositions;

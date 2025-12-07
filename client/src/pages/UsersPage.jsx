@@ -59,7 +59,7 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const response = await userService.getAll({ limit: 1000 })
+      const response = await userService.getAll({ limit: 10000 })
       setUsers(response?.data?.users || [])
     } catch (error) {
       console.error('Error fetching users:', error)
@@ -71,7 +71,7 @@ const UsersPage = () => {
 
   const fetchCounterparties = async () => {
     try {
-      const response = await counterpartyService.getAll({ limit: 2000 })
+      const response = await counterpartyService.getAll({ limit: 10000 })
       const counterpartiesData = response?.data?.data?.counterparties || []
       setCounterparties(counterpartiesData)
     } catch (error) {

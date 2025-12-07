@@ -25,7 +25,7 @@ export const CounterpartyObjectsModal = ({
   const fetchSites = async () => {
     setLoading(true);
     try {
-      const response = await constructionSiteService.getAll({ limit: 1000 });
+      const response = await constructionSiteService.getAll({ limit: 10000 });
       setSites(response.data.data.constructionSites);
     } catch (error) {
       msg.error('Ошибка при загрузке объектов');

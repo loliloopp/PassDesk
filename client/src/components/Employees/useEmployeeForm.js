@@ -35,7 +35,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     try {
       const [citizenshipsRes, positionsRes, settingsRes] = await Promise.all([
         citizenshipService.getAll(),
-        positionService.getAll({ limit: 1000 }), // Загружаем все должности
+        positionService.getAll({ limit: 10000 }), // Загружаем все должности
         settingsService.getPublicSettings(),
       ]);
 

@@ -71,7 +71,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   useEffect(() => {
     if (visible && userRole === 'admin') {
       setCounterpartiesLoading(true);
-      counterpartyService.getAll({ limit: 1000 })
+      counterpartyService.getAll({ limit: 10000 })
         .then(response => {
           const rawCounterparties = response?.data?.data?.counterparties || response?.data?.counterparties || [];
           const counterparties = Array.isArray(rawCounterparties) ? rawCounterparties : [];
