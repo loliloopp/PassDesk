@@ -517,7 +517,6 @@ const UsersPage = () => {
               }}
               popupMatchSelectWidth={false}
               maxTagCount="responsive"
-              popupMaxHeight={300}
               virtual={true}
             >
               {counterparties.map(c => (
