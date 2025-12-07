@@ -69,8 +69,8 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
     try {
       setLoading(true);
       
-      // Загружаем список сотрудников
-      const response = await employeeService.getAll({ limit: 10000 });
+      // Загружаем список сотрудников (только активных, без черновиков)
+      const response = await employeeService.getAll({ limit: 10000, activeOnly: 'true' });
       let allEmployees = response.data.employees || [];
 
       // Загружаем статусы для всех сотрудников одним batch запросом
@@ -90,11 +90,8 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
         }
       }
 
-      // Показываем всех сотрудников, исключая черновики
-      let filtered = allEmployees.filter(emp => {
-        const cardStatusMapping = emp.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
-        return cardStatusMapping?.status?.name !== 'status_card_draft';
-      });
+      // Сервер уже отфильтровал черновики, уволенных и неактивных через activeOnly=true
+      let filtered = allEmployees;
 
       // Фильтруем по контрагенту
       if (selectedCounterparty) {
