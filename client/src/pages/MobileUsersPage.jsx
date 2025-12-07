@@ -56,7 +56,8 @@ const MobileUsersPage = () => {
   // Загрузить контрагентов
   const fetchCounterparties = async () => {
     try {
-      const { data } = await counterpartyService.getAll({ limit: 100 });
+      // Загружаем все контрагенты без ограничения для поиска в Select
+      const { data } = await counterpartyService.getAll({ limit: 10000, page: 1 });
       setCounterparties(data.data.counterparties);
     } catch (error) {
       console.error('Error loading counterparties:', error);
@@ -310,10 +311,17 @@ const MobileUsersPage = () => {
               placeholder="Не выбрано"
               allowClear
               showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
+              optionFilterProp="label"
+              filterOption={(input, option) => {
+                // Безопасное преобразование: проверяем тип данных перед вызовом toLowerCase
+                const label = option?.label;
+                const searchText = typeof label === 'string' ? label : String(label || '');
+                return searchText.toLowerCase().includes(input.toLowerCase());
+              }}
+              popupMatchSelectWidth={false}
+              maxTagCount="responsive"
+              popupMaxHeight={300}
+              virtual={true}
             >
               {counterparties.map(c => (
                 <Select.Option key={c.id} value={c.id}>

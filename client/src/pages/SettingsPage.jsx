@@ -23,8 +23,8 @@ const SettingsPage = () => {
     try {
       setLoading(true);
       
-      // Загружаем контрагентов
-      const counterpartiesResponse = await counterpartyService.getAll();
+      // Загружаем все контрагенты без ограничения
+      const counterpartiesResponse = await counterpartyService.getAll({ limit: 10000, page: 1 });
       console.log('Counterparties response:', counterpartiesResponse);
       
       // Проверяем разные варианты структуры ответа

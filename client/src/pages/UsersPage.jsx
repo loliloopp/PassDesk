@@ -71,7 +71,8 @@ const UsersPage = () => {
 
   const fetchCounterparties = async () => {
     try {
-      const response = await counterpartyService.getAll({ limit: 10000 })
+      // Загружаем все контрагенты без ограничения для поиска в Select
+      const response = await counterpartyService.getAll({ limit: 10000, page: 1 })
       const counterpartiesData = response?.data?.data?.counterparties || []
       setCounterparties(counterpartiesData)
     } catch (error) {
@@ -514,6 +515,10 @@ const UsersPage = () => {
                 const searchText = typeof label === 'string' ? label : String(label || '');
                 return searchText.toLowerCase().includes(input.toLowerCase());
               }}
+              popupMatchSelectWidth={false}
+              maxTagCount="responsive"
+              popupMaxHeight={300}
+              virtual={true}
             >
               {counterparties.map(c => (
                 <Select.Option key={c.id} value={c.id}>

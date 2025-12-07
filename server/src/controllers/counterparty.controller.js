@@ -4,7 +4,10 @@ import { Op } from 'sequelize';
 // Получить все контрагенты
 export const getAllCounterparties = async (req, res) => {
   try {
-    const { type, search, page = 1, limit = 10, include } = req.query;
+    const { type, search, page = 1, limit = 100, include } = req.query;
+    
+    // Ограничиваем максимальный лимит на 10000 для предотвращения нагрузки
+    const actualLimit = Math.min(parseInt(limit) || 100, 10000);
     
     const where = {};
     
@@ -21,7 +24,7 @@ export const getAllCounterparties = async (req, res) => {
       ];
     }
     
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * actualLimit;
     
     // Настройка include для связанных данных
     const includeOptions = [];
@@ -39,7 +42,7 @@ export const getAllCounterparties = async (req, res) => {
     const { count, rows } = await Counterparty.findAndCountAll({
       where,
       include: includeOptions,
-      limit: parseInt(limit),
+      limit: actualLimit,
       offset: parseInt(offset),
       order: [['createdAt', 'DESC']],
       distinct: true // Важно для правильного подсчета при JOIN
@@ -52,8 +55,8 @@ export const getAllCounterparties = async (req, res) => {
         pagination: {
           total: count,
           page: parseInt(page),
-          limit: parseInt(limit),
-          pages: Math.ceil(count / limit)
+          limit: actualLimit,
+          pages: Math.ceil(count / actualLimit)
         }
       }
     });

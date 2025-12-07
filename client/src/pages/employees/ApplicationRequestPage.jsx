@@ -81,7 +81,7 @@ const ApplicationRequestPage = () => {
   useEffect(() => {
     if (user?.role === 'admin') {
       setCounterpartiesLoading(true);
-      counterpartyService.getAll({ limit: 10000 })
+      counterpartyService.getAll({ limit: 10000, page: 1 })
         .then(response => {
           const rawCounterparties = response?.data?.data?.counterparties || response?.data?.counterparties || [];
           const counterparties = Array.isArray(rawCounterparties) ? rawCounterparties : [];

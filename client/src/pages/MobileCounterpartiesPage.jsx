@@ -32,7 +32,8 @@ const MobileCounterpartiesPage = () => {
   const fetchCounterparties = async () => {
     setLoading(true);
     try {
-      const { data } = await counterpartyService.getAll({ limit: 100 });
+      // Загружаем все контрагенты без ограничения для поиска
+      const { data } = await counterpartyService.getAll({ limit: 10000, page: 1 });
       setCounterparties(data.data.counterparties || []);
     } catch (error) {
       console.error('Error fetching counterparties:', error);

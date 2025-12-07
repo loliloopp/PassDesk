@@ -46,7 +46,8 @@ const ExportToExcelModal = ({ visible, onCancel }) => {
 
   const fetchCounterparties = async () => {
     try {
-      const { data } = await counterpartyService.getAll();
+      // Загружаем все контрагенты без ограничения
+      const { data } = await counterpartyService.getAll({ limit: 10000, page: 1 });
       setCounterparties(data.data.counterparties || []);
     } catch (error) {
       console.error('Error loading counterparties:', error);
