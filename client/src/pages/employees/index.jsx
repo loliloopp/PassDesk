@@ -154,16 +154,20 @@ const EmployeesPage = () => {
             m => m.statusGroup === 'status_active' || m.status_group === 'status_active'
           );
           
+          // Получаем основной статус (status_new, status_tb_passed, status_processed)
+          const mainStatus = mainStatusMapping?.status?.name;
+          
           // Проверяем статусы (черновик может быть в группе status_card, status или старых группах)
-          const isDraft = cardStatusMapping?.status?.name === 'status_card_draft' || mainStatusMapping?.status?.name === 'status_draft';
+          const isDraft = cardStatusMapping?.status?.name === 'status_card_draft' || mainStatus === 'status_draft';
           const isProcessed = cardStatusMapping?.status?.name === 'status_card_processed';
-          const isNew = cardStatusMapping?.status?.name === 'status_card_new';
           const isFired = activeStatusMapping?.status?.name === 'status_active_fired';
           const isInactive = activeStatusMapping?.status?.name === 'status_active_inactive';
+          // Действующий = status_new или status_tb_passed или status_processed (аналогично десктопной таблице)
+          const isActive = mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
           
           if (statusFilter === 'draft') return isDraft;
           if (statusFilter === 'processed') return isProcessed;
-          if (statusFilter === 'new') return isNew;
+          if (statusFilter === 'active') return isActive;
           if (statusFilter === 'fired') return isFired;
           if (statusFilter === 'inactive') return isInactive;
           return true;

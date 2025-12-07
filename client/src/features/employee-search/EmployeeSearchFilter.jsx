@@ -34,11 +34,11 @@ export const EmployeeSearchFilter = ({
       ),
     },
     {
-      key: 'new',
+      key: 'active',
       label: (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Новые</span>
-          {statusFilter === 'new' && <CheckOutlined style={{ color: '#1890ff' }} />}
+          <span>Действующий</span>
+          {statusFilter === 'active' && <CheckOutlined style={{ color: '#1890ff' }} />}
         </div>
       ),
     },
@@ -87,7 +87,7 @@ export const EmployeeSearchFilter = ({
   // Текст для кнопки фильтра
   const getFilterButtonLabel = () => {
     if (!statusFilter) return 'Все статусы';
-    if (statusFilter === 'new') return 'Новые';
+    if (statusFilter === 'active') return 'Действующий';
     if (statusFilter === 'draft') return 'Черновик';
     if (statusFilter === 'processed') return 'Отправленные';
     if (statusFilter === 'fired') return 'Уволен';
