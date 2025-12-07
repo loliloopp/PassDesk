@@ -507,10 +507,13 @@ const UsersPage = () => {
               placeholder="Не выбрано"
               allowClear
               showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
+              optionFilterProp="label"
+              filterOption={(input, option) => {
+                // Безопасное преобразование: проверяем тип данных перед вызовом toLowerCase
+                const label = option?.label;
+                const searchText = typeof label === 'string' ? label : String(label || '');
+                return searchText.toLowerCase().includes(input.toLowerCase());
+              }}
             >
               {counterparties.map(c => (
                 <Select.Option key={c.id} value={c.id}>
