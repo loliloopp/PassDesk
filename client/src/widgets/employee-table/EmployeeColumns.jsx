@@ -11,6 +11,8 @@ import {
 import { getStatusPriority } from '@/entities/employee';
 import { PositionFilterDropdown } from './PositionFilterDropdown';
 import { FullNameFilterDropdown } from './FullNameFilterDropdown';
+import { CounterpartyFilterDropdown } from './CounterpartyFilterDropdown';
+import { CreatedAtFilterDropdown } from './CreatedAtFilterDropdown';
 
 /**
  * Создание конфигурации колонок для таблицы сотрудников
@@ -207,7 +209,18 @@ export const useEmployeeColumns = ({
                 const bCounterparty = b.employeeCounterpartyMappings?.[0]?.counterparty?.name || '';
                 return aCounterparty.localeCompare(bCounterparty);
               },
-              filters: uniqueFilters.counterparties.map((cp) => ({ text: cp, value: cp })),
+              filterDropdown: (props) => (
+                <CounterpartyFilterDropdown
+                  {...props}
+                  uniqueFilterCounterparties={uniqueFilters.counterparties}
+                  resetTrigger={resetTrigger}
+                />
+              ),
+              filterIcon: (filtered) => (
+                <div style={{ color: filtered ? '#1890ff' : undefined }}>
+                  ☰
+                </div>
+              ),
               filteredValue: filters.counterparty || [],
               onFilter: (value, record) => {
                 const mappings = record.employeeCounterpartyMappings || [];
@@ -358,6 +371,31 @@ export const useEmployeeColumns = ({
         sorter: (a, b) => {
           if (!a.createdAt || !b.createdAt) return 0;
           return new Date(a.createdAt) - new Date(b.createdAt);
+        },
+        filterDropdown: (props) => (
+          <CreatedAtFilterDropdown
+            {...props}
+            resetTrigger={resetTrigger}
+          />
+        ),
+        filterIcon: (filtered) => (
+          <div style={{ color: filtered ? '#1890ff' : undefined }}>
+            ☰
+          </div>
+        ),
+        filteredValue: filters.createdAt || [],
+        onFilter: (value, record) => {
+          if (!record.createdAt) return false;
+          const recordDate = new Date(record.createdAt).toISOString().split('T')[0];
+          
+          // Если выбран диапазон
+          if (Array.isArray(value)) {
+            const [fromDate, toDate] = value;
+            return recordDate >= fromDate && recordDate <= toDate;
+          }
+          
+          // Обратная совместимость для одиночного значения
+          return recordDate === value;
         },
       },
       {

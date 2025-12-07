@@ -5,6 +5,7 @@ const STORAGE_KEY = 'employee_table_filters';
 /**
  * Хук для сохранения и восстановления фильтров таблицы сотрудников
  * Хранит только фильтры столбцов, где они есть
+ * Поддерживает как обычные массивы значений, так и массивы дат для фильтра "Дата создания"
  */
 export const useTableFilters = () => {
   const [filters, setFilters] = useState({});
@@ -26,8 +27,15 @@ export const useTableFilters = () => {
     // Фильтруем фильтры: оставляем только те, у которых есть значения
     const filteredFilters = {};
     Object.keys(newFilters).forEach((key) => {
-      if (newFilters[key] && newFilters[key].length > 0) {
-        filteredFilters[key] = newFilters[key];
+      if (newFilters[key]) {
+        // Для массивов проверяем длину, для остального проверяем на null/undefined
+        if (Array.isArray(newFilters[key])) {
+          if (newFilters[key].length > 0) {
+            filteredFilters[key] = newFilters[key];
+          }
+        } else if (newFilters[key] !== null && newFilters[key] !== undefined) {
+          filteredFilters[key] = newFilters[key];
+        }
       }
     });
 
