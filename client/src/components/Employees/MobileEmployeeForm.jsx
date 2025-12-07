@@ -222,6 +222,33 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     });
   };
 
+  // Обработчик потери фокуса на поле ИНН
+  const handleInnBlur = async () => {
+    // Не проверяем ИНН при редактировании сотрудника или при сбросе формы
+    if (employee || !onCheckInn || isFormResetRef.current) {
+      return;
+    }
+
+    const innValue = form.getFieldValue('inn');
+    const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
+    
+    // Проверяем только если ИНН полностью заполнен (10 или 12 цифр)
+    if ((normalized.length === 10 || normalized.length === 12) && innValue) {
+      try {
+        await onCheckInn(innValue);
+      } catch (error) {
+        // 🎯 Обработка ошибок проверки ИНН (409, 404 и т.д.)
+        if (error.response?.status === 409) {
+          // Сотрудник найден в другом контрагенте
+          messageApi.error(error.response?.data?.message || 'Сотрудник с таким ИНН уже существует. Обратитесь к администратору.');
+        } else if (error.response?.status !== 404) {
+          // 404 это нормально (сотрудник не найден)
+          console.error('Ошибка при проверке ИНН:', error);
+        }
+      }
+    }
+  };
+
   // Формируем items для Collapse
   const collapseItems = [];
 
@@ -391,6 +418,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               <Input 
                 placeholder="1234-567890-12" 
                 size="large" 
+                onBlur={handleInnBlur}
                 {...noAutoFillProps}
               />
             </Form.Item>
@@ -1078,38 +1106,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
           layout="vertical"
           initialValues={{ gender: 'male' }}
           autoComplete="off"
-          onFieldsChange={          (changedFields) => {
-            // Проверяем, изменилось ли поле ИНН
-            const innField = changedFields.find(field => field.name && field.name[0] === 'inn');
-            
-            if (innField && !employee && onCheckInn && !isFormResetRef.current) {
-              // Очищаем предыдущий таймер, если он есть
-              if (innCheckTimeoutRef.current) {
-                clearTimeout(innCheckTimeoutRef.current);
-              }
-              
-              // Запускаем проверку с задержкой 1000мс (debounce)
-              innCheckTimeoutRef.current = setTimeout(async () => {
-                const innValue = form.getFieldValue('inn');
-                const normalized = innValue ? innValue.replace(/[^\d]/g, '') : '';
-                
-                if ((normalized.length === 10 || normalized.length === 12) && innValue) {
-                  try {
-                    await onCheckInn(innValue);
-                  } catch (error) {
-                    // 🎯 Обработка ошибок проверки ИНН (409, 404 и т.д.)
-                    if (error.response?.status === 409) {
-                      // Сотрудник найден в другом контрагенте
-                      messageApi.error(error.response?.data?.message || 'Сотрудник с таким ИНН уже существует. Обратитесь к администратору.');
-                    } else if (error.response?.status !== 404) {
-                      // 404 это нормально (сотрудник не найден)
-                      console.error('Ошибка при проверке ИНН:', error);
-                    }
-                  }
-                }
-              }, 1000); // Увеличил до 1000мс, чтобы дать пользователю время ввести весь ИНН
-            }
-            
+          onFieldsChange={(changedFields) => {
             // Сбрасываем флаг после обработки
             isFormResetRef.current = false;
           }}
