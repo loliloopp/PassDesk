@@ -239,6 +239,13 @@ Employee.init(
         model: 'users',
         key: 'id'
       }
+    },
+    idAll: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      unique: true,
+      field: 'id_all',
+      comment: 'ID из внешней системы (для маппинга сотрудников)'
     }
   },
   {
@@ -247,6 +254,14 @@ Employee.init(
     tableName: 'employees',
     timestamps: true,
     underscored: true,
+    hooks: {
+      beforeUpdate(employee) {
+        // id_all не может быть изменен после создания
+        if (employee.changed('idAll')) {
+          throw new Error('Поле id_all (ID из внешней системы) не может быть изменено');
+        }
+      }
+    },
     indexes: [
       {
         fields: ['position_id']
@@ -271,6 +286,9 @@ Employee.init(
     },
     {
       fields: ['kig']
+    },
+    {
+      fields: ['id_all']
     }
     ]
   }
