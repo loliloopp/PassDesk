@@ -26,6 +26,7 @@ const AddEmployeePage = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [loading, setLoading] = useState(false);
   const employeeLoadedRef = useRef(false); // 🔗 Флаг что сотрудник уже загружен
+  const savedEmployeeIdRef = useRef(null); // 🎯 ID сохранённого сотрудника (не сбрасывается при перемонтировании)
 
   const { createEmployee, updateEmployee } = useEmployeeActions(() => {
     // Не нужно refetch, так как мы уходим со страницы
@@ -38,6 +39,14 @@ const AddEmployeePage = () => {
     try {
       const foundEmployee = await checkInn(innValue);
       if (foundEmployee) {
+        // 🎯 Если найденный сотрудник - это тот же, которого мы редактируем/только что создали - игнорируем
+        // Проверяем и editingEmployee?.id и savedEmployeeIdRef.current (на случай если editingEmployee сбросился)
+        const currentEmployeeId = editingEmployee?.id || savedEmployeeIdRef.current;
+        if (currentEmployeeId && foundEmployee.id === currentEmployeeId) {
+          console.log('🔍 handleCheckInn: найден тот же сотрудник, игнорируем');
+          return;
+        }
+
         const fullName = [foundEmployee.lastName, foundEmployee.firstName, foundEmployee.middleName]
           .filter(Boolean)
           .join(' ');
@@ -97,11 +106,13 @@ const AddEmployeePage = () => {
 
     if (id) {
       setLoading(true);
+      savedEmployeeIdRef.current = id; // 🎯 Сразу запоминаем id из URL
       employeeService
         .getById(id)
         .then((response) => {
           setEditingEmployee(response.data);
           employeeLoadedRef.current = true;
+          savedEmployeeIdRef.current = response.data?.id || id; // 🎯 Обновляем на случай если id поменялся
         })
         .catch((error) => {
           message.error('Ошибка загрузки данных сотрудника');
@@ -149,6 +160,7 @@ const AddEmployeePage = () => {
         // Обновление существующего сотрудника
         const updated = await updateEmployee(editingEmployee.id, values);
         setEditingEmployee(updated);
+        savedEmployeeIdRef.current = updated?.id || editingEmployee.id; // 🎯 Сохраняем id
         
         // При сохранении черновика остаемся на странице
         if (!values.isDraft) {
@@ -161,6 +173,7 @@ const AddEmployeePage = () => {
         // Создание нового сотрудника
         const newEmployee = await createEmployee(values);
         setEditingEmployee(newEmployee);
+        savedEmployeeIdRef.current = newEmployee?.id; // 🎯 Сохраняем id созданного сотрудника
         
         // При сохранении черновика остаемся на странице
         if (!values.isDraft) {
