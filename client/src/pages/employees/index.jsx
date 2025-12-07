@@ -141,16 +141,21 @@ const EmployeesPage = () => {
       // Фильтр по статусу
       if (statusFilter) {
         filtered = filtered.filter((employee) => {
-          // Находим статусы сотрудника
-          const cardStatusMapping = employee.statusMappings?.find(
-            m => m.statusGroup === 'status_card' || m.status_group === 'status_card'
-          );
+          // Находим статусы сотрудника (с поддержкой старых неправильных групп из импорта)
+          const cardStatusMapping = employee.statusMappings?.find(m => {
+            const group = m.statusGroup || m.status_group;
+            return group === 'status_card' || group === 'card draft';
+          });
+          const mainStatusMapping = employee.statusMappings?.find(m => {
+            const group = m.statusGroup || m.status_group;
+            return group === 'status' || group === 'draft';
+          });
           const activeStatusMapping = employee.statusMappings?.find(
             m => m.statusGroup === 'status_active' || m.status_group === 'status_active'
           );
           
-          // Проверяем статусы
-          const isDraft = cardStatusMapping?.status?.name === 'status_card_draft';
+          // Проверяем статусы (черновик может быть в группе status_card, status или старых группах)
+          const isDraft = cardStatusMapping?.status?.name === 'status_card_draft' || mainStatusMapping?.status?.name === 'status_draft';
           const isProcessed = cardStatusMapping?.status?.name === 'status_card_processed';
           const isNew = cardStatusMapping?.status?.name === 'status_card_new';
           const isFired = activeStatusMapping?.status?.name === 'status_active_fired';

@@ -148,9 +148,16 @@ const MobileEmployeeList = ({
                       const isFired = activeStatusMapping?.status?.name === 'status_active_fired';
                       const isInactive = activeStatusMapping?.status?.name === 'status_active_inactive';
                       
-                      // Проверяем статус черновик
-                      const cardStatusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
-                      const isDraft = cardStatusMapping?.status?.name === 'status_card_draft';
+                      // Проверяем статус черновик (может быть в группе status_card, status или старых неправильных группах 'card draft', 'draft')
+                      const cardStatusMapping = employee.statusMappings?.find(m => {
+                        const group = m.statusGroup || m.status_group;
+                        return group === 'status_card' || group === 'card draft';
+                      });
+                      const mainStatusMapping = employee.statusMappings?.find(m => {
+                        const group = m.statusGroup || m.status_group;
+                        return group === 'status' || group === 'draft';
+                      });
+                      const isDraft = cardStatusMapping?.status?.name === 'status_card_draft' || mainStatusMapping?.status?.name === 'status_draft';
                       
                       // Показываем только если есть хотя бы один статус
                       if (!isFired && !isDraft && !isInactive) return null;

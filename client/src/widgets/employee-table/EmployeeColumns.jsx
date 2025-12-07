@@ -445,10 +445,12 @@ export const useEmployeeColumns = ({
           
           // Функция для получения статуса по группе
           // API возвращает snake_case поля: status_group, status.name
-          const getStatusByGroup = (group) => {
+          // Также поддерживаем старые неправильные группы из импорта (draft, card draft)
+          const getStatusByGroup = (group, alternativeGroups = []) => {
+            const groupsToCheck = [group, ...alternativeGroups];
             const mapping = statusMappings.find(m => {
               const mappingGroup = m.statusGroup || m.status_group;
-              return mappingGroup === group;
+              return groupsToCheck.includes(mappingGroup);
             });
             if (!mapping) return null;
             // Статус может быть в status или Status
@@ -456,10 +458,13 @@ export const useEmployeeColumns = ({
             return statusObj?.name;
           };
 
-          // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status (Черновик/Новый/Проведен ТБ/Обработан)
+          // Приоритет: status_secure (Заблокирован) > status_active (Уволен/Неактивный) > status_card (Черновик) > status (Новый/Проведен ТБ/Обработан)
           const secureStatus = getStatusByGroup('status_secure');
           const activeStatus = getStatusByGroup('status_active');
-          const mainStatus = getStatusByGroup('status');
+          // Проверяем группу status_card и старую неправильную группу 'card draft'
+          const cardStatus = getStatusByGroup('status_card', ['card draft']);
+          // Проверяем группу status и старую неправильную группу 'draft'
+          const mainStatus = getStatusByGroup('status', ['draft']);
 
           if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') {
             return <Tag color="red">Заблокирован</Tag>;
@@ -472,8 +477,12 @@ export const useEmployeeColumns = ({
             return <Tag color="blue">Неактивный</Tag>;
           }
 
+          // Проверяем черновик - может быть в группе status_card или status
+          if (cardStatus === 'status_card_draft' || mainStatus === 'status_draft') {
+            return <Tag color="default">Черновик</Tag>;
+          }
+
           const statusMap = {
-            'status_draft': { text: 'Черновик', color: 'default' },
             'status_new': { text: 'Действующий', color: 'green' },
             'status_tb_passed': { text: 'Действующий', color: 'green' },
             'status_processed': { text: 'Действующий', color: 'success' },
@@ -493,10 +502,12 @@ export const useEmployeeColumns = ({
         filteredValue: filters.status || [],
         onFilter: (value, record) => {
           const statusMappings = record.statusMappings || [];
-          const getStatusByGroup = (group) => {
+          // Функция с поддержкой альтернативных групп (для совместимости со старыми данными)
+          const getStatusByGroup = (group, alternativeGroups = []) => {
+            const groupsToCheck = [group, ...alternativeGroups];
             const mapping = statusMappings.find(m => {
               const mappingGroup = m.statusGroup || m.status_group;
-              return mappingGroup === group;
+              return groupsToCheck.includes(mappingGroup);
             });
             if (!mapping) return null;
             const statusObj = mapping.status || mapping.Status;
@@ -505,7 +516,8 @@ export const useEmployeeColumns = ({
 
           const secureStatus = getStatusByGroup('status_secure');
           const activeStatus = getStatusByGroup('status_active');
-          const mainStatus = getStatusByGroup('status');
+          const cardStatus = getStatusByGroup('status_card', ['card draft']);
+          const mainStatus = getStatusByGroup('status', ['draft']);
 
           if (value === 'blocked') {
             return secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl';
@@ -516,19 +528,16 @@ export const useEmployeeColumns = ({
           if (value === 'inactive') {
             return activeStatus === 'status_active_inactive';
           }
+          if (value === 'draft') {
+            // Черновик может быть в группе status_card или status
+            return cardStatus === 'status_card_draft' || mainStatus === 'status_draft';
+          }
           if (value === 'active') {
             // Действующий = status_new или status_tb_passed или status_processed
             return mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
           }
           
-          return (
-            secureStatus !== 'status_secure_block' && 
-            secureStatus !== 'status_secure_block_compl' &&
-            activeStatus !== 'status_active_fired' &&
-            activeStatus !== 'status_active_fired_compl' &&
-            activeStatus !== 'status_active_inactive' &&
-            mainStatus === `status_${value}`
-          );
+          return false;
         },
       },
       {

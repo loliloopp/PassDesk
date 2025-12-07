@@ -31,6 +31,11 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
 
   // Загрузка справочников
   const loadReferences = async (abortSignal) => {
+    // Если сигнал уже отменён до начала - не делаем запрос
+    if (abortSignal?.aborted) {
+      return;
+    }
+    
     setLoadingReferences(true);
     try {
       const [citizenshipsRes, positionsRes, settingsRes] = await Promise.all([

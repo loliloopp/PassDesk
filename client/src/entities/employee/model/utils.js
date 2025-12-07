@@ -99,21 +99,31 @@ export const getUniqueFilterValues = (employees) => {
  * Получить приоритет статуса сотрудника для сортировки
  */
 export const getStatusPriority = (record) => {
-  const getStatusByGroup = (group) => {
-    const mapping = record.statusMappings?.find(m => m.statusGroup === group || m.status_group === group);
+  // Функция с поддержкой альтернативных групп (для совместимости со старыми данными из импорта)
+  const getStatusByGroup = (group, alternativeGroups = []) => {
+    const groupsToCheck = [group, ...alternativeGroups];
+    const mapping = record.statusMappings?.find(m => {
+      const mappingGroup = m.statusGroup || m.status_group;
+      return groupsToCheck.includes(mappingGroup);
+    });
     return mapping?.status?.name;
   };
 
   const secureStatus = getStatusByGroup('status_secure');
   const activeStatus = getStatusByGroup('status_active');
-  const mainStatus = getStatusByGroup('status');
+  // Проверяем status_card и старую неправильную группу 'card draft'
+  const cardStatus = getStatusByGroup('status_card', ['card draft']);
+  // Проверяем status и старую неправильную группу 'draft'
+  const mainStatus = getStatusByGroup('status', ['draft']);
 
   if (secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl') return 1; // Заблокирован
   if (activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl') return 2; // Уволен
   if (activeStatus === 'status_active_inactive') return 3; // Неактивный
-  if (mainStatus === 'status_new') return 4; // Новый
-  if (mainStatus === 'status_tb_passed') return 5; // Проведен ТБ
-  if (mainStatus === 'status_processed') return 6; // Обработан
-  return 7; // Остальные
+  // Черновик может быть в группе status_card или status
+  if (cardStatus === 'status_card_draft' || mainStatus === 'status_draft') return 4; // Черновик
+  if (mainStatus === 'status_new') return 5; // Новый/Действующий
+  if (mainStatus === 'status_tb_passed') return 6; // Проведен ТБ
+  if (mainStatus === 'status_processed') return 7; // Обработан
+  return 8; // Остальные
 };
 

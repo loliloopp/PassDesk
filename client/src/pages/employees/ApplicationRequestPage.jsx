@@ -10,6 +10,7 @@ import { applicationService } from '@/services/applicationService';
 import { constructionSiteService } from '@/services/constructionSiteService';
 import { counterpartyService } from '@/services/counterpartyService';
 import ExcelColumnsModal from '@/components/Employees/ExcelColumnsModal';
+import { getStatusPriority } from '@/entities/employee/model/utils';
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
 import { formatSnils, formatKig, formatInn } from '@/utils/formatters';
@@ -94,17 +95,6 @@ const ApplicationRequestPage = () => {
     }
   }, [user?.role]);
 
-  // Функция для определения статуса сотрудника
-  const getEmployeeStatus = (employee) => {
-    const statusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_card' || m.status_group === 'status_card');
-    const activeStatusMapping = employee.statusMappings?.find(m => m.statusGroup === 'status_active' || m.status_group === 'status_active');
-    
-    const cardStatus = statusMapping?.status?.name;
-    const activeStatus = activeStatusMapping?.status?.name;
-    
-    return { cardStatus, activeStatus };
-  };
-
   // Фильтруем сотрудников
   const availableEmployees = useMemo(() => {
     let filtered = employees;
@@ -130,19 +120,16 @@ const ApplicationRequestPage = () => {
     
     // Исключаем черновики, деактивированных, заблокированных
     filtered = filtered.filter(emp => {
-      const { cardStatus, activeStatus } = getEmployeeStatus(emp);
+      const priority = getStatusPriority(emp);
       
-      // Исключаем черновики (status_card_draft)
-      if (cardStatus === 'status_card_draft') return false;
-      
-      // Исключаем деактивированных (status_active_inactive)
-      if (activeStatus === 'status_active_inactive') return false;
-      
-      // Исключаем заблокированных (status_active_blocked)
-      if (activeStatus === 'status_active_blocked') return false;
+      // Приоритеты: 1-blocked, 2-fired, 3-inactive, 4-draft, 5-new, 6-tb_passed, 7-processed, 8-other
+      // Исключаем: заблокированных (1), черновиков (4), деактивированных (3)
+      if (priority === 1) return false; // status_secure_block
+      if (priority === 3) return false; // status_active_inactive
+      if (priority === 4) return false; // status_card_draft или status_draft
       
       // Исключаем уволенных если не включена опция
-      if (!includeFired && activeStatus === 'status_active_fired') return false;
+      if (!includeFired && priority === 2) return false; // status_active_fired
       
       return true;
     });

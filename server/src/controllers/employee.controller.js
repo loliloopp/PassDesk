@@ -2638,11 +2638,15 @@ export const importEmployees = async (req, res, next) => {
               }
             });
 
-            // Создаем статусы
+            // Создаем статусы (берём группу из статуса в БД)
+            const statusGroupMap = {
+              'status_draft': 'status',
+              'status_card_draft': 'status_card'
+            };
+            
             for (const statusName of ['status_draft', 'status_card_draft']) {
               const statusId = statusMap[statusName];
-              // statusGroup - это название группы (например, 'status_draft' или 'status_card_draft')
-              const statusGroup = statusName.replace('status_', '').replace('_', ' ');
+              const statusGroup = statusGroupMap[statusName];
               
               await EmployeeStatusMapping.findOrCreate({
                 where: {
