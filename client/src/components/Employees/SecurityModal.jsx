@@ -363,6 +363,7 @@ const SecurityModal = ({ visible, onCancel, onSuccess }) => {
         rowKey="id"
         loading={loading}
         size="small"
+        scroll={{ y: 500 }}
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,
