@@ -43,7 +43,7 @@ export const useEmployeeColumns = ({
       {
         title: '№',
         key: 'index',
-        width: 40,
+        width: 55,
         align: 'center',
         render: (text, record, index) => index + 1,
       },
