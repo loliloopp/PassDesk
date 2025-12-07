@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Typography, App, Grid, Button } from 'antd';
-import { PlusOutlined, FileExcelOutlined, ClearOutlined } from '@ant-design/icons';
+import { Typography, App, Grid, Button, Tooltip } from 'antd';
+import { PlusOutlined, FileExcelOutlined, ClearOutlined, SyncOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useEmployees, useEmployeeActions, useCheckInn, getUniqueFilterValues } from '@/entities/employee';
 import { employeeApi } from '@/entities/employee';
@@ -56,11 +56,18 @@ const EmployeesPage = () => {
   usePageTitle('Сотрудники', isMobile);
 
   // Загружаем ВСЕ сотрудников без фильтрации по статусам (activeOnly = false)
-  const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees(false);
+  // Прогрессивная загрузка: сначала первые 100, потом остальные в фоне
+  const { 
+    employees, 
+    loading: employeesLoading, 
+    backgroundLoading,
+    totalCount,
+    refetch: refetchEmployees 
+  } = useEmployees(false);
   const { departments, loading: departmentsLoading } = useDepartments();
   const { defaultCounterpartyId, loading: settingsLoading } = useSettings();
 
-  // Общий статус загрузки
+  // Общий статус загрузки (только первоначальная загрузка)
   const loading = employeesLoading || departmentsLoading || settingsLoading;
 
   // Определяем права доступа
@@ -336,9 +343,16 @@ const EmployeesPage = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
           {/* Заголовок только на десктопе - на мобильных в Header */}
           {!isMobile && (
-            <Title level={2} style={{ margin: 0, flexShrink: 0 }}>
-              Сотрудники
-            </Title>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <Title level={2} style={{ margin: 0 }}>
+                Сотрудники
+              </Title>
+              {backgroundLoading && (
+                <Tooltip title={`Загрузка данных... (${employees.length} из ${totalCount})`}>
+                  <SyncOutlined spin style={{ color: '#1890ff', fontSize: 16 }} />
+                </Tooltip>
+              )}
+            </div>
           )}
 
           {/* На десктопе показываем поиск и кнопку сброса рядом с заголовком */}

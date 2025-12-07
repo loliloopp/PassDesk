@@ -44,9 +44,35 @@ export const employeeStatusService = {
   },
 
   // Получить статусы для нескольких сотрудников одним запросом (batch)
+  // Автоматически разбивает на порции по 500 ID для избежания ошибок
   getStatusesBatch: async (employeeIds) => {
-    const response = await api.post('/employees/statuses/batch', { employeeIds })
-    return response.data
+    const CHUNK_SIZE = 500;
+    
+    // Если ID мало - один запрос
+    if (employeeIds.length <= CHUNK_SIZE) {
+      const response = await api.post('/employees/statuses/batch', { employeeIds });
+      return response.data;
+    }
+    
+    // Разбиваем на порции и загружаем параллельно
+    const chunks = [];
+    for (let i = 0; i < employeeIds.length; i += CHUNK_SIZE) {
+      chunks.push(employeeIds.slice(i, i + CHUNK_SIZE));
+    }
+    
+    const results = await Promise.all(
+      chunks.map(chunk => 
+        api.post('/employees/statuses/batch', { employeeIds: chunk })
+          .then(res => res.data)
+          .catch(err => {
+            console.warn('Batch status load error:', err);
+            return {}; // Возвращаем пустой объект при ошибке
+          })
+      )
+    );
+    
+    // Объединяем результаты
+    return results.reduce((acc, result) => ({ ...acc, ...result }), {});
   },
 
   // Уволить сотрудника

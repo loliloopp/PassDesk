@@ -56,8 +56,9 @@ const calculateStatusCard = (employee) => {
 
 export const getAllEmployees = async (req, res, next) => {
   try {
-    const { page = 1, limit = 100, search = '', activeOnly = 'false', dateFrom, dateTo } = req.query;
-    const offset = (page - 1) * limit;
+    const { page = 1, limit = 100, search = '', activeOnly = 'false', dateFrom, dateTo, offset: queryOffset } = req.query;
+    // Используем offset из query если передан, иначе вычисляем из page
+    const offset = queryOffset !== undefined ? parseInt(queryOffset) : (page - 1) * limit;
     const userId = req.user.id;
     const userRole = req.user.role;
     const userCounterpartyId = req.user.counterpartyId;
@@ -316,6 +317,12 @@ export const getAllEmployees = async (req, res, next) => {
       return employeeData;
     });
 
+    // Определяем total: для activeOnly=false используем count из БД,
+    // для activeOnly=true или фильтров по дате - приблизительное значение
+    // (точный подсчёт требует отдельного запроса, что замедлит ответ)
+    const hasPostFiltering = isActiveOnly || dateFrom || dateTo;
+    const totalCount = hasPostFiltering ? filteredRows.length : count;
+    
     res.json({
       success: true,
       data: {
@@ -323,8 +330,8 @@ export const getAllEmployees = async (req, res, next) => {
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total: filteredRows.length,
-          pages: Math.ceil(filteredRows.length / limit)
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit)
         }
       }
     });

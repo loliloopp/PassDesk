@@ -1,63 +1,169 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import { employeeApi } from '../api/employeeApi';
 import { employeeStatusService } from '@/services/employeeStatusService';
 
+// Размер первой порции для быстрого отображения
+const INITIAL_PAGE_SIZE = 100;
+// Размер порции для фоновой загрузки
+const BACKGROUND_PAGE_SIZE = 2000;
+
+/**
+ * Загрузка статусов для списка сотрудников
+ */
+const loadStatusesForEmployees = async (employeesData) => {
+  if (employeesData.length === 0) return employeesData;
+  
+  try {
+    const employeeIds = employeesData.map(emp => emp.id);
+    const statusesBatch = await employeeStatusService.getStatusesBatch(employeeIds);
+    
+    return employeesData.map(emp => ({
+      ...emp,
+      statusMappings: statusesBatch[emp.id] || []
+    }));
+  } catch (statusErr) {
+    console.warn('Error loading statuses batch:', statusErr);
+    return employeesData;
+  }
+};
+
 /**
  * Хук для работы с сотрудниками
- * Оптимизированная загрузка с параллельными запросами
- * @param {boolean} activeOnly - показывать только активных сотрудников (фильтровать исключенные статусы). По умолчанию false
- * @param {object} filterParams - дополнительные параметры фильтрации (dateFrom, dateTo и т.д.)
+ * Прогрессивная загрузка: сначала первая порция, потом остальные в фоне
+ * @param {boolean} activeOnly - показывать только активных сотрудников
+ * @param {object} filterParams - дополнительные параметры фильтрации
  */
 export const useEmployees = (activeOnly = false, filterParams = {}) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  
+  // Флаг для отмены фоновой загрузки при размонтировании или новом запросе
+  const abortControllerRef = useRef(null);
+  const isMountedRef = useRef(true);
 
-  const fetchEmployees = async () => {
+  /**
+   * Загрузка сотрудников с прогрессивной стратегией
+   */
+  const fetchEmployees = useCallback(async () => {
+    // Отменяем предыдущую фоновую загрузку
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     setLoading(true);
+    setBackgroundLoading(false);
     setError(null);
+    
     try {
-      const response = await employeeApi.getAll({ activeOnly, ...filterParams });
-      // employeeApi возвращает response.data, структура: { success: true, data: { employees: [], pagination: {} } }
-      let employeesData = response?.data?.employees || [];
+      // 1. Загружаем первую порцию для быстрого отображения
+      const initialResponse = await employeeApi.getAll({ 
+        activeOnly, 
+        ...filterParams,
+        page: 1,
+        limit: INITIAL_PAGE_SIZE
+      });
       
-      // Загружаем статусы для всех сотрудников одним batch запросом
-      if (employeesData.length > 0) {
-        try {
-          const employeeIds = employeesData.map(emp => emp.id);
-          const statusesBatch = await employeeStatusService.getStatusesBatch(employeeIds);
-          
-          // Добавляем статусы к каждому сотруднику
-          employeesData = employeesData.map(emp => ({
-            ...emp,
-            statusMappings: statusesBatch[emp.id] || []
-          }));
-        } catch (statusErr) {
-          console.warn('Error loading statuses batch:', statusErr);
-          // Если ошибка - продолжаем без статусов
+      const initialData = initialResponse?.data?.employees || [];
+      const pagination = initialResponse?.data?.pagination || {};
+      const total = pagination.total || initialData.length;
+      
+      setTotalCount(total);
+      
+      // Загружаем статусы для первой порции
+      const initialWithStatuses = await loadStatusesForEmployees(initialData);
+      
+      if (!isMountedRef.current) return [];
+      
+      // Показываем первую порцию пользователю
+      setEmployees(initialWithStatuses);
+      setLoading(false);
+      
+      // 2. Если есть ещё данные - загружаем в фоне
+      if (total > INITIAL_PAGE_SIZE) {
+        setBackgroundLoading(true);
+        
+        // Собираем все данные, начиная с уже загруженных
+        let allEmployees = [...initialWithStatuses];
+        // Начинаем с offset = INITIAL_PAGE_SIZE (после первых 100)
+        let currentOffset = INITIAL_PAGE_SIZE;
+        
+        // Загружаем остальные порции
+        while (currentOffset < total && !abortControllerRef.current.signal.aborted) {
+          try {
+            // Используем page и limit с правильным расчётом
+            const pageNum = Math.floor(currentOffset / BACKGROUND_PAGE_SIZE) + 1;
+            const response = await employeeApi.getAll({
+              activeOnly,
+              ...filterParams,
+              page: 1, // Всегда page=1, используем offset через limit
+              limit: BACKGROUND_PAGE_SIZE,
+              offset: currentOffset // Явно передаём offset
+            });
+            
+            const pageData = response?.data?.employees || [];
+            if (pageData.length === 0) break;
+            
+            // Загружаем статусы для этой порции
+            const pageWithStatuses = await loadStatusesForEmployees(pageData);
+            
+            // Добавляем к общему списку (исключая дубликаты)
+            const existingIds = new Set(allEmployees.map(e => e.id));
+            const newEmployees = pageWithStatuses.filter(e => !existingIds.has(e.id));
+            allEmployees = [...allEmployees, ...newEmployees];
+            
+            // Обновляем состояние после каждой порции
+            if (isMountedRef.current && !abortControllerRef.current.signal.aborted) {
+              setEmployees([...allEmployees]);
+            }
+            
+            currentOffset += BACKGROUND_PAGE_SIZE;
+          } catch (err) {
+            // Если ошибка при фоновой загрузке - прерываем, но не показываем ошибку
+            console.warn('Background loading error:', err);
+            break;
+          }
+        }
+        
+        if (isMountedRef.current) {
+          setBackgroundLoading(false);
         }
       }
       
-      setEmployees(employeesData);
-      return employeesData;
+      return initialWithStatuses;
     } catch (err) {
       console.error('Error fetching employees:', err);
-      setError(err);
-      setEmployees([]);
+      if (isMountedRef.current) {
+        setError(err);
+        setEmployees([]);
+        setLoading(false);
+        setBackgroundLoading(false);
+      }
       return [];
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [activeOnly, JSON.stringify(filterParams)]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchEmployees();
-  }, [activeOnly, JSON.stringify(filterParams)]);
+    
+    return () => {
+      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchEmployees]);
 
   return {
     employees,
     loading,
+    backgroundLoading, // Индикатор фоновой загрузки
+    totalCount, // Общее количество сотрудников
     error,
     refetch: fetchEmployees,
   };
