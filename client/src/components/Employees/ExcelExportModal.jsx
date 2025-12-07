@@ -96,6 +96,7 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
           'Гражданство': emp.citizenship?.code || '-',
           'Организация': counterpartyMapping?.counterparty?.name || '-',
           'ИНН организации': counterpartyMapping?.counterparty?.inn || '-',
+          'id_all': emp.idAll || '-',
         };
       });
 
