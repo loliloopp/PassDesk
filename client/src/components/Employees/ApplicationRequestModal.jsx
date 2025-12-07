@@ -24,6 +24,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   const [availableCounterparties, setAvailableCounterparties] = useState([]);
   const [counterpartySearchText, setCounterpartySearchText] = useState('');
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
   const { columns: selectedColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
 
@@ -429,8 +430,15 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
             rowKey="id"
             loading={loading}
             size="small"
-            pagination={{ pageSize: 10, showSizeChanger: true }}
-            scroll={{ x: 1200 }}
+            pagination={{ 
+              current: pagination.current, 
+              pageSize: pagination.pageSize,
+              showSizeChanger: true,
+              onChange: (page, pageSize) => {
+                setPagination({ current: 1, pageSize });
+              }
+            }}
+            scroll={{ x: 1200, y: 400 }}
           />
         )}
 
