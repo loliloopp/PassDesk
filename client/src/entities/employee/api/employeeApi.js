@@ -121,5 +121,22 @@ export const employeeApi = {
     const response = await api.post(`/employees/${employeeId}/status/edited`, { isUpload });
     return response.data;
   },
+
+  // Валидировать импорт сотрудников из Excel
+  validateEmployeesImport: async (employees) => {
+    const response = await api.post('/employees/import/validate', { employees });
+    return response;
+  },
+
+  // Выполнить импорт сотрудников из Excel
+  importEmployees: async (employees, conflictResolutions = {}) => {
+    const response = await api.post('/employees/import/execute', {
+      employees,
+      conflictResolutions
+    }, {
+      timeout: 5 * 60 * 1000 // 5 минут для импорта больших объемов данных
+    });
+    return response;
+  }
 };
 

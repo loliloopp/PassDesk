@@ -2257,3 +2257,421 @@ export const transferEmployeeToCounterparty = async (req, res, next) => {
   }
 };
 
+/**
+ * Импорт сотрудников из Excel
+ * Шаг 1: Валидация и проверка контрагентов
+ */
+export const validateEmployeesImport = async (req, res, next) => {
+  try {
+    const { employees } = req.body;
+    const userId = req.user.id;
+
+    console.log('📥 validateEmployeesImport - входные данные:', {
+      count: Array.isArray(employees) ? employees.length : 0,
+      sample: employees?.[0]
+    });
+
+    if (!Array.isArray(employees) || employees.length === 0) {
+      throw new AppError('Данные сотрудников не предоставлены', 400);
+    }
+
+    // 1. Проверяем наличие требуемых статусов
+    const requiredStatuses = ['status_draft', 'status_card_draft'];
+    const foundStatuses = await Status.findAll({
+      where: {
+        name: requiredStatuses
+      }
+    });
+
+    const foundStatusNames = foundStatuses.map(s => s.name);
+    const missingStatuses = requiredStatuses.filter(s => !foundStatusNames.includes(s));
+
+    if (missingStatuses.length > 0) {
+      console.error('❌ Отсутствуют статусы:', missingStatuses);
+      throw new AppError(
+        `Ошибка системы: не найдены статусы: ${missingStatuses.join(', ')}`,
+        500
+      );
+    }
+
+    console.log('✅ Все требуемые статусы найдены');
+
+    // 2. Валидируем данные и проверяем контрагентов
+    const validationErrors = [];
+    const counterpartyInnMap = {}; // Кеш для контрагентов
+
+    const validatedEmployees = await Promise.all(
+      employees.map(async (emp, index) => {
+        const errors = [];
+
+        // Обязательное поле - фамилия
+        if (!emp.lastName || emp.lastName.toString().trim() === '') {
+          errors.push('Фамилия (last_name) обязательна');
+        }
+
+        // Проверяем ИНН контрагента - ОБЯЗАТЕЛЕН для поиска контрагента
+        if (!emp.counterpartyInn || emp.counterpartyInn.toString().trim() === '') {
+          errors.push('ИНН контрагента обязателен');
+        } else {
+          const counterpartyInn = emp.counterpartyInn.toString().trim();
+
+          // Кеш контрагентов
+          if (!counterpartyInnMap[counterpartyInn]) {
+            const counterparty = await Counterparty.findOne({
+              where: { inn: counterpartyInn }
+            });
+            counterpartyInnMap[counterpartyInn] = counterparty;
+          }
+
+          if (!counterpartyInnMap[counterpartyInn]) {
+            errors.push(`Контрагент с ИНН ${counterpartyInn} не найден`);
+          }
+        }
+
+        // ИНН сотрудника - НЕ обязателен
+
+        if (errors.length > 0) {
+          console.log(`⚠️ Ошибки валидации в строке ${index + 1}:`, errors);
+          validationErrors.push({
+            rowIndex: index + 1,
+            lastName: emp.lastName,
+            errors
+          });
+          return null;
+        }
+
+        console.log(`✅ Строка ${index + 1} валидна:`, emp.lastName);
+
+        return {
+          firstName: emp.firstName ? emp.firstName.toString().trim() : null,
+          lastName: emp.lastName.toString().trim(),
+          middleName: emp.middleName ? emp.middleName.toString().trim() : null,
+          inn: emp.inn ? emp.inn.toString().trim() : null,
+          snils: emp.snils ? emp.snils.toString().trim() : null,
+          idAll: emp.idAll ? emp.idAll.toString().trim() : null,
+          counterpartyInn: emp.counterpartyInn.toString().trim(),
+          rowIndex: index + 1
+        };
+      })
+    );
+
+    // Фильтруем null значения (невалидные строки)
+    const validEmployees = validatedEmployees.filter(e => e !== null);
+
+    console.log(`📊 Результаты валидации: ${validEmployees.length} валидных, ${validationErrors.length} ошибок`);
+
+    // 3. Проверяем конфликты ИНН сотрудников
+    const conflictingInns = [];
+    const existingEmployees = {};
+
+    if (validEmployees.length > 0) {
+      const innsToCheck = validEmployees
+        .map(e => e.inn)
+        .filter(Boolean);
+
+      if (innsToCheck.length > 0) {
+        const existing = await Employee.findAll({
+          where: {
+            inn: innsToCheck
+          }
+        });
+
+        existing.forEach(emp => {
+          existingEmployees[emp.inn] = emp;
+        });
+
+        validEmployees.forEach(emp => {
+          if (emp.inn && existingEmployees[emp.inn]) {
+            console.log(`⚠️ Конфликт ИНН: ${emp.inn}`);
+            conflictingInns.push({
+              inn: emp.inn,
+              newEmployee: emp,
+              existingEmployee: {
+                id: existingEmployees[emp.inn].id,
+                firstName: existingEmployees[emp.inn].firstName,
+                lastName: existingEmployees[emp.inn].lastName,
+                middleName: existingEmployees[emp.inn].middleName
+              }
+            });
+          }
+        });
+      }
+    }
+
+    console.log(`🔍 Конфликтов найдено: ${conflictingInns.length}`);
+
+    const result = {
+      validEmployees,
+      validationErrors,
+      conflictingInns,
+      hasErrors: validationErrors.length > 0,
+      hasConflicts: conflictingInns.length > 0
+    };
+
+    console.log('📤 Отправляем ответ:', {
+      validEmployeesCount: validEmployees.length,
+      validationErrorsCount: validationErrors.length,
+      conflictingInnsCount: conflictingInns.length
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('❌ Error validating employees import:', error);
+    next(error);
+  }
+};
+
+/**
+ * Импорт сотрудников из Excel
+ * Шаг 2: Финальный импорт с разрешением конфликтов
+ */
+export const importEmployees = async (req, res, next) => {
+  try {
+    const { employees, conflictResolutions } = req.body;
+    const userId = req.user.id;
+
+    if (!Array.isArray(employees) || employees.length === 0) {
+      throw new AppError('Данные сотрудников не предоставлены', 400);
+    }
+
+    // Получаем статусы
+    const statuses = await Status.findAll({
+      where: {
+        name: ['status_draft', 'status_card_draft']
+      }
+    });
+
+    const statusMap = {};
+    statuses.forEach(s => {
+      statusMap[s.name] = s.id;
+    });
+
+    // Кеш контрагентов
+    const counterpartyCache = {};
+
+    const results = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: []
+    };
+
+    // Обрабатываем батчами по 100
+    const batchSize = 100;
+
+    for (let i = 0; i < employees.length; i += batchSize) {
+      const batch = employees.slice(i, i + batchSize);
+
+      await Promise.all(
+        batch.map(async (emp) => {
+          try {
+            // Получаем контрагент
+            if (!counterpartyCache[emp.counterpartyInn]) {
+              const counterparty = await Counterparty.findOne({
+                where: { inn: emp.counterpartyInn }
+              });
+              counterpartyCache[emp.counterpartyInn] = counterparty;
+            }
+
+            const counterparty = counterpartyCache[emp.counterpartyInn];
+
+            if (!counterparty) {
+              throw new Error(`Контрагент с ИНН ${emp.counterpartyInn} не найден`);
+            }
+
+            // Сначала проверяем по id_all (это уникальный идентификатор из ЗУП)
+            let employee;
+            
+            if (emp.idAll) {
+              // Ищем сотрудника по id_all (уникальный ключ из ЗУП)
+              employee = await Employee.findOne({
+                where: { idAll: emp.idAll }
+              });
+
+              if (employee) {
+                // Сотрудник с таким id_all существует - обновляем его
+                console.log(`🔄 Обновляем сотрудника с id_all '${emp.idAll}'`);
+                await employee.update({
+                  firstName: emp.firstName,
+                  lastName: emp.lastName,
+                  middleName: emp.middleName,
+                  inn: emp.inn || null,
+                  snils: emp.snils || null,
+                  updatedBy: userId
+                });
+                results.updated++;
+              } else {
+                // Сотрудника с таким id_all нет - проверяем конфликт по ИНН
+                const resolution = conflictResolutions?.[emp.inn];
+
+                if (emp.inn) {
+                  const existingByInn = await Employee.findOne({
+                    where: { inn: emp.inn }
+                  });
+
+                  if (existingByInn) {
+                    // Конфликт по ИНН
+                    if (resolution === 'skip') {
+                      results.skipped++;
+                      return;
+                    }
+
+                    if (resolution === 'update') {
+                      // Обновляем существующего сотрудника
+                      await existingByInn.update({
+                        firstName: emp.firstName,
+                        lastName: emp.lastName,
+                        middleName: emp.middleName,
+                        snils: emp.snils || null,
+                        idAll: emp.idAll,
+                        updatedBy: userId
+                      });
+                      employee = existingByInn;
+                      results.updated++;
+                    } else {
+                      // По умолчанию пропускаем при конфликте
+                      results.skipped++;
+                      return;
+                    }
+                  } else {
+                    // Создаем нового сотрудника с ИНН
+                    employee = await Employee.create({
+                      firstName: emp.firstName,
+                      lastName: emp.lastName,
+                      middleName: emp.middleName,
+                      inn: emp.inn,
+                      snils: emp.snils || null,
+                      idAll: emp.idAll,
+                      isActive: true,
+                      createdBy: userId
+                    });
+                    results.created++;
+                  }
+                } else {
+                  // Создаем сотрудника без ИНН
+                  employee = await Employee.create({
+                    firstName: emp.firstName,
+                    lastName: emp.lastName,
+                    middleName: emp.middleName,
+                    snils: emp.snils || null,
+                    idAll: emp.idAll,
+                    isActive: true,
+                    createdBy: userId
+                  });
+                  results.created++;
+                }
+              }
+            } else {
+              // Нет id_all - используем логику по ИНН
+              const resolution = conflictResolutions?.[emp.inn];
+
+              if (emp.inn) {
+                const existingByInn = await Employee.findOne({
+                  where: { inn: emp.inn }
+                });
+
+                if (existingByInn) {
+                  if (resolution === 'skip') {
+                    results.skipped++;
+                    return;
+                  }
+
+                  if (resolution === 'update') {
+                    await existingByInn.update({
+                      firstName: emp.firstName,
+                      lastName: emp.lastName,
+                      middleName: emp.middleName,
+                      snils: emp.snils || null,
+                      updatedBy: userId
+                    });
+                    employee = existingByInn;
+                    results.updated++;
+                  } else {
+                    results.skipped++;
+                    return;
+                  }
+                } else {
+                  employee = await Employee.create({
+                    firstName: emp.firstName,
+                    lastName: emp.lastName,
+                    middleName: emp.middleName,
+                    inn: emp.inn,
+                    snils: emp.snils || null,
+                    isActive: true,
+                    createdBy: userId
+                  });
+                  results.created++;
+                }
+              } else {
+                // Ни id_all ни ИНН - просто создаем нового
+                employee = await Employee.create({
+                  firstName: emp.firstName,
+                  lastName: emp.lastName,
+                  middleName: emp.middleName,
+                  snils: emp.snils || null,
+                  isActive: true,
+                  createdBy: userId
+                });
+                results.created++;
+              }
+            }
+
+            // Создаем связь с контрагентом
+            await EmployeeCounterpartyMapping.findOrCreate({
+              where: {
+                employeeId: employee.id,
+                counterpartyId: counterparty.id
+              },
+              defaults: {
+                employeeId: employee.id,
+                counterpartyId: counterparty.id
+              }
+            });
+
+            // Создаем статусы
+            for (const statusName of ['status_draft', 'status_card_draft']) {
+              const statusId = statusMap[statusName];
+              // statusGroup - это название группы (например, 'status_draft' или 'status_card_draft')
+              const statusGroup = statusName.replace('status_', '').replace('_', ' ');
+              
+              await EmployeeStatusMapping.findOrCreate({
+                where: {
+                  employeeId: employee.id,
+                  statusId: statusId
+                },
+                defaults: {
+                  employeeId: employee.id,
+                  statusId: statusId,
+                  statusGroup: statusGroup,
+                  createdBy: userId,
+                  isActive: true,
+                  isUpload: false
+                }
+              });
+            }
+          } catch (error) {
+            console.error(`❌ Error importing employee at row ${emp.rowIndex}:`, error);
+            results.errors.push({
+              rowIndex: emp.rowIndex,
+              lastName: emp.lastName,
+              error: error.message
+            });
+          }
+        })
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Импорт завершен',
+      data: results
+    });
+  } catch (error) {
+    console.error('❌ Error importing employees:', error);
+    next(error);
+  }
+};
+

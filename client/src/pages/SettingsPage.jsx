@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Form, Select, Button, message, Spin, Typography } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { Form, Select, Button, message, Spin, Typography, Space, Divider } from 'antd';
+import { SaveOutlined, UploadOutlined } from '@ant-design/icons';
 import settingsService from '@/services/settingsService';
 import { counterpartyService } from '@/services/counterpartyService';
+import EmployeeImportModal from '@/components/Employees/EmployeeImportModal';
 
 const { Title, Text } = Typography;
 
@@ -12,6 +13,7 @@ const SettingsPage = () => {
   const [counterparties, setCounterparties] = useState([]);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState('');
   const [form] = Form.useForm();
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -136,6 +138,32 @@ const SettingsPage = () => {
         </Form.Item>
         </Form>
       </div>
+
+      <Divider />
+
+      <div style={{ flexShrink: 0, marginTop: '24px' }}>
+        <Title level={4}>Загрузка данных</Title>
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+          Импортируйте сотрудников из файла Excel
+        </Text>
+        <Button
+          type="primary"
+          icon={<UploadOutlined />}
+          onClick={() => setIsImportModalOpen(true)}
+          size="large"
+        >
+          Загрузка сотрудников из Excel
+        </Button>
+      </div>
+
+      <EmployeeImportModal
+        visible={isImportModalOpen}
+        onCancel={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          message.success('Сотрудники успешно импортированы');
+          setIsImportModalOpen(false);
+        }}
+      />
     </div>
   );
 };

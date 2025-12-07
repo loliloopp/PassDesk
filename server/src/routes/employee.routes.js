@@ -72,12 +72,22 @@ const updateMyProfileValidation = [
 ];
 
 // Employee routes
+// ⚠️ Специфичные маршруты ДОЛЖНЫ быть перед параметризованными (/:id)
 router.get('/my-profile', employeeController.getMyProfile); // Получить свой профиль
 router.put('/my-profile', updateMyProfileValidation, validate, employeeController.updateMyProfile); // Обновить свой профиль
 router.get('/check-inn', employeeController.checkEmployeeByInn); // Проверить наличие сотрудника по ИНН
+router.get('/search', employeeController.searchEmployees); // Поиск
+
+// Импорт сотрудников из Excel (только admin) - ДОЛЖНО быть перед /:id
+router.post('/import/validate', authorize('admin'), employeeController.validateEmployeesImport); // Валидация данных
+router.post('/import/execute', authorize('admin'), employeeController.importEmployees); // Финальный импорт
+
+// Общие маршруты
 router.get('/', employeeController.getAllEmployees);
-router.get('/:id', employeeController.getEmployeeById);
 router.post('/', createEmployeeValidation, validate, employeeController.createEmployee); // Валидация для создания (нужна минимум фамилия)
+
+// Маршруты с параметрами (/:id должны быть в конце)
+router.get('/:id', employeeController.getEmployeeById);
 router.put('/:id/draft', updateEmployeeDraftValidation, validate, employeeController.updateEmployee); // Обновление черновика - мягкая валидация
 router.put('/:id', updateEmployeeValidation, validate, employeeController.updateEmployee); // Полное обновление - строгая валидация
 router.put('/:id/construction-sites', employeeController.updateEmployeeConstructionSites); // Убрали authorize('admin')
@@ -91,7 +101,6 @@ router.post('/:id/action/deactivate', employeeController.deactivateEmployee); //
 router.post('/:id/action/activate', employeeController.activateEmployee); // Активировать сотрудника
 router.post('/:id/transfer', authorize('admin'), employeeController.transferEmployeeToCounterparty); // Перевести сотрудника в другую компанию (только admin)
 router.delete('/:id', employeeController.deleteEmployee); // Проверка прав в контроллере
-router.get('/search', employeeController.searchEmployees);
 
 // Employee files routes
 // Пользователи (user) могут загружать файлы только для своего профиля
