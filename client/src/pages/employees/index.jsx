@@ -74,21 +74,9 @@ const EmployeesPage = () => {
   const canExport = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
   
   // Определяем, может ли пользователь удалять сотрудника
+  // Удаление доступно только администраторам
   const canDeleteEmployee = (employee) => {
-    if (user?.role === 'admin') return true;
-    if (user?.role !== 'user') return false;
-    
-    // Пользователь контрагента по умолчанию - только свои созданные сотрудники
-    if (user?.counterpartyId === defaultCounterpartyId) {
-      return employee.createdBy === user?.id;
-    }
-    
-    // Пользователь остальных контрагентов - может удалять сотрудников контрагента
-    if (user?.counterpartyId !== defaultCounterpartyId) {
-      return true;
-    }
-    
-    return false;
+    return user?.role === 'admin';
   };
 
   // Actions для работы с сотрудниками
