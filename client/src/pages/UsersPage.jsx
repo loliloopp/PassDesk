@@ -520,7 +520,7 @@ const UsersPage = () => {
               virtual={true}
             >
               {counterparties.map(c => (
-                <Select.Option key={c.id} value={c.id}>
+                <Select.Option key={c.id} value={c.id} label={`${c.name} (${c.inn})`}>
                   {c.name} ({c.inn})
                 </Select.Option>
               ))}
