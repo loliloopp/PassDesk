@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Row, Col, Button, Upload, App, Tooltip, Spin, List, Space, Popconfirm, Tag } from 'antd';
 import { CheckCircleOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import { employeeService } from '../../services/employeeService';
@@ -29,6 +29,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
   const [fileCounts, setFileCounts] = useState({}); // { docType: count }
   const [allFiles, setAllFiles] = useState([]); // все загруженные файлы
   const [loading, setLoading] = useState(false);
+  const uploadingRef = useRef(new Set()); // Отслеживаем уже отправленные файлы
 
   // Загрузить файлы при инициализации и при изменении employeeId
   useEffect(() => {
@@ -175,6 +176,22 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
       return;
     }
 
+    // Проверяем, не загружаются ли уже файлы
+    if (uploadingTypes[documentType]) {
+      return;
+    }
+
+    // Создаем уникальный ключ для этой загрузки (по размерам файлов)
+    const uploadKey = fileList.map(f => `${f.name}_${f.size}`).join('|');
+    
+    // Если эта загрузка уже в процессе, выходим
+    if (uploadingRef.current.has(uploadKey)) {
+      return;
+    }
+
+    // Добавляем в отслеживание
+    uploadingRef.current.add(uploadKey);
+
     // Показываем индикатор загрузки
     setUploadingTypes(prev => ({ ...prev, [documentType]: true }));
 
@@ -209,6 +226,8 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
       message.error(`Ошибка загрузки файла`);
     } finally {
       setUploadingTypes(prev => ({ ...prev, [documentType]: false }));
+      // Удаляем из отслеживания
+      uploadingRef.current.delete(uploadKey);
     }
   };
 
