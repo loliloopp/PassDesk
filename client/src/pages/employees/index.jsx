@@ -182,8 +182,8 @@ const EmployeesPage = () => {
 
   // Мемоизированные уникальные значения для фильтров
   const uniqueFilters = useMemo(
-    () => getUniqueFilterValues(filteredEmployees),
-    [filteredEmployees]
+    () => getUniqueFilterValues(filteredEmployees, tableFilters.counterparty),
+    [filteredEmployees, tableFilters.counterparty]
   );
 
   // Handlers

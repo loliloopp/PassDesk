@@ -4,6 +4,7 @@ import { Input, Button, Space, Checkbox } from 'antd';
 /**
  * Компонент фильтра для колонки "ФИО"
  * Включает поле поиска и список с чекбоксами
+ * Показывает только ФИО сотрудников выбранных контрагентов (если они выбраны)
  */
 export const FullNameFilterDropdown = ({
   setSelectedKeys,
@@ -12,6 +13,7 @@ export const FullNameFilterDropdown = ({
   clearFilters,
   uniqueFilterFullNames,
   resetTrigger,
+  selectedCounterparties = [],
 }) => {
   const [searchText, setSearchText] = useState('');
 
@@ -30,8 +32,23 @@ export const FullNameFilterDropdown = ({
     clearFilters();
   };
 
+  // Показываем подсказку если контрагенты не выбраны
+  const showHint = selectedCounterparties && selectedCounterparties.length > 0;
+
   return (
     <div style={{ padding: '8px', minWidth: '250px' }}>
+      {showHint && (
+        <div style={{ 
+          padding: '8px', 
+          marginBottom: '8px', 
+          backgroundColor: '#e6f7ff', 
+          borderRadius: '4px',
+          fontSize: '12px',
+          color: '#0050b3'
+        }}>
+          ℹ️ Показаны только сотрудники выбранного контрагента
+        </div>
+      )}
       <Input
         placeholder="Поиск по ФИО..."
         value={searchText}
@@ -40,22 +57,28 @@ export const FullNameFilterDropdown = ({
         autoFocus
       />
       <div style={{ maxHeight: '200px', overflow: 'auto', marginBottom: '8px' }}>
-        {filteredFullNames.map((name) => (
-          <div key={name} style={{ marginBottom: '4px' }}>
-            <Checkbox
-              checked={selectedKeys.includes(name)}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedKeys([...selectedKeys, name]);
-                } else {
-                  setSelectedKeys(selectedKeys.filter((v) => v !== name));
-                }
-              }}
-            >
-              {name}
-            </Checkbox>
+        {filteredFullNames.length > 0 ? (
+          filteredFullNames.map((name) => (
+            <div key={name} style={{ marginBottom: '4px' }}>
+              <Checkbox
+                checked={selectedKeys.includes(name)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedKeys([...selectedKeys, name]);
+                  } else {
+                    setSelectedKeys(selectedKeys.filter((v) => v !== name));
+                  }
+                }}
+              >
+                {name}
+              </Checkbox>
+            </div>
+          ))
+        ) : (
+          <div style={{ padding: '8px', color: '#999', textAlign: 'center' }}>
+            {showHint ? 'Нет сотрудников' : 'Выберите контрагента'}
           </div>
-        ))}
+        )}
       </div>
       <Space style={{ width: '100%', justifyContent: 'space-between' }}>
         <Button

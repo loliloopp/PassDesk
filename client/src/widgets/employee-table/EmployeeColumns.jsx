@@ -62,6 +62,7 @@ export const useEmployeeColumns = ({
             {...props}
             uniqueFilterFullNames={uniqueFilters.fullNames}
             resetTrigger={resetTrigger}
+            selectedCounterparties={filters.counterparty}
           />
         ),
         filterIcon: (filtered) => (

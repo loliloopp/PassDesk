@@ -49,12 +49,24 @@ export const getEmployeeFullName = (employee) => {
 
 /**
  * Получить уникальные значения для фильтров таблицы
+ * @param {Array} employees - массив сотрудников
+ * @param {Array} selectedCounterparties - выбранные контрагенты для фильтрации ФИО
  */
-export const getUniqueFilterValues = (employees) => {
+export const getUniqueFilterValues = (employees, selectedCounterparties = []) => {
+  // Фильтруем сотрудников по выбранным контрагентам если они выбраны
+  let filteredForFullNames = employees;
+  if (selectedCounterparties && selectedCounterparties.length > 0) {
+    filteredForFullNames = employees.filter(emp => 
+      emp.employeeCounterpartyMappings?.some(m => 
+        selectedCounterparties.includes(m.counterparty?.name)
+      )
+    );
+  }
+
   const positions = [...new Set(employees.map((e) => e.position?.name).filter(Boolean))];
   const fullNames = [
     ...new Set(
-      employees
+      filteredForFullNames
         .map((e) => `${e.lastName} ${e.firstName} ${e.middleName || ''}`.trim())
         .filter(Boolean)
     ),
