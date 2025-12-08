@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Row, Col, Button, Upload, App, Tooltip, Spin, List, Space, Popconfirm, Tag } from 'antd';
-import { CheckCircleOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Row, Col, Button, Upload, App, Tooltip, Spin, List, Space, Popconfirm, Modal } from 'antd';
+import { CheckCircleOutlined, DeleteOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons';
+import { FileViewer } from '../../shared/ui/FileViewer';
 import { employeeService } from '../../services/employeeService';
 
 // Типы документов
@@ -30,6 +31,8 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
   const [allFiles, setAllFiles] = useState([]); // все загруженные файлы
   const [loading, setLoading] = useState(false);
   const uploadingRef = useRef(new Set()); // Отслеживаем уже отправленные файлы
+  const [viewerVisible, setViewerVisible] = useState(false); // Видимость модального окна
+  const [viewingFile, setViewingFile] = useState(null); // Файл для просмотра
 
   // Загрузить файлы при инициализации и при изменении employeeId
   useEffect(() => {
@@ -144,6 +147,12 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
                         <Button
                           type="text"
                           size="small"
+                          icon={<EyeOutlined />}
+                          onClick={() => handleViewFile(file)}
+                        />
+                        <Button
+                          type="text"
+                          size="small"
                           icon={<DownloadOutlined />}
                           onClick={() => handleDownloadFile(file)}
                         />
@@ -250,14 +259,45 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
   const handleDownloadFile = async (file) => {
     try {
       const downloadLink = await employeeService.getFileDownloadLink(employeeId, file.id);
-      if (downloadLink?.url) {
-        window.open(downloadLink.url, '_blank');
+      
+      // Извлекаем URL из ответа
+      const url = downloadLink?.data?.downloadUrl || downloadLink?.downloadUrl;
+      
+      if (url && typeof url === 'string') {
+        window.open(url, '_blank');
       } else {
+        console.error('❌ No download URL found in response:', downloadLink);
         message.error('Ошибка при получении ссылки скачивания');
       }
     } catch (error) {
       console.error('Error downloading file:', error);
       message.error('Ошибка скачивания файла');
+    }
+  };
+
+  // Просмотр файла
+  const handleViewFile = async (file) => {
+    try {
+      const viewLink = await employeeService.getFileViewLink(employeeId, file.id);
+      
+      // Извлекаем URL из ответа
+      const url = viewLink?.data?.viewUrl || viewLink?.viewUrl;
+      
+      if (url && typeof url === 'string') {
+        // Открываем модальное окно с просмотром
+        setViewingFile({
+          url,
+          mimeType: file.mimeType || 'application/pdf',
+          fileName: file.fileName
+        });
+        setViewerVisible(true);
+      } else {
+        console.error('❌ No view URL found in response:', viewLink);
+        message.error('Ошибка при получении ссылки просмотра');
+      }
+    } catch (error) {
+      console.error('Error viewing file:', error);
+      message.error('Ошибка просмотра файла');
     }
   };
 
@@ -344,6 +384,17 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
           </div>
         </Col>
       </Row>
+
+      {/* Встроенный просмотрщик файлов */}
+      {viewingFile && (
+        <FileViewer
+          visible={viewerVisible}
+          fileUrl={viewingFile.url}
+          fileName={viewingFile.fileName}
+          mimeType={viewingFile.mimeType}
+          onClose={() => setViewerVisible(false)}
+        />
+      )}
     </div>
   );
 };
