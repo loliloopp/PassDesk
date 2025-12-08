@@ -1,13 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm, Radio } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { citizenshipService } from '../../services/citizenshipService';
 import { constructionSiteService } from '../../services/constructionSiteService';
-import positionService from '../../services/positionService';
-import settingsService from '../../services/settingsService';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
 import { useAuthStore } from '../../store/authStore';
+import { useReferencesStore } from '../../store/referencesStore';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
 import TransferEmployeeModal from './TransferEmployeeModal.jsx';
 import dayjs from 'dayjs';
@@ -745,8 +743,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   const fetchCitizenships = async () => {
     try {
-      const { data } = await citizenshipService.getAll();
-      const loadedCitizenships = data.data.citizenships || [];
+      // Используем глобальный кэш
+      const { fetchCitizenships: fetchFromCache } = useReferencesStore.getState();
+      const loadedCitizenships = await fetchFromCache();
       setCitizenships(loadedCitizenships);
       return loadedCitizenships;
     } catch (error) {
@@ -784,8 +783,9 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   const fetchPositions = async () => {
     try {
-      const { data } = await positionService.getAll({ limit: 10000 });
-      const loadedPositions = data.data.positions || [];
+      // Используем глобальный кэш
+      const { fetchPositions: fetchFromCache } = useReferencesStore.getState();
+      const loadedPositions = await fetchFromCache();
       setPositions(loadedPositions);
       return loadedPositions;
     } catch (error) {
@@ -796,8 +796,10 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   const fetchDefaultCounterparty = async () => {
     try {
-      const response = await settingsService.getPublicSettings();
-      const dcId = response.data.defaultCounterpartyId;
+      // Используем глобальный кэш
+      const { fetchSettings } = useReferencesStore.getState();
+      const settings = await fetchSettings();
+      const dcId = settings?.defaultCounterpartyId;
       setDefaultCounterpartyId(dcId);
       return dcId;
     } catch (error) {

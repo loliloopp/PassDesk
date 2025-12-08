@@ -76,16 +76,30 @@ const registerLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Общий лимит для API (мягкий)
-const apiLimiter = rateLimit({
+// Лимит для GET запросов (мягкий - для справочников и чтения данных)
+const getApiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 минута
-  max: 100, // 100 запросов в минуту
+  max: 1000, // 1000 запросов в минуту для чтения
   message: {
     success: false,
-    message: 'Слишком много запросов. Попробуйте снова через минуту.'
+    message: 'Слишком много запросов на чтение. Попробуйте снова через минуту.'
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req) => req.method !== 'GET' // Применяется только к GET
+});
+
+// Лимит для POST/PUT/DELETE запросов (строже - для мутаций)
+const mutationApiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 минута
+  max: 100, // 100 запросов в минуту для изменений
+  message: {
+    success: false,
+    message: 'Слишком много запросов на изменение данных. Попробуйте снова через минуту.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'GET' // Применяется только к POST/PUT/DELETE
 });
 
 // Middleware
@@ -126,8 +140,9 @@ app.use(`${apiPrefix}/auth/login`, authLimiter);
 app.use(`${apiPrefix}/auth/register`, registerLimiter);
 app.use(`${apiPrefix}/auth/refresh`, refreshLimiter);
 
-// Общий лимит для всего API
-app.use(apiPrefix, apiLimiter);
+// Раздельные лимиты для GET и мутаций
+app.use(apiPrefix, getApiLimiter); // 1000/мин для GET
+app.use(apiPrefix, mutationApiLimiter); // 100/мин для POST/PUT/DELETE
 
 // API Routes
 app.use(apiPrefix, routes);

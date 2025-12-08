@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import { employeeApi } from '../api/employeeApi';
 import { employeeStatusService } from '@/services/employeeStatusService';
+import { useEmployeesStore } from '@/store/employeesStore';
 
 // Размер первой порции для быстрого отображения
 const INITIAL_PAGE_SIZE = 100;
@@ -48,7 +49,19 @@ export const useEmployees = (activeOnly = false, filterParams = {}) => {
   /**
    * Загрузка сотрудников с прогрессивной стратегией
    */
-  const fetchEmployees = useCallback(async () => {
+  const fetchEmployees = useCallback(async (force = false) => {
+    // Проверяем кэш (если не force)
+    if (!force) {
+      const cached = useEmployeesStore.getState().getEmployees({ activeOnly, ...filterParams });
+      if (cached) {
+        setEmployees(cached.employees);
+        setTotalCount(cached.totalCount);
+        setLoading(false);
+        setBackgroundLoading(false);
+        return cached.employees;
+      }
+    }
+
     // Отменяем предыдущую фоновую загрузку
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -131,7 +144,12 @@ export const useEmployees = (activeOnly = false, filterParams = {}) => {
         
         if (isMountedRef.current) {
           setBackgroundLoading(false);
+          // Сохраняем полный список в кэш
+          useEmployeesStore.getState().setEmployees(allEmployees, total, { activeOnly, ...filterParams });
         }
+      } else {
+        // Если данных мало, сохраняем сразу
+        useEmployeesStore.getState().setEmployees(initialWithStatuses, total, { activeOnly, ...filterParams });
       }
       
       return initialWithStatuses;
@@ -165,7 +183,8 @@ export const useEmployees = (activeOnly = false, filterParams = {}) => {
     backgroundLoading, // Индикатор фоновой загрузки
     totalCount, // Общее количество сотрудников
     error,
-    refetch: fetchEmployees,
+    refetch: () => fetchEmployees(true), // force reload
+    invalidateCache: () => useEmployeesStore.getState().invalidate(),
   };
 };
 
@@ -194,6 +213,9 @@ export const useEmployeeActions = (onSuccess) => {
       } else {
         message.success('Сотрудник создан');
       }
+      
+      // Сбрасываем кэш сотрудников при создании
+      useEmployeesStore.getState().invalidate();
       
       // employeeApi.create уже возвращает response.data, которая имеет структуру:
       // {success: true, message: "...", data: {id, firstName, ...}}
@@ -262,6 +284,9 @@ export const useEmployeeActions = (onSuccess) => {
         message.success('Сотрудник обновлен');
       }
       
+      // Сбрасываем кэш сотрудников при обновлении
+      useEmployeesStore.getState().invalidate();
+      
       // API уже возвращает response.data, которая имеет структуру:
       // {success: true, message: "...", data: {id, firstName, ...}}
       // Поэтому нужно взять response.data (это данные сотрудника)
@@ -313,6 +338,10 @@ export const useEmployeeActions = (onSuccess) => {
     try {
       await employeeApi.delete(id);
       message.success('Сотрудник удален');
+      
+      // Сбрасываем кэш сотрудников при удалении
+      useEmployeesStore.getState().invalidate();
+      
       onSuccess?.();
     } catch (error) {
       // Проверяем наличие сообщения об ошибке от сервера
@@ -326,6 +355,10 @@ export const useEmployeeActions = (onSuccess) => {
     try {
       await employeeApi.updateDepartment(employeeId, departmentId);
       message.success('Подразделение обновлено');
+      
+      // Сбрасываем кэш сотрудников при обновлении подразделения
+      useEmployeesStore.getState().invalidate();
+      
       onSuccess?.();
     } catch (error) {
       message.error('Ошибка при обновлении подразделения');

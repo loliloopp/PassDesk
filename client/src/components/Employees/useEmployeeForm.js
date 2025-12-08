@@ -1,23 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Form, App } from 'antd';
-import { citizenshipService } from '@/services/citizenshipService';
 import { constructionSiteService } from '@/services/constructionSiteService';
-import positionService from '@/services/positionService';
-import settingsService from '@/services/settingsService';
 import { employeeStatusService } from '@/services/employeeStatusService';
 import { useAuthStore } from '@/store/authStore';
+import { useReferencesStore } from '@/store/referencesStore';
 import dayjs from 'dayjs';
 
 /**
  * Хук для управления формой сотрудника
  * Содержит общую логику для десктопной и мобильной версий
+ * Использует глобальный кэш для справочников
  */
 export const useEmployeeForm = (employee, visible, onSuccess) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const { user } = useAuthStore();
 
-  // Состояния
+  // Получаем справочники из глобального кэша
+  const {
+    citizenships: cachedCitizenships,
+    positions: cachedPositions,
+    settings: cachedSettings,
+    fetchCitizenships,
+    fetchPositions,
+    fetchSettings,
+  } = useReferencesStore();
+
+  // Локальные состояния
   const [citizenships, setCitizenships] = useState([]);
   const [constructionSites, setConstructionSites] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -29,7 +38,26 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   // Определяем, требуется ли патент для выбранного гражданства
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
 
-  // Загрузка справочников
+  // Синхронизируем локальные состояния с кэшем
+  useEffect(() => {
+    if (cachedCitizenships) {
+      setCitizenships(cachedCitizenships);
+    }
+  }, [cachedCitizenships]);
+
+  useEffect(() => {
+    if (cachedPositions) {
+      setPositions(cachedPositions);
+    }
+  }, [cachedPositions]);
+
+  useEffect(() => {
+    if (cachedSettings) {
+      setDefaultCounterpartyId(cachedSettings.defaultCounterpartyId);
+    }
+  }, [cachedSettings]);
+
+  // Загрузка справочников (теперь использует кэш)
   const loadReferences = async (abortSignal) => {
     // Если сигнал уже отменён до начала - не делаем запрос
     if (abortSignal?.aborted) {
@@ -38,10 +66,11 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     
     setLoadingReferences(true);
     try {
-      const [citizenshipsRes, positionsRes, settingsRes] = await Promise.all([
-        citizenshipService.getAll(),
-        positionService.getAll({ limit: 10000 }), // Загружаем все должности
-        settingsService.getPublicSettings(),
+      // Загружаем из кэша (или делаем запрос если кэш пустой/старый)
+      const [citizenshipsData, positionsData, settingsData] = await Promise.all([
+        fetchCitizenships(),
+        fetchPositions(),
+        fetchSettings(),
       ]);
 
       // Проверяем, не был ли запрос отменен
@@ -49,18 +78,11 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         return;
       }
 
-      // Извлекаем данные с учетом структуры API
-      const citizenshipsData = citizenshipsRes.data?.data?.citizenships || [];
-      const positionsData = positionsRes.data?.data?.positions || [];
-      const settingsData = settingsRes.data || {};
-
-      setCitizenships(citizenshipsData);
-      setPositions(positionsData);
-      
-      const dcId = settingsData.defaultCounterpartyId;
+      const dcId = settingsData?.defaultCounterpartyId;
       setDefaultCounterpartyId(dcId);
 
       // Загружаем объекты строительства с учетом контрагента
+      // (Объекты строительства не кэшируем глобально, т.к. они зависят от counterpartyId)
       let sitesData = [];
       if (user?.counterpartyId) {
         try {

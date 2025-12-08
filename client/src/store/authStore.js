@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '@/services/api'
+import { useReferencesStore } from './referencesStore'
+import { useEmployeesStore } from './employeesStore'
 
 export const useAuthStore = create(
   persist(
@@ -71,6 +73,10 @@ export const useAuthStore = create(
           refreshToken: null,
           isAuthenticated: false
         })
+        
+        // Очищаем все кэши
+        useReferencesStore.getState().clearAll()
+        useEmployeesStore.getState().clear()
         
         // Если есть токен, пытаемся уведомить сервер (не критично если упадет)
         if (currentToken) {
