@@ -147,16 +147,25 @@ export const getAllEmployees = async (req, res, next) => {
       {
         model: EmployeeStatusMapping,
         as: 'statusMappings',
-        where: { isActive: true },
         include: [
           {
             model: Status,
             as: 'status',
-            attributes: ['id', 'name', 'group']
+            attributes: ['id', 'name', 'group'],
+            // Если activeOnly=true, фильтруем только действующие статусы
+            where: isActiveOnly ? {
+              name: ['status_new', 'status_tb_passed', 'status_processed']
+            } : undefined
           }
         ],
         attributes: ['id', 'statusId', 'isActive', 'isUpload', 'statusGroup', 'createdAt', 'updatedAt'],
-        required: false
+        // Если activeOnly=true, требуем наличие статуса (inner join)
+        required: isActiveOnly ? true : false,
+        // Дополнительное условие - статус должен быть активным
+        where: isActiveOnly ? {
+          isActive: true
+        } : undefined,
+        subQuery: false
       }
     ];
 
@@ -210,23 +219,27 @@ export const getAllEmployees = async (req, res, next) => {
           ]
         ]
       },
-      distinct: true // Важно для правильного подсчета при фильтрации через include
+      distinct: true, // Важно для правильного подсчета при фильтрации через include
+      subQuery: false // Не использовать subquery для include
     });
+    
+    // Статусы уже загружены через include в основной запрос
+    const employeesWithStatuses = rows;
+    
+    console.log('🔍 Query returned rows:', employeesWithStatuses.length);
+    if (employeesWithStatuses.length > 0) {
+      console.log('📋 First employee statusMappings:', employeesWithStatuses[0].statusMappings?.map(m => ({
+        statusId: m.statusId,
+        statusName: m.status?.name,
+        isActive: m.isActive,
+        statusGroup: m.statusGroup
+      })));
+    }
 
-    // Фильтруем сотрудников - исключаем тех, у кого есть исключенные статусы (если activeOnly = true)
-    let filteredRows = isActiveOnly ? rows.filter(employee => {
-      const statusMappings = employee.statusMappings || [];
-      
-      // Проверяем наличие исключенного статуса
-      const hasExcludedStatus = statusMappings.some(mapping => {
-        if (mapping.status) {
-          return excludedStatuses.includes(mapping.status.name);
-        }
-        return false;
-      });
-      
-      return !hasExcludedStatus;
-    }) : rows;
+    console.log('📊 Total employees loaded:', employeesWithStatuses.length);
+    
+    // Фильтрация уже сделана на уровне SQL через required=true и where в include
+    let filteredRows = employeesWithStatuses;
 
     // Фильтруем по дате, если указаны параметры
     if (dateFrom || dateTo) {

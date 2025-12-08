@@ -164,8 +164,12 @@ const ExportPage = () => {
     if (tableFilters.status && tableFilters.status.length > 0) {
       filtered = filtered.filter(emp => {
         const statusMappings = emp.statusMappings || [];
+        
+        // Фильтруем только активные статусы
+        const activeStatusMappings = statusMappings.filter(m => m.isActive);
+        
         const getStatusByGroup = (group) => {
-          const mapping = statusMappings.find(m => {
+          const mapping = activeStatusMappings.find(m => {
             const mappingGroup = m.statusGroup || m.status_group;
             return mappingGroup === group;
           });
@@ -188,8 +192,12 @@ const ExportPage = () => {
           if (value === 'edited') {
             return hrStatus === 'status_hr_edited';
           }
+          if (value === 'active') {
+            // Действующий = status_new или status_tb_passed или status_processed
+            return mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
+          }
           
-          return mainStatus === `status_${value}`;
+          return false;
         });
       });
     }
@@ -206,9 +214,12 @@ const ExportPage = () => {
   const getEmployeeStatus = (employee) => {
     const statusMappings = employee.statusMappings || [];
     
-    // Функция для получения статуса по группе
+    // Фильтруем только активные статусы
+    const activeStatusMappings = statusMappings.filter(m => m.isActive);
+    
+    // Функция для получения статуса по группе из активных статусов
     const getStatusByGroup = (group) => {
-      const mapping = statusMappings.find(m => {
+      const mapping = activeStatusMappings.find(m => {
         const mappingGroup = m.statusGroup || m.status_group;
         return mappingGroup === group;
       });
@@ -237,11 +248,12 @@ const ExportPage = () => {
     }
 
     const statusMap = {
-      'status_new': { name: 'Новый', color: 'default' },
-      'status_processed': { name: 'Обработан', color: 'success' },
+      'status_new': { name: 'Действующий', color: 'green' },
+      'status_tb_passed': { name: 'Действующий', color: 'green' },
+      'status_processed': { name: 'Действующий', color: 'success' },
     };
 
-    return statusMap[mainStatus] || null;
+    return statusMap[mainStatus] || { name: '-', color: 'default' };
   };
 
   // Колонки таблицы
@@ -449,8 +461,7 @@ const ExportPage = () => {
         return <Tag color={status.color}>{status.name}</Tag>;
       },
       filters: [
-        { text: 'Новый', value: 'new' },
-        { text: 'Обработан', value: 'processed' },
+        { text: 'Действующий', value: 'active' },
         { text: 'Редактирован', value: 'edited' },
         { text: 'Повторно принят', value: 'fired_off' },
         { text: 'Уволен', value: 'fired' },
@@ -458,8 +469,12 @@ const ExportPage = () => {
       filteredValue: tableFilters.status || [],
       onFilter: (value, record) => {
         const statusMappings = record.statusMappings || [];
+        
+        // Фильтруем только активные статусы
+        const activeStatusMappings = statusMappings.filter(m => m.isActive);
+        
         const getStatusByGroup = (group) => {
-          const mapping = statusMappings.find(m => {
+          const mapping = activeStatusMappings.find(m => {
             const mappingGroup = m.statusGroup || m.status_group;
             return mappingGroup === group;
           });
@@ -468,28 +483,25 @@ const ExportPage = () => {
           return statusObj?.name;
         };
 
-        const secureStatus = getStatusByGroup('status_secure');
         const activeStatus = getStatusByGroup('status_active');
+        const hrStatus = getStatusByGroup('status_hr');
         const mainStatus = getStatusByGroup('status');
 
-        if (value === 'blocked') {
-          return secureStatus === 'status_secure_block' || secureStatus === 'status_secure_block_compl';
-        }
         if (value === 'fired') {
           return activeStatus === 'status_active_fired' || activeStatus === 'status_active_fired_compl';
         }
-        if (value === 'inactive') {
-          return activeStatus === 'status_active_inactive';
+        if (value === 'fired_off') {
+          return hrStatus === 'status_hr_fired_off';
+        }
+        if (value === 'edited') {
+          return hrStatus === 'status_hr_edited';
+        }
+        if (value === 'active') {
+          // Действующий = status_new или status_tb_passed или status_processed
+          return mainStatus === 'status_new' || mainStatus === 'status_tb_passed' || mainStatus === 'status_processed';
         }
         
-        return (
-          secureStatus !== 'status_secure_block' && 
-          secureStatus !== 'status_secure_block_compl' &&
-          activeStatus !== 'status_active_fired' &&
-          activeStatus !== 'status_active_fired_compl' &&
-          activeStatus !== 'status_active_inactive' &&
-          mainStatus === `status_${value}`
-        );
+        return false;
       },
     },
     {
