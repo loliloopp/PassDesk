@@ -83,7 +83,13 @@ router.post('/import/validate', authorize('admin'), employeeController.validateE
 router.post('/import/execute', authorize('admin'), employeeController.importEmployees); // Финальный импорт
 
 // Общие маршруты
-router.get('/', employeeController.getAllEmployees);
+// Если есть activeOnly=true, используем отдельный контроллер для выгрузки
+router.get('/', (req, res, next) => {
+  const controller = req.query.activeOnly === 'true' 
+    ? employeeController.getActiveEmployeesForExport
+    : employeeController.getAllEmployees;
+  controller(req, res, next);
+});
 router.post('/', createEmployeeValidation, validate, employeeController.createEmployee); // Валидация для создания (нужна минимум фамилия)
 
 // Маршруты с параметрами (/:id должны быть в конце)

@@ -228,8 +228,6 @@ export const getAllEmployees = async (req, res, next) => {
     }
 
     // Загружаем сотрудников с полными данными
-    // subQuery: true нужен чтобы LIMIT применялся к уникальным сотрудникам, 
-    // а не к строкам результата JOIN (иначе получаем дубликаты из-за множественных маппингов)
     const rows = await Employee.findAll({
       where,
       limit: parseInt(limit),
@@ -251,7 +249,9 @@ export const getAllEmployees = async (req, res, next) => {
           ]
         ]
       },
-      subQuery: true // ВАЖНО: true чтобы LIMIT работал по уникальным Employee, а не по JOIN-строкам
+      subQuery: false,
+      raw: false,
+      nest: true // Правильно структурирует вложенные ассоциации
     });
     
     // Статусы уже загружены через include в основной запрос
@@ -2689,6 +2689,255 @@ export const importEmployees = async (req, res, next) => {
     });
   } catch (error) {
     console.error('❌ Error importing employees:', error);
+    next(error);
+  }
+};
+
+/**
+ * Получить активных сотрудников для выгрузки (ОТДЕЛЬНЫЙ эндпоинт)
+ * С фильтрацией только по активным статусам без сложных JOIN'ов в subquery
+ */
+export const getActiveEmployeesForExport = async (req, res, next) => {
+  try {
+    const { limit = 100, page = 1, search = '' } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+    const userCounterpartyId = req.user?.counterpartyId;
+
+    // Основной фильтр
+    const where = {};
+
+    if (search) {
+      where[Op.or] = [
+        { firstName: { [Op.iLike]: `%${search}%` } },
+        { lastName: { [Op.iLike]: `%${search}%` } },
+        { middleName: { [Op.iLike]: `%${search}%` } },
+        { email: { [Op.iLike]: `%${search}%` } },
+        { phone: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    // Только активные статусы для выгрузки
+    const activeStatuses = ['status_new', 'status_tb_passed', 'status_processed'];
+
+    const employeeInclude = [
+      {
+        model: Citizenship,
+        as: 'citizenship',
+        attributes: ['id', 'name', 'code', 'requiresPatent']
+      },
+      {
+        model: Citizenship,
+        as: 'birthCountry',
+        attributes: ['id', 'name', 'code']
+      },
+      {
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'firstName', 'lastName']
+      },
+      {
+        model: Position,
+        as: 'position',
+        attributes: ['id', 'name']
+      },
+      {
+        model: EmployeeCounterpartyMapping,
+        as: 'employeeCounterpartyMappings',
+        include: [
+          {
+            model: Counterparty,
+            as: 'counterparty',
+            attributes: ['id', 'name', 'type', 'inn', 'kpp']
+          },
+          {
+            model: Department,
+            as: 'department',
+            attributes: ['id', 'name']
+          },
+          {
+            model: ConstructionSite,
+            as: 'constructionSite',
+            attributes: ['id', 'shortName', 'fullName']
+          }
+        ]
+      },
+      // Простой include статусов БЕЗ nested INNER JOIN для statusMappings->status
+      {
+        model: EmployeeStatusMapping,
+        as: 'statusMappings',
+        attributes: ['id', 'statusId', 'isActive', 'isUpload', 'statusGroup', 'createdAt', 'updatedAt'],
+        where: {
+          isActive: true
+        },
+        required: true,
+        include: [
+          {
+            model: Status,
+            as: 'status',
+            attributes: ['id', 'name', 'group'],
+            where: {
+              name: activeStatuses
+            },
+            required: true
+          }
+        ]
+      }
+    ];
+
+    // Фильтрация по роли
+    if (userRole === 'user') {
+      const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+      
+      if (userCounterpartyId === defaultCounterpartyId) {
+        employeeInclude.push({
+          model: UserEmployeeMapping,
+          as: 'userEmployeeMappings',
+          where: {
+            userId: userId,
+            counterpartyId: null
+          },
+          required: true
+        });
+      } else {
+        employeeInclude[4].where = {
+          counterpartyId: userCounterpartyId
+        };
+        employeeInclude[4].required = true;
+      }
+    }
+
+    // Подсчитаем активных сотрудников
+    let totalCount;
+    if (userRole === 'user' && userCounterpartyId === (await Setting.getSetting('default_counterparty_id'))) {
+      totalCount = await Employee.count({
+        where: {
+          ...where,
+          createdBy: userId
+        },
+        include: [{
+          model: EmployeeStatusMapping,
+          as: 'statusMappings',
+          where: { isActive: true },
+          required: true,
+          attributes: [],
+          include: [{
+            model: Status,
+            as: 'status',
+            where: { name: activeStatuses },
+            required: true,
+            attributes: []
+          }]
+        }],
+        distinct: true,
+        subQuery: false
+      });
+    } else if (userRole === 'user') {
+      totalCount = await Employee.count({
+        where,
+        include: [
+          {
+            model: EmployeeCounterpartyMapping,
+            as: 'employeeCounterpartyMappings',
+            where: { counterpartyId: userCounterpartyId },
+            required: true,
+            attributes: []
+          },
+          {
+            model: EmployeeStatusMapping,
+            as: 'statusMappings',
+            where: { isActive: true },
+            required: true,
+            attributes: [],
+            include: [{
+              model: Status,
+              as: 'status',
+              where: { name: activeStatuses },
+              required: true,
+              attributes: []
+            }]
+          }
+        ],
+        distinct: true,
+        subQuery: false
+      });
+    } else {
+      totalCount = await Employee.count({
+        where,
+        include: [{
+          model: EmployeeStatusMapping,
+          as: 'statusMappings',
+          where: { isActive: true },
+          required: true,
+          attributes: [],
+          include: [{
+            model: Status,
+            as: 'status',
+            where: { name: activeStatuses },
+            required: true,
+            attributes: []
+          }]
+        }],
+        distinct: true,
+        subQuery: false
+      });
+    }
+
+    // Загружаем данные без subQuery (простой подход)
+    const rows = await Employee.findAll({
+      where,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['lastName', 'ASC']],
+      include: employeeInclude,
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)::int
+              FROM files
+              WHERE files.entity_type = 'employee'
+                AND files.entity_id = "Employee"."id"
+                AND files.is_deleted = false
+            )`),
+            'filesCount'
+          ]
+        ]
+      },
+      subQuery: false,
+      raw: false,
+      nest: true
+    });
+
+    // Удаляем дубликаты (из-за множественных маппингов)
+    const seen = new Set();
+    const uniqueRows = rows.filter(row => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    });
+
+    const employeesWithStatus = uniqueRows.map(employee => {
+      const employeeData = employee.toJSON();
+      employeeData.statusCard = calculateStatusCard(employeeData);
+      return employeeData;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        employees: employeesWithStatus,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching active employees for export:', error);
     next(error);
   }
 };
