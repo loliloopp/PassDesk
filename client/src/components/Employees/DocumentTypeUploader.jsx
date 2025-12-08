@@ -320,17 +320,25 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
       `}</style>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} lg={8}>
           <div className="document-uploader-column">
-            {DOCUMENT_TYPES.slice(0, 6).map(docType => (
+            {DOCUMENT_TYPES.slice(0, 4).map(docType => (
               <DocumentTypeItem key={docType.value} docType={docType} />
             ))}
           </div>
         </Col>
 
-        <Col xs={24} sm={12}>
+        <Col xs={24} sm={12} lg={8}>
           <div className="document-uploader-column">
-            {DOCUMENT_TYPES.slice(6).map(docType => (
+            {DOCUMENT_TYPES.slice(4, 8).map(docType => (
+              <DocumentTypeItem key={docType.value} docType={docType} />
+            ))}
+          </div>
+        </Col>
+
+        <Col xs={24} sm={12} lg={8}>
+          <div className="document-uploader-column">
+            {DOCUMENT_TYPES.slice(8).map(docType => (
               <DocumentTypeItem key={docType.value} docType={docType} />
             ))}
           </div>
