@@ -7,6 +7,7 @@ import { invalidateCache } from '../../utils/requestCache';
 import { useAuthStore } from '../../store/authStore';
 import { useReferencesStore } from '../../store/referencesStore';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
+import DocumentTypeUploader from './DocumentTypeUploader.jsx';
 import TransferEmployeeModal from './TransferEmployeeModal.jsx';
 import dayjs from 'dayjs';
 
@@ -1648,7 +1649,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       items.push({
         key: '4',
         label: 'Файлы',
-        children: <EmployeeFileUpload employeeId={employee.id} readonly={false} onFilesChange={handleFilesChange} />,
+        children: <DocumentTypeUploader employeeId={employee.id} readonly={false} onFilesUpdated={handleFilesChange} />,
       });
     }
 
