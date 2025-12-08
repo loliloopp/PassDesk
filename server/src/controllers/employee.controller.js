@@ -198,7 +198,39 @@ export const getAllEmployees = async (req, res, next) => {
     }
     // Для админа и manager - ограничений по контрагенту нет (видят всех)
 
-    const { count, rows } = await Employee.findAndCountAll({
+    // ИСПРАВЛЕНИЕ: делаем отдельный COUNT запрос для точного подсчета
+    // потому что distinct: true с множественными JOIN'ами дает неправильный результат
+    let totalCount;
+    if (userRole === 'user' && userCounterpartyId === (await Setting.getSetting('default_counterparty_id'))) {
+      // Для user в default контрагенте считаем по createdBy
+      totalCount = await Employee.count({
+        where: {
+          ...where,
+          createdBy: userId
+        }
+      });
+    } else if (userRole === 'user') {
+      // Для user в других контрагентах считаем через маппинг
+      totalCount = await Employee.count({
+        where,
+        include: [{
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          where: { counterpartyId: userCounterpartyId },
+          required: true,
+          attributes: []
+        }],
+        distinct: true
+      });
+    } else {
+      // Для админа и manager просто считаем всех
+      totalCount = await Employee.count({ where });
+    }
+
+    // Загружаем сотрудников с полными данными
+    // subQuery: true нужен чтобы LIMIT применялся к уникальным сотрудникам, 
+    // а не к строкам результата JOIN (иначе получаем дубликаты из-за множественных маппингов)
+    const rows = await Employee.findAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -219,8 +251,7 @@ export const getAllEmployees = async (req, res, next) => {
           ]
         ]
       },
-      distinct: true, // Важно для правильного подсчета при фильтрации через include
-      subQuery: false // Не использовать subquery для include
+      subQuery: true // ВАЖНО: true чтобы LIMIT работал по уникальным Employee, а не по JOIN-строкам
     });
     
     // Статусы уже загружены через include в основной запрос
@@ -294,11 +325,10 @@ export const getAllEmployees = async (req, res, next) => {
       return employeeData;
     });
 
-    // Определяем total: для activeOnly=false используем count из БД,
-    // для activeOnly=true или фильтров по дате - приблизительное значение
-    // (точный подсчёт требует отдельного запроса, что замедлит ответ)
-    const hasPostFiltering = isActiveOnly || dateFrom || dateTo;
-    const totalCount = hasPostFiltering ? filteredRows.length : count;
+    // ВАЖНО: total должен быть общим количеством записей в БД (totalCount),
+    // а НЕ количеством в текущем батче после пост-фильтрации (filteredRows.length)
+    // Потому что filteredRows уже ограничен LIMIT и OFFSET
+    const finalTotalCount = totalCount;
     
     res.json({
       success: true,
@@ -307,8 +337,8 @@ export const getAllEmployees = async (req, res, next) => {
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total: totalCount,
-          pages: Math.ceil(totalCount / limit)
+          total: finalTotalCount,
+          pages: Math.ceil(finalTotalCount / limit)
         }
       }
     });
