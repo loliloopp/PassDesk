@@ -268,7 +268,7 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange, hideU
             </Button>
           )}
           <div style={{ color: '#8c8c8c', fontSize: '12px' }}>
-            Поддерживаемые форматы: JPG, PNG, PDF, XLS, XLSX, DOC, DOCX (макс. 10 МБ)
+            Поддерживаемые форматы: JPG, PNG, PDF, XLS, XLSX, DOC, DOCX (макс. 100 МБ)
           </div>
         </Space>
       )}
