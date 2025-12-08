@@ -97,6 +97,7 @@ const ExcelExportModal = ({ visible, employees = [], onCancel, onSuccess }) => {
           'Организация': counterpartyMapping?.counterparty?.name || '-',
           'ИНН организации': counterpartyMapping?.counterparty?.inn || '-',
           'id_all': emp.idAll || '-',
+          'Дата окончания паспорта': emp.passportExpiryDate ? dayjs(emp.passportExpiryDate).format('DD.MM.YYYY') : '-',
         };
       });
 
