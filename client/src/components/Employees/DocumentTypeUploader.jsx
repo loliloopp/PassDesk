@@ -42,7 +42,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
     setLoading(true);
     try {
       const response = await employeeService.getFiles(employeeId);
-      const files = response.data || [];
+      const files = response?.data || response || [];
       setAllFiles(files);
 
       // Подсчитываем файлы по типам документов
@@ -126,42 +126,40 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
             <List
               size="small"
               dataSource={filesOfType}
-              renderItem={(file) => (
-                <List.Item>
-                  <List.Item.Meta
-                    title={
-                      <span style={{ fontSize: '12px' }}>
-                        {file.filename || file.originalName}
-                      </span>
-                    }
-                    description={
-                      <span style={{ fontSize: '11px', color: '#8c8c8c' }}>
-                        {file.mimeType && `${file.mimeType} • `}
-                        {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''}
-                      </span>
-                    }
-                  />
-                  {!readonly && (
-                    <Space size="small">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<DownloadOutlined />}
-                        onClick={() => handleDownloadFile(file)}
-                      />
-                      <Popconfirm
-                        title="Удалить файл?"
-                        description="Вы уверены, что хотите удалить этот файл?"
-                        onConfirm={() => handleDeleteFile(file.id)}
-                        okText="Да"
-                        cancelText="Отмена"
-                      >
-                        <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                      </Popconfirm>
-                    </Space>
-                  )}
-                </List.Item>
-              )}
+              renderItem={(file) => {
+                const displayName = file.fileName || file.file_name || file.filename || file.original_name || file.originalName || 'Неизвестный файл';
+                
+                return (
+                  <List.Item>
+                    <List.Item.Meta
+                      title={
+                        <span style={{ fontSize: '12px' }}>
+                          {displayName}
+                        </span>
+                      }
+                    />
+                    {!readonly && (
+                      <Space size="small">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<DownloadOutlined />}
+                          onClick={() => handleDownloadFile(file)}
+                        />
+                        <Popconfirm
+                          title="Удалить файл?"
+                          description="Вы уверены, что хотите удалить этот файл?"
+                          onConfirm={() => handleDeleteFile(file.id)}
+                          okText="Да"
+                          cancelText="Отмена"
+                        >
+                          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                      </Space>
+                    )}
+                  </List.Item>
+                );
+              }}
             />
           </div>
         )}
@@ -197,8 +195,10 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
       
       message.success(`${DOCUMENT_TYPES.find(d => d.value === documentType)?.label} загружен(ы)`);
       
-      // Перезагружаем все файлы чтобы обновить счетчики
-      await fetchAllFiles();
+      // Небольшая задержка чтобы сервер обновил имена файлов
+      setTimeout(() => {
+        fetchAllFiles();
+      }, 300);
 
       // Уведомляем родителя об обновлении
       if (onFilesUpdated) {
@@ -215,7 +215,7 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
   // Удаление файла
   const handleDeleteFile = async (fileId) => {
     try {
-      await employeeService.deleteFile(fileId);
+      await employeeService.deleteFile(employeeId, fileId);
       message.success('Файл удален');
       await fetchAllFiles();
       if (onFilesUpdated) {
@@ -230,14 +230,12 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
   // Скачать файл
   const handleDownloadFile = async (file) => {
     try {
-      const response = await employeeService.downloadFile(file.id);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', file.filename || 'file');
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
+      const downloadLink = await employeeService.getFileDownloadLink(employeeId, file.id);
+      if (downloadLink?.url) {
+        window.open(downloadLink.url, '_blank');
+      } else {
+        message.error('Ошибка при получении ссылки скачивания');
+      }
     } catch (error) {
       console.error('Error downloading file:', error);
       message.error('Ошибка скачивания файла');
