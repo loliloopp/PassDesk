@@ -1,5 +1,5 @@
 import { Table } from 'antd';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useEmployeeColumns } from './EmployeeColumns';
 import { useTableFilters } from './useTableFilters';
 
@@ -153,6 +153,17 @@ export const EmployeeTable = ({
     onConstructionSitesEdit, // Передаем новый callback
     resetTrigger, // Передаем триггер сброса
   });
+
+  // При загрузке фильтров из localStorage передаем их на верхний уровень
+  // Используем ref чтобы отследить первую загрузку
+  const filtersInitializedRef = useRef(false);
+  useEffect(() => {
+    // Передаем фильтры наверх когда они загружены из localStorage (при первом рендере после инициализации)
+    if (onFiltersChange && !filtersInitializedRef.current && Object.keys(filters).length > 0) {
+      filtersInitializedRef.current = true;
+      onFiltersChange(filters);
+    }
+  }, [filters, onFiltersChange]);
 
   // Сбрасываем фильтры когда меняется resetTrigger
   useEffect(() => {

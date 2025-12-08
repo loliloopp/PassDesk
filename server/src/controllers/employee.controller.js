@@ -56,7 +56,7 @@ const calculateStatusCard = (employee) => {
 
 export const getAllEmployees = async (req, res, next) => {
   try {
-    const { page = 1, limit = 100, search = '', activeOnly = 'false', dateFrom, dateTo, offset: queryOffset } = req.query;
+    const { page = 1, limit = 100, search = '', activeOnly = 'false', dateFrom, dateTo, offset: queryOffset, counterpartyId } = req.query;
     // Используем offset из query если передан, иначе вычисляем из page
     const offset = queryOffset !== undefined ? parseInt(queryOffset) : (page - 1) * limit;
     const userId = req.user.id;
@@ -64,6 +64,12 @@ export const getAllEmployees = async (req, res, next) => {
     const userCounterpartyId = req.user.counterpartyId;
 
     const where = {};
+    
+    // Фильтр по контрагенту (если выбран)
+    if (counterpartyId) {
+      // Если пользователь выбрал контрагента, добавляем фильтр
+      // Но нужно учитывать роль пользователя - админ может смотреть всех, user только своих
+    }
     
     // Поиск по ФИО, email, телефону
     if (search) {
@@ -170,7 +176,8 @@ export const getAllEmployees = async (req, res, next) => {
     ];
 
     // Для роли 'user' - применяем фильтрацию
-    // Для админа - показываем всех сотрудников всех контрагентов
+    // Для админа и manager - могут видеть сотрудников всех контрагентов
+    // НО если выбран конкретный контрагент - фильтруем по нему
     if (userRole === 'user') {
       // Получаем контрагента по умолчанию
       const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
@@ -195,8 +202,14 @@ export const getAllEmployees = async (req, res, next) => {
         };
         employeeInclude[4].required = true;
       }
+    } else if ((userRole === 'admin' || userRole === 'manager') && counterpartyId) {
+      // Для админа и manager - если выбран конкретный контрагент в фильтре - фильтруем по нему
+      employeeInclude[4].where = {
+        counterpartyId: counterpartyId
+      };
+      employeeInclude[4].required = true;
     }
-    // Для админа и manager - ограничений по контрагенту нет (видят всех)
+    // Если админ/manager не выбрал контрагент - видят всех из всех контрагентов
 
     // ИСПРАВЛЕНИЕ: делаем отдельный COUNT запрос для точного подсчета
     // потому что distinct: true с множественными JOIN'ами дает неправильный результат

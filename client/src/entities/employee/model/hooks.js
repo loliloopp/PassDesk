@@ -34,8 +34,9 @@ const loadStatusesForEmployees = async (employeesData) => {
  * Прогрессивная загрузка: сначала первая порция, потом остальные в фоне
  * @param {boolean} activeOnly - показывать только активных сотрудников
  * @param {object} filterParams - дополнительные параметры фильтрации
+ * @param {boolean} enabled - флаг включения загрузки (по умолчанию true)
  */
-export const useEmployees = (activeOnly = false, filterParams = {}) => {
+export const useEmployees = (activeOnly = false, filterParams = {}, enabled = true) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [backgroundLoading, setBackgroundLoading] = useState(false);
@@ -167,7 +168,10 @@ export const useEmployees = (activeOnly = false, filterParams = {}) => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    fetchEmployees();
+    // Не загружаем если enabled = false
+    if (enabled) {
+      fetchEmployees();
+    }
     
     return () => {
       isMountedRef.current = false;
@@ -175,7 +179,7 @@ export const useEmployees = (activeOnly = false, filterParams = {}) => {
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchEmployees]);
+  }, [fetchEmployees, enabled]);
 
   return {
     employees,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Typography, App, Grid, Button, Tooltip } from 'antd';
 import { PlusOutlined, FileExcelOutlined, ClearOutlined, SyncOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { employeeApi } from '@/entities/employee';
 import { useDepartments } from '@/entities/department';
 import { useSettings } from '@/entities/settings';
 import { useAuthStore } from '@/store/authStore';
+import { counterpartyService } from '@/services/counterpartyService';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { EmployeeTable, MobileEmployeeList } from '@/widgets/employee-table';
 import { EmployeeSearchFilter } from '@/features/employee-search';
@@ -23,6 +24,20 @@ import SecurityModal from '@/components/Employees/SecurityModal';
 const { Title } = Typography;
 const { useBreakpoint } = Grid;
 
+// Ключ для сохранения фильтров таблицы (должен совпадать с useTableFilters)
+const TABLE_FILTERS_STORAGE_KEY = 'employee_table_filters';
+
+// Функция для получения начальных фильтров из localStorage
+const getInitialFilters = () => {
+  try {
+    const saved = localStorage.getItem(TABLE_FILTERS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch (error) {
+    console.warn('Ошибка при загрузке фильтров таблицы:', error);
+    return {};
+  }
+};
+
 /**
  * Страница управления сотрудниками
  * Оптимизирована для быстрой загрузки с параллельными запросами и мемоизацией
@@ -36,8 +51,29 @@ const EmployeesPage = () => {
 
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
-  const [tableFilters, setTableFilters] = useState({});
+  // Инициализируем фильтры из localStorage
+  const [tableFilters, setTableFilters] = useState(getInitialFilters);
   const [resetTrigger, setResetTrigger] = useState(0);
+  // Маппинг имен контрагентов в ID для фильтрации на сервере
+  const [counterpartyMap, setCounterpartyMap] = useState({});
+
+  // Загружаем список контрагентов для маппинга имя → ID
+  useEffect(() => {
+    const loadCounterparties = async () => {
+      try {
+        const { data } = await counterpartyService.getAll({ limit: 10000, page: 1 });
+        const counterparties = data?.data?.counterparties || data?.counterparties || [];
+        const map = {};
+        counterparties.forEach(c => {
+          if (c.name) map[c.name] = c.id;
+        });
+        setCounterpartyMap(map);
+      } catch (error) {
+        console.warn('Ошибка загрузки контрагентов:', error);
+      }
+    };
+    loadCounterparties();
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -57,13 +93,28 @@ const EmployeesPage = () => {
 
   // Загружаем ВСЕ сотрудников без фильтрации по статусам (activeOnly = false)
   // Прогрессивная загрузка: сначала первые 100, потом остальные в фоне
+  // Преобразуем имя контрагента в ID для фильтрации на сервере
+  const counterpartyIdForFilter = useMemo(() => {
+    if (!tableFilters.counterparty || tableFilters.counterparty.length === 0) return null;
+    // Берем первый выбранный контрагент (если выбрано несколько)
+    const counterpartyName = tableFilters.counterparty[0];
+    return counterpartyMap[counterpartyName] || null;
+  }, [tableFilters.counterparty, counterpartyMap]);
+
+  // Флаг готовности фильтра контрагента (маппинг загружен или фильтр не установлен)
+  const isCounterpartyFilterReady = !tableFilters.counterparty?.length || Object.keys(counterpartyMap).length > 0;
+
   const { 
     employees, 
     loading: employeesLoading, 
     backgroundLoading,
     totalCount,
     refetch: refetchEmployees 
-  } = useEmployees(false);
+  } = useEmployees(
+    false, 
+    counterpartyIdForFilter ? { counterpartyId: counterpartyIdForFilter } : {},
+    isCounterpartyFilterReady // Не загружаем пока маппинг не готов
+  );
   const { departments, loading: departmentsLoading } = useDepartments();
   const { defaultCounterpartyId, loading: settingsLoading } = useSettings();
 
