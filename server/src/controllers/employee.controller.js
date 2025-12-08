@@ -228,6 +228,8 @@ export const getAllEmployees = async (req, res, next) => {
     }
 
     // Загружаем сотрудников с полными данными
+    // ВАЖНО: subQuery: true чтобы LIMIT/OFFSET применялись к уникальным Employee,
+    // а не к строкам JOIN (иначе при множественных маппингах получаем дубликаты)
     const rows = await Employee.findAll({
       where,
       limit: parseInt(limit),
@@ -249,9 +251,9 @@ export const getAllEmployees = async (req, res, next) => {
           ]
         ]
       },
-      subQuery: false,
+      subQuery: true,
       raw: false,
-      nest: true // Правильно структурирует вложенные ассоциации
+      nest: true
     });
     
     // Статусы уже загружены через include в основной запрос
