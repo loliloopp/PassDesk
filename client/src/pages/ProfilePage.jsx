@@ -274,6 +274,16 @@ const ProfilePage = () => {
             >
               Выйти из аккаунта
             </Button>
+
+            <Divider style={{ margin: '8px 0' }} />
+
+            <Typography.Link 
+              href="https://docs.google.com/document/d/12wNHmIGNUcLjdDeThLY-77F_ARR1o2hKF_CIWhauy88/edit?usp=sharing" 
+              target="_blank"
+              style={{ display: 'block', textAlign: 'center' }}
+            >
+              Инструкция
+            </Typography.Link>
           </Space>
         </Card>
 

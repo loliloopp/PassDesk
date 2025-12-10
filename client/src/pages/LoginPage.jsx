@@ -346,6 +346,11 @@ const LoginPage = () => {
           {registerTabContent}
 
           <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <div style={{ marginBottom: 12 }}>
+              <Link href="https://docs.google.com/document/d/12wNHmIGNUcLjdDeThLY-77F_ARR1o2hKF_CIWhauy88/edit?usp=sharing" target="_blank">
+                Инструкция
+              </Link>
+            </div>
             <Text type="secondary" style={{ fontSize: 12 }}>
               © 2025 PassDesk. Все права защищены.
             </Text>
@@ -424,6 +429,11 @@ const LoginPage = () => {
         />
 
         <div style={{ textAlign: 'center', marginTop: 24 }}>
+          <div style={{ marginBottom: 12 }}>
+            <Link href="https://docs.google.com/document/d/12wNHmIGNUcLjdDeThLY-77F_ARR1o2hKF_CIWhauy88/edit?usp=sharing" target="_blank">
+              Инструкция
+            </Link>
+          </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
             © 2025 PassDesk. Все права защищены.
           </Text>
