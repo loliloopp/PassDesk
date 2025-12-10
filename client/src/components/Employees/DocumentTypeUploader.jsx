@@ -11,7 +11,7 @@ const DOCUMENT_TYPES = [
   { value: 'kig', label: 'КИГ' },
   { value: 'patent_front', label: 'Патент (лиц.)' },
   { value: 'patent_back', label: 'Патент (спин.)' },
-  { value: 'biometric_consent', label: 'Согласие биоман.' },
+  { value: 'biometric_consent', label: 'Согласие биометр.' },
   { value: 'diploma', label: 'Диплом' },
   { value: 'med_book', label: 'Мед.книжка' },
   { value: 'migration_card', label: 'Миграционная карта' },
