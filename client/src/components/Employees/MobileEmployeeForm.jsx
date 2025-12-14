@@ -978,11 +978,20 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                   multiple={true}
                 />
 
-                {/* Согласие на обработку биометрических данных */}
+                {/* Согласие на обработку биометрических данных Генподрядчик */}
                 <EmployeeDocumentUpload
                   employeeId={employee.id}
                   documentType="biometric_consent"
-                  label="Согласие на обработку биометрических данных"
+                  label="Согласие биометр. Генподряд"
+                  readonly={false}
+                  multiple={true}
+                />
+
+                {/* Согласие на обработку биометрических данных Застройщик */}
+                <EmployeeDocumentUpload
+                  employeeId={employee.id}
+                  documentType="biometric_consent_developer"
+                  label="Согласие биометр. Застройщик"
                   readonly={false}
                   multiple={true}
                 />

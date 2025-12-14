@@ -64,10 +64,10 @@ File.init(
       comment: 'ID связанной сущности'
     },
     documentType: {
-      type: DataTypes.ENUM('passport', 'patent_front', 'patent_back', 'biometric_consent', 'application_scan', 'consent', 'bank_details', 'kig', 'diploma', 'med_book', 'migration_card', 'arrival_notice', 'patent_payment_receipt', 'mvd_notification', 'other'),
+      type: DataTypes.ENUM('passport', 'patent_front', 'patent_back', 'biometric_consent', 'biometric_consent_developer', 'application_scan', 'consent', 'bank_details', 'kig', 'diploma', 'med_book', 'migration_card', 'arrival_notice', 'patent_payment_receipt', 'mvd_notification', 'other'),
       field: 'document_type',
       allowNull: true,
-      comment: 'Тип документа: passport (Паспорт), patent_front (Лицевая сторона патента), patent_back (Задняя сторона патента), biometric_consent (Согласие на обработку биометрических данных), application_scan (Скан заявки), consent (Согласие на обработку ПД), bank_details (Реквизиты счета), kig (КИГ), diploma (Диплом), med_book (Мед.книжка), migration_card (Миграционная карта), arrival_notice (Уведомление о прибытии), patent_payment_receipt (Чек об оплате патента), mvd_notification (Уведомление МВД), other (Другое)'
+      comment: 'Тип документа: passport (Паспорт), patent_front (Лицевая сторона патента), patent_back (Задняя сторона патента), biometric_consent (Согласие биометр. Генподряд), biometric_consent_developer (Согласие биометр. Застройщик), application_scan (Скан заявки), consent (Согласие на обработку ПД), bank_details (Реквизиты счета), kig (КИГ), diploma (Диплом), med_book (Мед.книжка), migration_card (Миграционная карта), arrival_notice (Уведомление о прибытии), patent_payment_receipt (Чек об оплате патента), mvd_notification (Уведомление МВД), other (Другое)'
     },
     employeeId: {
       type: DataTypes.UUID,

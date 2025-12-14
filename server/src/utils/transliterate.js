@@ -111,7 +111,8 @@ export const sanitizeFileName = (fileName) => {
 const documentTypeNames = {
   'passport': 'паспорт',
   'consent': 'согласие_персональные',
-  'biometric_consent': 'согласие_биометрические',
+  'biometric_consent': 'согласие_биометрические_генподряд',
+  'biometric_consent_developer': 'согласие_биометрические_застройщик',
   'patent_front': 'патент1',
   'patent_back': 'патент2',
   'bank_details': 'реквизиты',
@@ -127,7 +128,7 @@ const documentTypeNames = {
 
 /**
  * Форматирование имени файла сотрудника
- * @param {string} documentType - Тип документа (passport, biometric_consent и т.д.)
+ * @param {string} documentType - Тип документа (passport, biometric_consent, biometric_consent_developer и т.д.)
  * @param {string} lastName - Фамилия
  * @param {string} firstName - Имя
  * @param {string} middleName - Отчество
