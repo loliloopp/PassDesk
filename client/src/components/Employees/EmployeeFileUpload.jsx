@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { FileViewer } from '../../shared/ui/FileViewer';
 import { employeeService } from '../../services/employeeService';
+import { ALLOWED_MIME_TYPES, SUPPORTED_FORMATS, ALLOWED_EXTENSIONS } from '../../shared/constants/fileTypes.js';
 
 const { Option } = Select;
 
@@ -210,30 +211,22 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange, hideU
 
   const uploadProps = {
     multiple: true,
-    accept: '.jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx',
+    accept: ALLOWED_EXTENSIONS,
     fileList: fileList,
     beforeUpload: (file) => {
-      // Проверка размера файла (макс. 100 МБ)
-      const isLt10M = file.size / 1024 / 1024 < 100;
-      if (!isLt10M) {
-        message.error(`${file.name}: размер файла превышает 100 МБ`);
+      // Проверка типа файла
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        message.error(
+          `❌ ${file.name}: неподдерживаемый тип файла\n` +
+          `✅ Поддерживаются: ${SUPPORTED_FORMATS}`
+        );
         return Upload.LIST_IGNORE;
       }
 
-      // Проверка типа файла
-      const allowedTypes = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'application/pdf',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ];
-      
-      if (!allowedTypes.includes(file.type)) {
-        message.error(`${file.name}: неподдерживаемый тип файла`);
+      // Проверка размера файла (макс. 100 МБ)
+      const fileSizeMB = file.size / 1024 / 1024;
+      if (fileSizeMB > 100) {
+        message.error(`❌ ${file.name}: размер файла ${fileSizeMB.toFixed(2)}MB превышает максимум 100MB`);
         return Upload.LIST_IGNORE;
       }
 
@@ -269,7 +262,7 @@ const EmployeeFileUpload = ({ employeeId, readonly = false, onFilesChange, hideU
             </Button>
           )}
           <div style={{ color: '#8c8c8c', fontSize: '12px' }}>
-            Поддерживаемые форматы: JPG, PNG, PDF, XLS, XLSX, DOC, DOCX (макс. 100 МБ)
+            ✅ Поддерживаемые форматы: {SUPPORTED_FORMATS} (макс. 100 МБ)
           </div>
         </Space>
       )}

@@ -3,6 +3,7 @@ import { Upload, Button, Image, App, Space, Popconfirm, Tooltip, Spin } from 'an
 import { UploadOutlined, DeleteOutlined, EyeOutlined, FileImageOutlined, CameraOutlined } from '@ant-design/icons';
 import { employeeService } from '@/services/employeeService';
 import { DocumentScannerModal as DocumentCamera } from '@/features/document-scanner';
+import { ALLOWED_MIME_TYPES, SUPPORTED_FORMATS } from '@/shared/constants/fileTypes.js';
 
 /**
  * Компонент для загрузки типизированных документов сотрудника
@@ -65,23 +66,21 @@ const EmployeeDocumentUpload = ({
 
   // Загрузка файла (универсальная функция)
   const uploadFile = async (file) => {
-    // Проверка размера файла (макс. 100 МБ)
-    const isLt10M = file.size / 1024 / 1024 < 100;
-    if (!isLt10M) {
-      message.error('Размер файла превышает 100 МБ');
+    const { message } = App.useApp();
+    
+    // Проверка типа файла
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      message.error(
+        `❌ ${file.name}: неподдерживаемый тип файла\n` +
+        `✅ Поддерживаются: ${SUPPORTED_FORMATS}`
+      );
       return;
     }
 
-    // Проверка типа файла (только изображения и PDF)
-    const allowedTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'application/pdf'
-    ];
-    
-    if (!allowedTypes.includes(file.type)) {
-      message.error('Поддерживаются только изображения (JPG, PNG) и PDF');
+    // Проверка размера файла (макс. 100 МБ)
+    const fileSizeMB = file.size / 1024 / 1024;
+    if (fileSizeMB > 100) {
+      message.error(`❌ ${file.name}: размер файла ${fileSizeMB.toFixed(2)}MB превышает максимум 100MB`);
       return;
     }
 
@@ -197,7 +196,7 @@ const EmployeeDocumentUpload = ({
   };
 
   const uploadProps = {
-    accept: 'image/jpeg,image/jpg,image/png,application/pdf',
+    accept: '.jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx',
     showUploadList: false,
     customRequest: handleUpload,
     multiple: multiple,
@@ -307,7 +306,7 @@ const EmployeeDocumentUpload = ({
                 {/* Скрытый инпут для выбора файлов */}
                 <input
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,application/pdf"
+                  accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx"
                   multiple={multiple}
                   style={{ display: 'none' }}
                   ref={fileInputRef}
@@ -317,8 +316,8 @@ const EmployeeDocumentUpload = ({
             </>
           )}
 
-          <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 4 }}>
-            JPG, PNG, PDF (макс. 10 МБ)
+          <div style={{ color: '#1890ff', fontSize: '12px', marginTop: 8 }}>
+            ✅ Поддерживаемые форматы: {SUPPORTED_FORMATS} (макс. 100 МБ)
           </div>
         </>
       )}

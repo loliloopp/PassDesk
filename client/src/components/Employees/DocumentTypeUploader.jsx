@@ -3,6 +3,7 @@ import { Row, Col, Button, Upload, App, Tooltip, Spin, List, Space, Popconfirm, 
 import { CheckCircleOutlined, DeleteOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import { FileViewer } from '../../shared/ui/FileViewer';
 import { employeeService } from '../../services/employeeService';
+import { ALLOWED_MIME_TYPES, SUPPORTED_FORMATS, ALLOWED_EXTENSIONS } from '../../shared/constants/fileTypes.js';
 
 // Типы документов
 const DOCUMENT_TYPES = [
@@ -90,9 +91,24 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
           {!readonly ? (
             <>
               <Upload
-                accept="*"
+                accept={ALLOWED_EXTENSIONS}
                 multiple={true}
-                beforeUpload={(file, fileList) => handleUpload(file, docType.value)}
+                beforeUpload={(file) => {
+                  // Проверка типа файла
+                  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+                    message.error(`❌ ${file.name}: неподдерживаемый тип файла\n✅ Поддерживаются: ${SUPPORTED_FORMATS}`);
+                    return Upload.LIST_IGNORE;
+                  }
+                  
+                  // Проверка размера файла (макс. 100 МБ)
+                  const fileSizeMB = file.size / 1024 / 1024;
+                  if (fileSizeMB > 100) {
+                    message.error(`❌ ${file.name}: размер файла ${fileSizeMB.toFixed(2)}MB превышает максимум 100MB`);
+                    return Upload.LIST_IGNORE;
+                  }
+                  
+                  return false;
+                }}
                 onChange={(info) => handleChange(info, docType.value)}
                 showUploadList={false}
                 disabled={uploadingTypes[docType.value]}
@@ -359,6 +375,18 @@ const DocumentTypeUploader = ({ employeeId, onFilesUpdated, readonly = false }) 
           border: none;
         }
       `}</style>
+
+      <div style={{
+        marginBottom: 16,
+        padding: '10px 12px',
+        backgroundColor: '#f0f5ff',
+        borderRadius: 4,
+        fontSize: '12px',
+        color: '#1890ff',
+        border: '1px solid #b3d8ff'
+      }}>
+        ℹ️ Укажите тип документа и выберите файл (поддерживаемые форматы: {SUPPORTED_FORMATS})
+      </div>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={8}>
