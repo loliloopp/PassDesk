@@ -2,6 +2,7 @@ import { Table } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect } from 'react';
 import { formatSnils, formatKig, formatInn } from '../../utils/formatters';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 
 const BiometricTable = ({ employees, applicationNumber, onExport }) => {
   const columns = [
@@ -58,6 +59,23 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       width: 130,
       render: (value) => formatInn(value),
     },
+    {
+      title: 'Согласие Биом.',
+      key: 'biometricConsent',
+      width: 130,
+      render: (_, record) => {
+        const hasConsent = record.files && record.files.length > 0;
+        return hasConsent ? (
+          <span style={{ color: '#52c41a', fontSize: '16px' }}>
+            <CheckOutlined /> Да
+          </span>
+        ) : (
+          <span style={{ color: '#f5222d', fontSize: '16px' }}>
+            <CloseOutlined /> Нет
+          </span>
+        );
+      },
+    },
   ];
 
   // Функция экспорта в Excel (временно отключена)
@@ -79,7 +97,7 @@ const BiometricTable = ({ employees, applicationNumber, onExport }) => {
       dataSource={employees}
       rowKey="id"
       pagination={false}
-      scroll={{ x: 1200 }}
+      scroll={{ x: 1350 }}
       bordered
       size="small"
     />

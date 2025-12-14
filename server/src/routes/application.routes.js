@@ -8,7 +8,8 @@ import {
   copyApplication,
   getContractsForApplication,
   getEmployeesForApplication,
-  exportApplicationToWord
+  exportApplicationToWord,
+  downloadDeveloperBiometricConsents
 } from '../controllers/application.controller.js';
 import {
   uploadApplicationFiles,
@@ -35,6 +36,8 @@ router.delete('/:id', deleteApplication);
 // Дополнительные операции
 router.post('/:id/copy', copyApplication);
 router.get('/:id/export/word', exportApplicationToWord);
+router.post('/:id/consents/developer-biometric/download', downloadDeveloperBiometricConsents);
+
 
 // Вспомогательные endpoints для формы создания заявки
 router.get('/helpers/contracts', getContractsForApplication);

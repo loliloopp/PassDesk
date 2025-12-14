@@ -175,6 +175,18 @@ export const getAllEmployees = async (req, res, next) => {
       }
     ];
 
+    // Добавляем загрузку файлов согласий на биометрию Застройщика
+    employeeInclude.push({
+      model: File,
+      as: 'files',
+      attributes: ['id', 'fileKey', 'fileName', 'documentType'],
+      where: {
+        documentType: 'biometric_consent_developer',
+        isDeleted: false
+      },
+      required: false
+    });
+
     // Для роли 'user' - применяем фильтрацию
     // Для админа и manager - могут видеть сотрудников всех контрагентов
     // НО если выбран конкретный контрагент - фильтруем по нему

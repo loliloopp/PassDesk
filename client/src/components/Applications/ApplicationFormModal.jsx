@@ -12,8 +12,9 @@ import {
   Collapse,
   DatePicker,
   App,
+  Button,
 } from 'antd';
-import { FileTextOutlined } from '@ant-design/icons';
+import { FileTextOutlined, DownloadOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { counterpartyService } from '../../services/counterpartyService';
 import { constructionSiteService } from '../../services/constructionSiteService';
@@ -36,6 +37,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
   const [counterpartyType, setCounterpartyType] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [downloadingConsents, setDownloadingConsents] = useState(false);
   
   const getCurrentUser = useAuthStore(state => state.getCurrentUser);
 
@@ -211,15 +213,82 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
 
   const isContractor = counterpartyType === 'contractor';
 
+  const handleDownloadConsents = async () => {
+    try {
+      // Получаем выбранные ID сотрудников из формы
+      const selectedEmployeeIds = form.getFieldValue('employeeIds');
+      
+      if (!selectedEmployeeIds || selectedEmployeeIds.length === 0) {
+        message.warning('Выберите хотя бы одного сотрудника');
+        return;
+      }
+
+      setDownloadingConsents(true);
+      
+      // Вызываем API для выгрузки согласий
+      const response = await applicationService.downloadDeveloperBiometricConsents(
+        editingId,
+        selectedEmployeeIds
+      );
+      
+      // Создаем ссылку для скачивания
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Извлекаем имя файла из заголовка Content-Disposition или используем дефолтное
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = 'консенты_биометрия.zip';
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]*)"?/);
+        if (fileNameMatch && fileNameMatch[1]) {
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
+      }
+      
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      message.success('Согласия выгружены');
+    } catch (error) {
+      console.error('Error downloading consents:', error);
+      message.error(error.response?.data?.message || 'Ошибка при выгрузке согласий');
+    } finally {
+      setDownloadingConsents(false);
+    }
+  };
+
   return (
     <Modal
       title={editingId ? 'Редактировать заявку' : 'Создать заявку'}
       open={visible}
       onCancel={onCancel}
-      onOk={handleSubmit}
       width={800}
-      okText={editingId ? 'Сохранить' : 'Создать'}
-      cancelText="Отмена"
+      footer={[
+        <Button
+          key="download-consents"
+          icon={<DownloadOutlined />}
+          onClick={handleDownloadConsents}
+          loading={downloadingConsents}
+          style={{ float: 'left' }}
+        >
+          Выгрузить согласие на обработку биометрии Застройщик
+        </Button>,
+        <Button key="cancel" onClick={onCancel}>
+          Отмена
+        </Button>,
+        <Button
+          key="submit"
+          type="primary"
+          onClick={handleSubmit}
+          loading={loading}
+        >
+          {editingId ? 'Сохранить' : 'Создать'}
+        </Button>,
+      ]}
     >
       <Spin spinning={loading}>
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>

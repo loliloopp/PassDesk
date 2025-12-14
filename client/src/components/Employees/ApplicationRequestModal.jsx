@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, Table, Checkbox, Space, Button, App, Select, Spin } from 'antd';
-import { FileExcelOutlined, SettingOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, SettingOutlined, DownloadOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { applicationService } from '../../services/applicationService';
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { counterpartyService } from '../../services/counterpartyService';
@@ -16,6 +16,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   const [loading, setLoading] = useState(false);
   const [sitesLoading, setSitesLoading] = useState(false);
   const [counterpartiesLoading, setCounterpartiesLoading] = useState(false);
+  const [downloadingConsents, setDownloadingConsents] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [allSelected, setAllSelected] = useState(false);
   const [selectedSite, setSelectedSite] = useState(null);
@@ -26,6 +27,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   const [counterpartySearchText, setCounterpartySearchText] = useState('');
   const [isColumnsModalOpen, setIsColumnsModalOpen] = useState(false);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
+  const [employeesWithConsents, setEmployeesWithConsents] = useState({});
 
   const { columns: selectedColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
 
@@ -85,6 +87,22 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
         .finally(() => setCounterpartiesLoading(false));
     }
   }, [visible, userRole]);
+
+  // Загружаем информацию о согласиях на биометрию для сотрудников
+  useEffect(() => {
+    if (visible && allEmployees.length > 0) {
+      const consentsMap = {};
+      
+      // Загружаем согласия для каждого сотрудника
+      allEmployees.forEach(emp => {
+        // Проверяем, есть ли уже информация о файлах в объекте сотрудника
+        const hasConsent = emp.files && emp.files.length > 0;
+        consentsMap[emp.id] = hasConsent;
+      });
+      
+      setEmployeesWithConsents(consentsMap);
+    }
+  }, [visible, allEmployees]);
 
   // Применяем фильтры
   const availableEmployees = useMemo(() => {
@@ -278,6 +296,59 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
     }
   };
 
+  const handleDownloadConsents = async () => {
+    try {
+      if (selectedEmployees.length === 0) {
+        message.warning('Выберите хотя бы одного сотрудника');
+        return;
+      }
+
+      setDownloadingConsents(true);
+      
+      // Получаем ID последней созданной заявки - но в этом окне заявка еще не создана
+      // Поэтому создаем заявку сначала и только потом выгружаем согласия
+      const createResponse = await applicationService.create({
+        employeeIds: selectedEmployees,
+      });
+      
+      const applicationId = createResponse.data.data.id;
+      
+      // Теперь выгружаем согласия для этой заявки
+      const response = await applicationService.downloadDeveloperBiometricConsents(
+        applicationId,
+        selectedEmployees
+      );
+      
+      // Создаем ссылку для скачивания
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Извлекаем имя файла из заголовка Content-Disposition или используем дефолтное
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = 'консенты_биометрия.zip';
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]*)"?/);
+        if (fileNameMatch && fileNameMatch[1]) {
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
+      }
+      
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      message.success('Согласия выгружены');
+    } catch (error) {
+      console.error('Error downloading consents:', error);
+      message.error(error.response?.data?.message || 'Ошибка при выгрузке согласий');
+    } finally {
+      setDownloadingConsents(false);
+    }
+  };
+
   const columns = [
     { title: '№', render: (_, __, index) => index + 1, width: 50 },
     {
@@ -297,6 +368,23 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
     { title: 'СНИЛС', dataIndex: 'snils', key: 'snils', ellipsis: true, render: (value) => formatSnils(value) },
     { title: 'Должность', dataIndex: ['position', 'name'], key: 'position', ellipsis: true },
     { title: 'ИНН сотрудника', dataIndex: 'inn', key: 'inn', ellipsis: true, render: (value) => formatInn(value) },
+    {
+      title: 'Согласие Биом.',
+      key: 'biometricConsent',
+      width: 130,
+      render: (_, record) => {
+        const hasConsent = employeesWithConsents[record.id];
+        return hasConsent ? (
+          <span style={{ color: '#52c41a', fontSize: '16px' }}>
+            <CheckOutlined /> Да
+          </span>
+        ) : (
+          <span style={{ color: '#f5222d', fontSize: '16px' }}>
+            <CloseOutlined /> Нет
+          </span>
+        );
+      },
+    },
   ];
 
   return (
@@ -313,6 +401,15 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       }}
       footer={
         <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadConsents}
+            loading={downloadingConsents}
+            disabled={selectedEmployees.length === 0}
+            style={{ float: 'left' }}
+          >
+            Выгрузить согласие на обработку биометрии Застройщик
+          </Button>
           <Button onClick={onCancel}>Отмена</Button>
           <Button
             type="primary"

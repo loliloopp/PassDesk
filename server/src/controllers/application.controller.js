@@ -227,6 +227,16 @@ export const getApplicationById = async (req, res) => {
               model: Position,
               as: 'position',
               attributes: ['id', 'name']
+            },
+            {
+              model: File,
+              as: 'files',
+              attributes: ['id', 'fileKey', 'fileName', 'documentType'],
+              where: {
+                documentType: 'biometric_consent_developer',
+                isDeleted: false
+              },
+              required: false
             }
           ],
           attributes: ['id', 'firstName', 'lastName', 'middleName', 'kig', 'birthDate', 'snils', 'inn', 'positionId'],
@@ -1018,6 +1028,134 @@ export const exportApplicationToWord = async (req, res) => {
       message: 'Ошибка при экспорте заявки',
       error: error.message
     });
+  }
+};
+
+// Выгрузить согласия на обработку биометрии Застройщика в ZIP
+export const downloadDeveloperBiometricConsents = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employeeIds } = req.body; // Массив ID выбранных сотрудников
+    
+    // Проверяем доступ к заявке
+    const application = await Application.findOne({
+      where: {
+        id: id,
+        createdBy: req.user.id // Только свои заявки
+      },
+      include: [
+        {
+          model: Employee,
+          as: 'employees',
+          attributes: ['id', 'firstName', 'lastName', 'middleName']
+        }
+      ]
+    });
+    
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Заявка не найдена'
+      });
+    }
+    
+    // Валидируем, что employeeIds - это массив
+    if (!Array.isArray(employeeIds) || employeeIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Необходимо выбрать хотя бы одного сотрудника'
+      });
+    }
+    
+    // Получаем согласия на биометрию Застройщика для выбранных сотрудников
+    const consentFiles = await File.findAll({
+      where: {
+        documentType: 'biometric_consent_developer',
+        employeeId: {
+          [Op.in]: employeeIds
+        },
+        isDeleted: false
+      },
+      include: [
+        {
+          model: Employee,
+          as: 'employee',
+          attributes: ['id', 'firstName', 'lastName', 'middleName']
+        }
+      ]
+    });
+    
+    if (consentFiles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Нет согласий на обработку биометрии Застройщика для выбранных сотрудников'
+      });
+    }
+    
+    // Импортируем archiver и axios для загрузки файлов
+    const archiver = (await import('archiver')).default;
+    const axios = (await import('axios')).default;
+    
+    // Создаем ZIP архив
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    
+    // Обработчики ошибок
+    archive.on('error', (err) => {
+      console.error('Archiver error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message: 'Ошибка при создании архива',
+          error: err.message
+        });
+      }
+    });
+    
+    // Устанавливаем заголовки для скачивания ZIP
+    const fileName = `Согласия_Биометрия_${application.applicationNumber}_${new Date().toISOString().split('T')[0]}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+    
+    // Пайпим архив в response
+    archive.pipe(res);
+    
+    // Добавляем файлы в архив
+    for (const file of consentFiles) {
+      try {
+        // Получаем подписанный URL для файла
+        const downloadData = await storageProvider.getDownloadUrl(file.filePath, { 
+          expiresIn: 3600,
+          fileName: file.fileName
+        });
+        
+        // Загружаем файл по URL и добавляем в архив
+        const fileResponse = await axios.get(downloadData.url, { 
+          responseType: 'stream',
+          timeout: 30000
+        });
+        
+        // Используем оригинальное имя файла из S3 (как указано в задании)
+        archive.append(fileResponse.data, { name: file.fileName });
+      } catch (error) {
+        console.error(`Error downloading file ${file.fileKey}:`, error.message);
+        // Продолжаем со следующего файла, не прерываем весь процесс
+      }
+    }
+    
+    // Завершаем архив
+    await archive.finalize();
+    
+  } catch (error) {
+    console.error('Error downloading biometric consents:', error);
+    
+    // Проверяем, был ли уже отправлен заголовок ответа
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при выгрузке согласий',
+        error: error.message
+      });
+    }
   }
 };
 
