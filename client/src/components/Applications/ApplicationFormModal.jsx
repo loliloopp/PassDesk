@@ -267,28 +267,31 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
       open={visible}
       onCancel={onCancel}
       width={800}
-      footer={[
-        <Button
-          key="download-consents"
-          icon={<DownloadOutlined />}
-          onClick={handleDownloadConsents}
-          loading={downloadingConsents}
-          style={{ float: 'left' }}
-        >
-          Выгрузить согласие на обработку биометрии Застройщик
-        </Button>,
-        <Button key="cancel" onClick={onCancel}>
-          Отмена
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          onClick={handleSubmit}
-          loading={loading}
-        >
-          {editingId ? 'Сохранить' : 'Создать'}
-        </Button>,
-      ]}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button
+            key="download-consents"
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadConsents}
+            loading={downloadingConsents}
+          >
+            Выгрузить согласие на обработку биометрии
+          </Button>
+          <Space>
+            <Button key="cancel" onClick={onCancel}>
+              Отмена
+            </Button>
+            <Button
+              key="submit"
+              type="primary"
+              onClick={handleSubmit}
+              loading={loading}
+            >
+              {editingId ? 'Сохранить' : 'Создать'}
+            </Button>
+          </Space>
+        </div>
+      }
     >
       <Spin spinning={loading}>
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>

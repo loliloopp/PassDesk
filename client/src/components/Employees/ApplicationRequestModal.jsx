@@ -400,27 +400,28 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
         content: { display: 'flex', flexDirection: 'column', height: '100%' }
       }}
       footer={
-        <Space>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Button
             icon={<DownloadOutlined />}
             onClick={handleDownloadConsents}
             loading={downloadingConsents}
             disabled={selectedEmployees.length === 0}
-            style={{ float: 'left' }}
           >
-            Выгрузить согласие на обработку биометрии Застройщик
+            Выгрузить согласие на обработку биометрии
           </Button>
-          <Button onClick={onCancel}>Отмена</Button>
-          <Button
-            type="primary"
-            icon={<FileExcelOutlined />}
-            onClick={handleCreateRequest}
-            loading={loading}
-            disabled={selectedEmployees.length === 0}
-          >
-            Создать ({selectedEmployees.length})
-          </Button>
-        </Space>
+          <Space>
+            <Button onClick={onCancel}>Отмена</Button>
+            <Button
+              type="primary"
+              icon={<FileExcelOutlined />}
+              onClick={handleCreateRequest}
+              loading={loading}
+              disabled={selectedEmployees.length === 0}
+            >
+              Создать ({selectedEmployees.length})
+            </Button>
+          </Space>
+        </div>
       }
     >
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
