@@ -9,10 +9,12 @@ import {
   CloseCircleFilled,
 } from '@ant-design/icons';
 import { getStatusPriority } from '@/entities/employee';
+import { calculateDocumentExpiryStatus } from '@/utils/documentExpiry';
 import { PositionFilterDropdown } from './PositionFilterDropdown';
 import { FullNameFilterDropdown } from './FullNameFilterDropdown';
 import { CounterpartyFilterDropdown } from './CounterpartyFilterDropdown';
 import { CreatedAtFilterDropdown } from './CreatedAtFilterDropdown';
+import { DocumentExpiryStatus } from './DocumentExpiryStatus';
 
 /**
  * Создание конфигурации колонок для таблицы сотрудников
@@ -435,6 +437,41 @@ export const useEmployeeColumns = ({
           );
         },
         sorter: (a, b) => (a.filesCount || 0) - (b.filesCount || 0),
+      },
+      {
+        title: 'Срок действия док.',
+        key: 'documentExpiry',
+        width: 100,
+        align: 'center',
+        render: (_, record) => <DocumentExpiryStatus employee={record} />,
+        filters: [
+          { text: '🔴 Истек', value: 'expired' },
+          { text: '🟠 Осталось ≤ 2 недели', value: 'expiring-soon' },
+          { text: '🟢 В норме', value: 'valid' },
+          { text: '-  Нет данных', value: 'no-data' },
+        ],
+        filteredValue: filters.documentExpiry || [],
+        onFilter: (value, record) => {
+          const dates = [
+            record.passportExpiryDate || record.passport_expiry_date,
+            record.kigEndDate || record.kig_end_date,
+            record.patentIssueDate || record.patent_issue_date
+              ? (() => {
+                  const issueDate = new Date(record.patentIssueDate || record.patent_issue_date);
+                  const expiryDate = new Date(issueDate);
+                  expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+                  return expiryDate.toISOString();
+                })()
+              : null
+          ].filter(Boolean);
+          
+          if (dates.length === 0) {
+            return value === 'no-data';
+          }
+          
+          const status = calculateDocumentExpiryStatus(dates);
+          return status === value;
+        },
       },
       {
         title: 'Статус',
