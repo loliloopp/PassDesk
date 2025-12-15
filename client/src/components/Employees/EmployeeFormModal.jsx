@@ -4,6 +4,7 @@ import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } fro
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
+import { capitalizeFirstLetter } from '../../utils/formatters';
 import { useAuthStore } from '../../store/authStore';
 import { useReferencesStore } from '../../store/referencesStore';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
@@ -899,6 +900,13 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     }
   };
 
+  // Обработчик onChange для капитализации ФИО
+  const handleFullNameChange = (fieldName, value) => {
+    // Капитализируем первую букву и обновляем значение в форме
+    const capitalizedValue = capitalizeFirstLetter(value);
+    form.setFieldValue(fieldName, capitalizedValue);
+  };
+
   // Переход на следующую вкладку
   const handleNext = () => {
     // Определяем доступные вкладки в зависимости от requiresPatent
@@ -1211,7 +1219,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   label="Фамилия"
                   rules={[{ required: true, message: 'Введите фамилию' }]}
                 >
-                  <Input id={antiAutofillIds.lastName} name={antiAutofillIds.lastName} {...noAutoFillProps} />
+                  <Input 
+                    id={antiAutofillIds.lastName} 
+                    name={antiAutofillIds.lastName} 
+                    {...noAutoFillProps}
+                    onChange={(e) => handleFullNameChange('lastName', e.target.value)}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={6} md={6} lg={6}>
@@ -1220,12 +1233,22 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   label="Имя"
                   rules={[{ required: true, message: 'Введите имя' }]}
                 >
-                  <Input id={antiAutofillIds.firstName} name={antiAutofillIds.firstName} {...noAutoFillProps} />
+                  <Input 
+                    id={antiAutofillIds.firstName} 
+                    name={antiAutofillIds.firstName} 
+                    {...noAutoFillProps}
+                    onChange={(e) => handleFullNameChange('firstName', e.target.value)}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={6} md={6} lg={6}>
                 <Form.Item name="middleName" label="Отчество">
-                  <Input id={antiAutofillIds.middleName} name={antiAutofillIds.middleName} {...noAutoFillProps} />
+                  <Input 
+                    id={antiAutofillIds.middleName} 
+                    name={antiAutofillIds.middleName} 
+                    {...noAutoFillProps}
+                    onChange={(e) => handleFullNameChange('middleName', e.target.value)}
+                  />
                 </Form.Item>
               </Col>
             </Row>

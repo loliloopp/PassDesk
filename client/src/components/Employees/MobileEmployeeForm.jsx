@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
+import { capitalizeFirstLetter } from '../../utils/formatters';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
 import dayjs from 'dayjs';
 
@@ -249,6 +250,13 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     }
   };
 
+  // Обработчик onChange для капитализации ФИО
+  const handleFullNameChange = (fieldName, value) => {
+    // Капитализируем первую букву и обновляем значение в форме
+    const capitalizedValue = capitalizeFirstLetter(value);
+    form.setFieldValue(fieldName, capitalizedValue);
+  };
+
   // Формируем items для Collapse
   const collapseItems = [];
 
@@ -450,6 +458,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                 placeholder="Иванов" 
                 size="large" 
                 {...noAutoFillProps}
+                onChange={(e) => handleFullNameChange('lastName', e.target.value)}
               />
             </Form.Item>
 
@@ -464,6 +473,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                 placeholder="Иван" 
                 size="large" 
                 {...noAutoFillProps}
+                onChange={(e) => handleFullNameChange('firstName', e.target.value)}
               />
             </Form.Item>
 
@@ -474,6 +484,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                 placeholder="Иванович" 
                 size="large" 
                 {...noAutoFillProps}
+                onChange={(e) => handleFullNameChange('middleName', e.target.value)}
               />
             </Form.Item>
 

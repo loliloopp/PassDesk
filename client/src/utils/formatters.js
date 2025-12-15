@@ -135,3 +135,23 @@ export const formatBlankNumber = (blankNumber) => {
   return blankNumber.toUpperCase();
 };
 
+/**
+ * Капитализация первой буквы ФИО (Фамилия, Имя, Отчество)
+ * Автоматически делает первую букву заглавной, остальное в нижнем регистре
+ * 
+ * Примеры:
+ * "иван" → "Иван"
+ * "ПЕТР" → "Петр"
+ * "сИДОР" → "Сидор"
+ */
+export const capitalizeFirstLetter = (value) => {
+  if (!value) return value;
+  
+  // Преобразуем в строку, убираем пробелы по краям
+  const trimmed = String(value).trim();
+  if (trimmed.length === 0) return '';
+  
+  // Первый символ в верхний регистр, остальное в нижний регистр
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+};
+

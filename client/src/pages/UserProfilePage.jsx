@@ -36,6 +36,7 @@ import dayjs from 'dayjs';
 import imageCompression from 'browser-image-compression';
 import userProfileService from '@/services/userProfileService';
 import { citizenshipService } from '@/services/citizenshipService';
+import { capitalizeFirstLetter } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 
 const { Title, Text } = Typography;
@@ -279,6 +280,13 @@ const UserProfilePage = () => {
         kig: employee.kig ? formatKig(employee.kig) : '',
       });
     }
+  };
+
+  // Обработчик onChange для капитализации ФИО
+  const handleFullNameChange = (fieldName, value) => {
+    // Капитализируем первую букву и обновляем значение в форме
+    const capitalizedValue = capitalizeFirstLetter(value);
+    form.setFieldValue(fieldName, capitalizedValue);
   };
 
   const handleSave = async () => {
@@ -635,17 +643,17 @@ const UserProfilePage = () => {
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="lastName" label="Фамилия" rules={[{ required: true }]}>
-                <Input />
+                <Input onChange={(e) => handleFullNameChange('lastName', e.target.value)} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="firstName" label="Имя" rules={[{ required: true }]}>
-                <Input />
+                <Input onChange={(e) => handleFullNameChange('firstName', e.target.value)} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Form.Item name="middleName" label="Отчество">
-                <Input />
+                <Input onChange={(e) => handleFullNameChange('middleName', e.target.value)} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
