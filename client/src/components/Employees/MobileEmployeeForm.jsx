@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
-import { capitalizeFirstLetter } from '../../utils/formatters';
+import { capitalizeFirstLetter, filterCyrillicOnly } from '../../utils/formatters';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
 import dayjs from 'dayjs';
 
@@ -159,6 +159,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
   const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
   const [activateLoading, setActivateLoading] = useState(false); // Состояние загрузки для активации
   const [passportType, setPassportType] = useState(null); // Отслеживаем тип паспорта
+  const [latinInputError, setLatinInputError] = useState(null); // Поле, где был введен латинский символ
+  const latinErrorTimeoutRef = useRef(null); // Ref для таймера очистки ошибки
   const isFormResetRef = useRef(false); // 🎯 Флаг для предотвращения проверки ИНН при сбросе формы
 
   // Инициализируем данные формы при изменении сотрудника или справочников
@@ -252,8 +254,28 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
 
   // Обработчик onChange для капитализации ФИО
   const handleFullNameChange = (fieldName, value) => {
+    // Проверяем, был ли введен латинский символ
+    const hasLatin = /[a-zA-Z]/.test(value);
+    
+    if (hasLatin) {
+      // Показываем ошибку для текущего поля
+      setLatinInputError(fieldName);
+      
+      // Очищаем предыдущий таймер если есть
+      if (latinErrorTimeoutRef.current) {
+        clearTimeout(latinErrorTimeoutRef.current);
+      }
+      
+      // Очищаем ошибку через 3 секунды
+      latinErrorTimeoutRef.current = setTimeout(() => {
+        setLatinInputError(null);
+      }, 3000);
+    }
+    
+    // Фильтруем латиницу - оставляем только кириллицу
+    const filtered = filterCyrillicOnly(value);
     // Капитализируем первую букву и обновляем значение в форме
-    const capitalizedValue = capitalizeFirstLetter(value);
+    const capitalizedValue = capitalizeFirstLetter(filtered);
     form.setFieldValue(fieldName, capitalizedValue);
   };
 
@@ -451,6 +473,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               label="Фамилия"
               name="lastName"
               rules={[{ required: true, message: 'Введите фамилию' }]}
+              validateStatus={latinInputError === 'lastName' ? 'error' : ''}
+              help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
             >
               <Input 
                 id={antiAutofillIds.lastName}
@@ -466,6 +490,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               label="Имя"
               name="firstName"
               rules={[{ required: true, message: 'Введите имя' }]}
+              validateStatus={latinInputError === 'firstName' ? 'error' : ''}
+              help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
             >
               <Input 
                 id={antiAutofillIds.firstName}
@@ -477,7 +503,12 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               />
             </Form.Item>
 
-            <Form.Item label="Отчество" name="middleName">
+            <Form.Item 
+              label="Отчество" 
+              name="middleName"
+              validateStatus={latinInputError === 'middleName' ? 'error' : ''}
+              help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
+            >
               <Input 
                 id={antiAutofillIds.middleName}
                 name={antiAutofillIds.middleName}

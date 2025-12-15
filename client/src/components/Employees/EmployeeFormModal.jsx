@@ -4,7 +4,7 @@ import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } fro
 import { constructionSiteService } from '../../services/constructionSiteService';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
-import { capitalizeFirstLetter } from '../../utils/formatters';
+import { capitalizeFirstLetter, filterCyrillicOnly } from '../../utils/formatters';
 import { useAuthStore } from '../../store/authStore';
 import { useReferencesStore } from '../../store/referencesStore';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
@@ -487,6 +487,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const [linkingMode, setLinkingMode] = useState(false); // 🎯 Режим привязки существующего сотрудника
   const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
   const isFormResetRef = useRef(false); // 🎯 Флаг для предотвращения проверки ИНН при сбросе формы
+  const [latinInputError, setLatinInputError] = useState(null); // Поле, где был введен латинский символ
+  const latinErrorTimeoutRef = useRef(null); // Ref для таймера очистки ошибки
   const { user } = useAuthStore();
   const [transferModalVisible, setTransferModalVisible] = useState(false); // Модальное окно перевода сотрудника
 
@@ -902,8 +904,28 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
   // Обработчик onChange для капитализации ФИО
   const handleFullNameChange = (fieldName, value) => {
+    // Проверяем, был ли введен латинский символ
+    const hasLatin = /[a-zA-Z]/.test(value);
+    
+    if (hasLatin) {
+      // Показываем ошибку для текущего поля
+      setLatinInputError(fieldName);
+      
+      // Очищаем предыдущий таймер если есть
+      if (latinErrorTimeoutRef.current) {
+        clearTimeout(latinErrorTimeoutRef.current);
+      }
+      
+      // Очищаем ошибку через 3 секунды
+      latinErrorTimeoutRef.current = setTimeout(() => {
+        setLatinInputError(null);
+      }, 3000);
+    }
+    
+    // Фильтруем латиницу - оставляем только кириллицу
+    const filtered = filterCyrillicOnly(value);
     // Капитализируем первую букву и обновляем значение в форме
-    const capitalizedValue = capitalizeFirstLetter(value);
+    const capitalizedValue = capitalizeFirstLetter(filtered);
     form.setFieldValue(fieldName, capitalizedValue);
   };
 
@@ -1218,6 +1240,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   name="lastName"
                   label="Фамилия"
                   rules={[{ required: true, message: 'Введите фамилию' }]}
+                  validateStatus={latinInputError === 'lastName' ? 'error' : ''}
+                  help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
                 >
                   <Input 
                     id={antiAutofillIds.lastName} 
@@ -1232,6 +1256,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   name="firstName"
                   label="Имя"
                   rules={[{ required: true, message: 'Введите имя' }]}
+                  validateStatus={latinInputError === 'firstName' ? 'error' : ''}
+                  help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
                 >
                   <Input 
                     id={antiAutofillIds.firstName} 
@@ -1242,7 +1268,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                 </Form.Item>
               </Col>
               <Col xs={24} sm={6} md={6} lg={6}>
-                <Form.Item name="middleName" label="Отчество">
+                <Form.Item 
+                  name="middleName" 
+                  label="Отчество"
+                  validateStatus={latinInputError === 'middleName' ? 'error' : ''}
+                  help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
+                >
                   <Input 
                     id={antiAutofillIds.middleName} 
                     name={antiAutofillIds.middleName} 

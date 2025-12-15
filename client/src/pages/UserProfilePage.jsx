@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Card,
   Row,
@@ -36,7 +36,7 @@ import dayjs from 'dayjs';
 import imageCompression from 'browser-image-compression';
 import userProfileService from '@/services/userProfileService';
 import { citizenshipService } from '@/services/citizenshipService';
-import { capitalizeFirstLetter } from '@/utils/formatters';
+import { capitalizeFirstLetter, filterCyrillicOnly } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 
 const { Title, Text } = Typography;
@@ -186,6 +186,8 @@ const UserProfilePage = () => {
   const [fileList, setFileList] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [latinInputError, setLatinInputError] = useState(null); // Поле, где был введен латинский символ
+  const latinErrorTimeoutRef = useRef(null); // Ref для таймера очистки ошибки
   const [form] = Form.useForm();
 
   // Загрузка данных профиля
@@ -284,8 +286,28 @@ const UserProfilePage = () => {
 
   // Обработчик onChange для капитализации ФИО
   const handleFullNameChange = (fieldName, value) => {
+    // Проверяем, был ли введен латинский символ
+    const hasLatin = /[a-zA-Z]/.test(value);
+    
+    if (hasLatin) {
+      // Показываем ошибку для текущего поля
+      setLatinInputError(fieldName);
+      
+      // Очищаем предыдущий таймер если есть
+      if (latinErrorTimeoutRef.current) {
+        clearTimeout(latinErrorTimeoutRef.current);
+      }
+      
+      // Очищаем ошибку через 3 секунды
+      latinErrorTimeoutRef.current = setTimeout(() => {
+        setLatinInputError(null);
+      }, 3000);
+    }
+    
+    // Фильтруем латиницу - оставляем только кириллицу
+    const filtered = filterCyrillicOnly(value);
     // Капитализируем первую букву и обновляем значение в форме
-    const capitalizedValue = capitalizeFirstLetter(value);
+    const capitalizedValue = capitalizeFirstLetter(filtered);
     form.setFieldValue(fieldName, capitalizedValue);
   };
 
@@ -642,17 +664,34 @@ const UserProfilePage = () => {
           <Title level={4}>Личная информация</Title>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={8}>
-              <Form.Item name="lastName" label="Фамилия" rules={[{ required: true }]}>
+              <Form.Item 
+                name="lastName" 
+                label="Фамилия" 
+                rules={[{ required: true }]}
+                validateStatus={latinInputError === 'lastName' ? 'error' : ''}
+                help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
+              >
                 <Input onChange={(e) => handleFullNameChange('lastName', e.target.value)} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
-              <Form.Item name="firstName" label="Имя" rules={[{ required: true }]}>
+              <Form.Item 
+                name="firstName" 
+                label="Имя" 
+                rules={[{ required: true }]}
+                validateStatus={latinInputError === 'firstName' ? 'error' : ''}
+                help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
+              >
                 <Input onChange={(e) => handleFullNameChange('firstName', e.target.value)} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8}>
-              <Form.Item name="middleName" label="Отчество">
+              <Form.Item 
+                name="middleName" 
+                label="Отчество"
+                validateStatus={latinInputError === 'middleName' ? 'error' : ''}
+                help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
+              >
                 <Input onChange={(e) => handleFullNameChange('middleName', e.target.value)} />
               </Form.Item>
             </Col>
