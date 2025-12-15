@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Form, Select, Button, message, Spin, Typography, Space, Divider } from 'antd';
-import { SaveOutlined, UploadOutlined } from '@ant-design/icons';
+import { SaveOutlined, UploadOutlined, FormOutlined } from '@ant-design/icons';
 import settingsService from '@/services/settingsService';
 import { counterpartyService } from '@/services/counterpartyService';
 import EmployeeImportModal from '@/components/Employees/EmployeeImportModal';
+import EmployeeFieldsSettingsModal from '@/components/Admin/EmployeeFieldsSettingsModal';
 
 const { Title, Text } = Typography;
 
@@ -14,6 +15,7 @@ const SettingsPage = () => {
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState('');
   const [form] = Form.useForm();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isFieldsSettingsOpen, setIsFieldsSettingsOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -142,6 +144,22 @@ const SettingsPage = () => {
       <Divider />
 
       <div style={{ flexShrink: 0, marginTop: '24px' }}>
+        <Title level={4}>Настройка форм</Title>
+        <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+          Управление отображением и обязательностью полей в форме сотрудника
+        </Text>
+        <Button
+          icon={<FormOutlined />}
+          onClick={() => setIsFieldsSettingsOpen(true)}
+          size="large"
+        >
+          Настройка полей сотрудника
+        </Button>
+      </div>
+
+      <Divider />
+
+      <div style={{ flexShrink: 0, marginTop: '24px' }}>
         <Title level={4}>Загрузка данных</Title>
         <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
           Импортируйте сотрудников из файла Excel
@@ -163,6 +181,11 @@ const SettingsPage = () => {
           message.success('Сотрудники успешно импортированы');
           setIsImportModalOpen(false);
         }}
+      />
+      
+      <EmployeeFieldsSettingsModal 
+        visible={isFieldsSettingsOpen}
+        onCancel={() => setIsFieldsSettingsOpen(false)}
       />
     </div>
   );

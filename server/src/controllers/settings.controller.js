@@ -25,12 +25,38 @@ export const getSettings = async (req, res, next) => {
  */
 export const getPublicSettings = async (req, res, next) => {
   try {
-    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    // Получаем настройки параллельно
+    const [
+      defaultCounterpartyId,
+      employeeFormConfigDefault,
+      employeeFormConfigExternal
+    ] = await Promise.all([
+      Setting.getSetting('default_counterparty_id'),
+      Setting.getSetting('employee_form_config_default'),
+      Setting.getSetting('employee_form_config_external')
+    ]);
+
+    // Парсим JSON конфиги, если они есть
+    let formConfigDefault = null;
+    let formConfigExternal = null;
+
+    try {
+      if (employeeFormConfigDefault) {
+        formConfigDefault = JSON.parse(employeeFormConfigDefault);
+      }
+      if (employeeFormConfigExternal) {
+        formConfigExternal = JSON.parse(employeeFormConfigExternal);
+      }
+    } catch (e) {
+      console.error('Error parsing form configs:', e);
+    }
 
     res.json({
       success: true,
       data: {
-        defaultCounterpartyId: defaultCounterpartyId || null
+        defaultCounterpartyId: defaultCounterpartyId || null,
+        employeeFormConfigDefault: formConfigDefault,
+        employeeFormConfigExternal: formConfigExternal
       }
     });
   } catch (error) {

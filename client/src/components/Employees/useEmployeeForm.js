@@ -4,6 +4,7 @@ import { constructionSiteService } from '@/services/constructionSiteService';
 import { employeeStatusService } from '@/services/employeeStatusService';
 import { useAuthStore } from '@/store/authStore';
 import { useReferencesStore } from '@/store/referencesStore';
+import { DEFAULT_FORM_CONFIG } from '@/shared/config/employeeFields';
 import dayjs from 'dayjs';
 
 /**
@@ -21,6 +22,8 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     citizenships: cachedCitizenships,
     positions: cachedPositions,
     settings: cachedSettings,
+    formConfigDefault,
+    formConfigExternal,
     fetchCitizenships,
     fetchPositions,
     fetchSettings,
@@ -34,9 +37,31 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
   const [loadingReferences, setLoadingReferences] = useState(false);
   const [selectedCitizenship, setSelectedCitizenship] = useState(null);
   const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
+  const [activeConfig, setActiveConfig] = useState(DEFAULT_FORM_CONFIG);
 
   // Определяем, требуется ли патент для выбранного гражданства
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
+
+  // Определяем активный конфиг
+  useEffect(() => {
+    // Если пользователь из дефолтного контрагента - берем дефолтный конфиг
+    // Иначе - внешний конфиг
+    const isDefault = user?.counterpartyId === defaultCounterpartyId;
+    const config = isDefault ? (formConfigDefault || DEFAULT_FORM_CONFIG) : (formConfigExternal || DEFAULT_FORM_CONFIG);
+    setActiveConfig(config);
+  }, [user, defaultCounterpartyId, formConfigDefault, formConfigExternal]);
+
+  // Хелпер для получения настроек поля
+  const getFieldProps = (fieldName) => {
+    const fieldConfig = activeConfig[fieldName] || { visible: true, required: false };
+    // Если поле не найдено в конфиге (новое), считаем его видимым и необязательным (или можно брать из дефолтов)
+    
+    return {
+      hidden: !fieldConfig.visible,
+      rules: fieldConfig.required ? [{ required: true, message: 'Обязательное поле' }] : [],
+      required: fieldConfig.required // Для отображения звездочки
+    };
+  };
 
   // Синхронизируем локальные состояния с кэшем
   useEffect(() => {
@@ -433,6 +458,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
     formatInn,
     formatPatentNumber,
     formatBlankNumber,
+    getFieldProps,
   };
 };
 

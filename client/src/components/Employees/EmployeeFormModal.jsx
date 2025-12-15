@@ -7,6 +7,7 @@ import { invalidateCache } from '../../utils/requestCache';
 import { capitalizeFirstLetter, filterCyrillicOnly } from '../../utils/formatters';
 import { useAuthStore } from '../../store/authStore';
 import { useReferencesStore } from '../../store/referencesStore';
+import { DEFAULT_FORM_CONFIG } from '../../shared/config/employeeFields';
 import EmployeeFileUpload from './EmployeeFileUpload.jsx';
 import DocumentTypeUploader from './DocumentTypeUploader.jsx';
 import TransferEmployeeModal from './TransferEmployeeModal.jsx';
@@ -490,7 +491,33 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const [latinInputError, setLatinInputError] = useState(null); // Поле, где был введен латинский символ
   const latinErrorTimeoutRef = useRef(null); // Ref для таймера очистки ошибки
   const { user } = useAuthStore();
+  const { formConfigDefault, formConfigExternal } = useReferencesStore();
   const [transferModalVisible, setTransferModalVisible] = useState(false); // Модальное окно перевода сотрудника
+  const [activeConfig, setActiveConfig] = useState(DEFAULT_FORM_CONFIG);
+
+  // Определяем активный конфиг
+  useEffect(() => {
+    const isDefault = user?.counterpartyId === defaultCounterpartyId;
+    const config = isDefault ? (formConfigDefault || DEFAULT_FORM_CONFIG) : (formConfigExternal || DEFAULT_FORM_CONFIG);
+    setActiveConfig(config);
+  }, [user, defaultCounterpartyId, formConfigDefault, formConfigExternal]);
+
+  // Хелпер для получения настроек поля
+  const getFieldProps = (fieldName) => {
+    const fieldConfig = activeConfig[fieldName] || { visible: true, required: false };
+    
+    // Базовые правила (например, паттерны)
+    let rules = [];
+    if (fieldConfig.required) {
+      rules.push({ required: true, message: `Заполните поле` });
+    }
+    
+    return {
+      hidden: !fieldConfig.visible,
+      required: fieldConfig.required,
+      rules, // Это базовые правила, специфичные добавляются в самом Form.Item
+    };
+  };
 
   // Обработчик для обновления при изменении файлов
   // filesCount - количество файлов (используется только для информации)
@@ -1200,12 +1227,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             
             {/* ИНН и Пол - первая строка */}
             <Row gutter={16}>
-              <Col xs={24} sm={3} md={3} lg={3}>
+              <Col xs={24} sm={3} md={3} lg={3} hidden={getFieldProps('inn').hidden}>
                 <Form.Item 
                   name="inn" 
                   label="ИНН"
                   rules={[
-                    { required: true, message: 'Введите ИНН' },
+                    ...getFieldProps('inn').rules,
                     {
                       pattern: /^\d{4}-\d{5}-\d{1}$|^\d{4}-\d{6}-\d{2}$/,
                       message: 'ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX'
@@ -1223,11 +1250,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={3} md={3} lg={3}>
+              <Col xs={24} sm={3} md={3} lg={3} hidden={getFieldProps('gender').hidden}>
                 <Form.Item
                   name="gender"
                   label="Пол"
-                  rules={[{ required: true, message: 'Выберите пол' }]}
+                  rules={getFieldProps('gender').rules}
                 >
                   <Radio.Group style={{ display: 'flex', gap: '8px' }}>
                     <Radio value="male">Муж</Radio>
@@ -1235,11 +1262,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Radio.Group>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={6} md={6} lg={6}>
+              <Col xs={24} sm={6} md={6} lg={6} hidden={getFieldProps('lastName').hidden}>
                 <Form.Item
                   name="lastName"
                   label="Фамилия"
-                  rules={[{ required: true, message: 'Введите фамилию' }]}
+                  rules={getFieldProps('lastName').rules}
                   validateStatus={latinInputError === 'lastName' ? 'error' : ''}
                   help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
                 >
@@ -1251,11 +1278,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={6} md={6} lg={6}>
+              <Col xs={24} sm={6} md={6} lg={6} hidden={getFieldProps('firstName').hidden}>
                 <Form.Item
                   name="firstName"
                   label="Имя"
-                  rules={[{ required: true, message: 'Введите имя' }]}
+                  rules={getFieldProps('firstName').rules}
                   validateStatus={latinInputError === 'firstName' ? 'error' : ''}
                   help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
                 >
@@ -1267,10 +1294,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={6} md={6} lg={6}>
+              <Col xs={24} sm={6} md={6} lg={6} hidden={getFieldProps('middleName').hidden}>
                 <Form.Item 
                   name="middleName" 
                   label="Отчество"
+                  rules={getFieldProps('middleName').rules}
                   validateStatus={latinInputError === 'middleName' ? 'error' : ''}
                   help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
                 >
@@ -1286,11 +1314,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             {/* Должность на отдельной строке с гражданством и датой рождения */}
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('positionId').hidden}>
                 <Form.Item
                   name="positionId"
                   label="Должность"
-                  rules={[{ required: true, message: 'Выберите должность' }]}
+                  rules={getFieldProps('positionId').rules}
                 >
                   <Select
                     placeholder="Выберите должность"
@@ -1314,11 +1342,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('citizenshipId').hidden}>
                 <Form.Item 
                   name="citizenshipId" 
                   label="Гражданство"
-                  rules={[{ required: true, message: 'Выберите гражданство' }]}
+                  rules={getFieldProps('citizenshipId').rules}
                 >
                   <Select
                     placeholder="Выберите гражданство"
@@ -1337,12 +1365,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('birthDate').hidden}>
                 <Form.Item 
                   name="birthDate" 
                   label="Дата рождения"
                   rules={[
-                    { required: true, message: 'Введите дату рождения' },
+                    ...getFieldProps('birthDate').rules,
                     {
                       validator: (_, value) => {
                         if (!value) {
@@ -1371,11 +1399,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             {/* Дата рождения (мобила) + Страна рождения + Адрес регистрации */}
             <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8}>
+              <Col xs={24} sm={12} md={8} lg={8} hidden={getFieldProps('birthCountryId').hidden}>
                 <Form.Item 
                   name="birthCountryId" 
                   label="Страна рождения"
-                  rules={[{ required: true, message: 'Выберите страну рождения' }]}
+                  rules={getFieldProps('birthCountryId').rules}
                   trigger="onChange"
                 >
                   <Select
@@ -1402,11 +1430,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} md={16} lg={16}>
+              <Col xs={24} sm={12} md={16} lg={16} hidden={getFieldProps('registrationAddress').hidden}>
                 <Form.Item 
                   name="registrationAddress" 
                   label="Адрес регистрации"
-                  rules={[{ required: true, message: 'Введите адрес регистрации' }]}
+                  rules={getFieldProps('registrationAddress').rules}
                 >
                 <Input id={antiAutofillIds.registrationAddress} name={antiAutofillIds.registrationAddress} placeholder="г. Москва, ул. Тверская, д.21, кв.11" {...noAutoFillProps} />
                 </Form.Item>
@@ -1415,11 +1443,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             {/* Контакты */}
             <Row gutter={16}>
-              <Col xs={24} sm={12} md={12} lg={12}>
+              <Col xs={24} sm={12} md={12} lg={12} hidden={getFieldProps('email').hidden}>
                 <Form.Item
                   name="email"
                   label="Email"
                   rules={[
+                    ...getFieldProps('email').rules,
                     { 
                       type: 'email', 
                       message: 'Введите корректный email (например: ivanov@example.com)' 
@@ -1429,12 +1458,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   <Input placeholder="ivanov@example.com" {...noAutoFillProps} />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={12} md={12} lg={12}>
+              <Col xs={24} sm={12} md={12} lg={12} hidden={getFieldProps('phone').hidden}>
                 <Form.Item 
                   name="phone" 
                   label="Телефон"
                   rules={[
-                    { required: true, message: 'Введите телефон' },
+                    ...getFieldProps('phone').rules,
                     {
                       pattern: /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/,
                       message: 'Телефон должен быть в формате +7 (999) 123-45-67'
@@ -1457,8 +1486,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             {/* Примечания */}
             <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item name="notes" label="Примечания">
+              <Col span={24} hidden={getFieldProps('notes').hidden}>
+                <Form.Item name="notes" label="Примечания" rules={getFieldProps('notes').rules}>
                   <TextArea rows={2} {...noAutoFillProps} />
                 </Form.Item>
               </Col>
@@ -1478,12 +1507,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         children: (
           <>
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('snils').hidden}>
                 <Form.Item 
                   name="snils" 
                   label="СНИЛС"
                   rules={[
-                    { required: true, message: 'Введите СНИЛС' },
+                    ...getFieldProps('snils').rules,
                     {
                       pattern: /^\d{3}-\d{3}-\d{3}\s\d{2}$/,
                       message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX'
@@ -1497,12 +1526,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                 </Form.Item>
               </Col>
               {requiresPatent && (
-                <Col xs={24} sm={8} md={8} lg={8}>
+                <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('kig').hidden}>
                   <Form.Item 
                     name="kig" 
                     label="КИГ"
                     rules={[
-                      { required: true, message: 'Введите КИГ, символы на латинице' },
+                      ...getFieldProps('kig').rules,
                       {
                         pattern: /^[A-Z]{2}\s\d{7}$/,
                         message: 'КИГ должен быть в формате: AF 1234567'
@@ -1517,11 +1546,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                 </Col>
               )}
               {requiresPatent && (
-                <Col xs={24} sm={8} md={8} lg={8}>
+                <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('kigEndDate').hidden}>
                   <Form.Item 
                     name="kigEndDate" 
                     label="Дата окончания КИГ"
-                    rules={[{ required: true, message: 'Введите дату окончания КИГ' }]}
+                    rules={getFieldProps('kigEndDate').rules}
                   >
                     <DatePicker
                       style={{ width: '100%' }}
@@ -1534,11 +1563,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             </Row>
 
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('passportType').hidden}>
                 <Form.Item 
                   name="passportType" 
                   label="Тип паспорта"
-                  rules={[{ required: true, message: 'Выберите тип паспорта' }]}
+                  rules={getFieldProps('passportType').rules}
                 >
                   <Select 
                     placeholder="Выберите тип паспорта" 
@@ -1551,11 +1580,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Select>
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('passportNumber').hidden}>
                 <Form.Item 
                   name="passportNumber" 
                   label="№ паспорта"
-                  rules={[{ required: true, message: 'Введите номер паспорта' }]}
+                  rules={getFieldProps('passportNumber').rules}
                   getValueFromEvent={(e) => {
                     // Применяем маску только для российского паспорта
                     if (passportType === 'russian') {
@@ -1571,11 +1600,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('passportDate').hidden}>
                 <Form.Item 
                   name="passportDate" 
                   label="Дата выдачи паспорта"
-                  rules={[{ required: true, message: 'Введите дату выдачи паспорта' }]}
+                  rules={getFieldProps('passportDate').rules}
                 >
                   <DatePicker
                     style={{ width: '100%' }}
@@ -1588,10 +1617,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
 
             <Row gutter={16}>
               {passportType === 'foreign' && (
-                <Col xs={24} sm={12} md={12} lg={12}>
+                <Col xs={24} sm={12} md={12} lg={12} hidden={getFieldProps('passportExpiryDate').hidden}>
                   <Form.Item 
                     name="passportExpiryDate" 
                     label="Дата окончания паспорта"
+                    rules={getFieldProps('passportExpiryDate').rules}
                   >
                     <DatePicker
                       style={{ width: '100%' }}
@@ -1601,11 +1631,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              <Col xs={24} sm={passportType === 'foreign' ? 12 : 24} md={passportType === 'foreign' ? 12 : 24} lg={passportType === 'foreign' ? 12 : 24}>
+              <Col xs={24} sm={passportType === 'foreign' ? 12 : 24} md={passportType === 'foreign' ? 12 : 24} lg={passportType === 'foreign' ? 12 : 24} hidden={getFieldProps('passportIssuer').hidden}>
                 <Form.Item 
                   name="passportIssuer" 
                   label="Кем выдан паспорт"
-                  rules={[{ required: true, message: 'Введите кем выдан паспорт' }]}
+                  rules={getFieldProps('passportIssuer').rules}
                 >
                   <Input placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20" {...noAutoFillProps} />
                 </Form.Item>
@@ -1635,12 +1665,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         ) : (
           <>
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('patentNumber').hidden}>
                 <Form.Item 
                   name="patentNumber" 
                   label="Номер патента"
                   rules={[
-                    { required: true, message: 'Введите номер патента' },
+                    ...getFieldProps('patentNumber').rules,
                     {
                       pattern: /^\d{2}\s№\d{10}$/,
                       message: 'Номер патента должен быть в формате XX №1234567890 (где XX - код от 01 до 99)'
@@ -1657,11 +1687,11 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('patentIssueDate').hidden}>
                 <Form.Item 
                   name="patentIssueDate" 
                   label="Дата выдачи патента"
-                  rules={[{ required: true, message: 'Введите дату выдачи патента' }]}
+                  rules={getFieldProps('patentIssueDate').rules}
                 >
                   <DatePicker
                     style={{ width: '100%' }}
@@ -1670,12 +1700,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} sm={8} md={8} lg={8}>
+              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('blankNumber').hidden}>
                 <Form.Item 
                   name="blankNumber" 
                   label="Номер бланка"
                   rules={[
-                    { required: true, message: 'Введите номер бланка' },
+                    ...getFieldProps('blankNumber').rules,
                     {
                       pattern: /^[А-ЯЁ]{2}\d{7}$/,
                       message: 'Номер бланка должен быть в формате ПР1234567 (кириллица)'

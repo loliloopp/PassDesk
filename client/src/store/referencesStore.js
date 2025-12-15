@@ -168,6 +168,8 @@ export const useReferencesStore = create((set, get) => ({
 
   // ===== НАСТРОЙКИ =====
   settings: null,
+  formConfigDefault: null,
+  formConfigExternal: null,
   settingsLoading: false,
   settingsError: null,
   settingsLastFetch: null,
@@ -199,7 +201,9 @@ export const useReferencesStore = create((set, get) => ({
       const data = response?.data || {};
       
       set({ 
-        settings: data, 
+        settings: data,
+        formConfigDefault: data.employeeFormConfigDefault,
+        formConfigExternal: data.employeeFormConfigExternal,
         settingsLoading: false,
         settingsLastFetch: Date.now()
       });
@@ -210,6 +214,16 @@ export const useReferencesStore = create((set, get) => ({
       set({ settingsError: error, settingsLoading: false });
       throw error;
     }
+  },
+
+  updateFormConfig: (type, config) => {
+    if (type === 'default') {
+      set({ formConfigDefault: config });
+    } else {
+      set({ formConfigExternal: config });
+    }
+    // Сбрасываем время fetch, чтобы при следующем запросе данные обновились (хотя мы уже обновили локально)
+    set({ settingsLastFetch: Date.now() }); 
   },
 
   invalidateSettings: () => {
@@ -293,6 +307,8 @@ export const useReferencesStore = create((set, get) => ({
       departments: null,
       departmentsLastFetch: null,
       settings: null,
+      formConfigDefault: null,
+      formConfigExternal: null,
       settingsLastFetch: null,
       constructionSites: null,
       constructionSitesLastFetch: null,
