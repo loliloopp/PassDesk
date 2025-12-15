@@ -531,46 +531,56 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const requiresPatent = selectedCitizenship?.requiresPatent !== false;
 
   // Определяем обязательные поля для каждой вкладки (динамически)
-  const getRequiredFieldsByTab = () => {
-    const baseFields = {
-      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthCountryId', 'birthDate', 'registrationAddress', 'phone'],
-      '2': requiresPatent 
-        ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
-        : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'], // без КИГ
+  const getRequiredFieldsByTab = (currentRequiresPatent, currentPassportType) => {
+    const allFields = {
+      '1': ['inn', 'lastName', 'firstName', 'middleName', 'gender', 'positionId', 'citizenshipId', 'birthCountryId', 'birthDate', 'registrationAddress', 'email', 'phone', 'notes'],
+      '2': ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer', 'passportExpiryDate'],
       '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
     };
-    
-    // Если патент не требуется, убираем вкладку "Патент" из валидации
-    if (!requiresPatent) {
-      delete baseFields['3'];
+
+    const requiredFields = {};
+
+    Object.keys(allFields).forEach(tabKey => {
+      requiredFields[tabKey] = allFields[tabKey].filter(fieldName => {
+        const props = getFieldProps(fieldName);
+        
+        // Если поле скрыто или не обязательно в настройках - оно нас не интересует для "зеленой галочки"
+        if (props.hidden || !props.required) {
+          return false;
+        }
+
+        // Специфичная логика
+        if (fieldName === 'kig' || fieldName === 'kigEndDate') {
+          if (!currentRequiresPatent) return false;
+        }
+        
+        if (fieldName === 'passportExpiryDate') {
+          if (currentPassportType !== 'foreign') return false;
+        }
+
+        return true;
+      });
+    });
+
+    if (!currentRequiresPatent) {
+      delete requiredFields['3'];
     }
-    
-    return baseFields;
+
+    return requiredFields;
   };
-  
-  const requiredFieldsByTab = getRequiredFieldsByTab();
+
+  const requiredFieldsByTab = getRequiredFieldsByTab(requiresPatent, passportType);
 
   const computeValidation = (forceCompute = false, citizenshipOverride = null) => {
-    // Получаем значения из формы (включая скрытые поля)
     const values = form.getFieldsValue(true);
     const validation = {};
     
-    // Используем переданное гражданство или текущее из стейта
     const currentCitizenship = citizenshipOverride || selectedCitizenship;
     const currentRequiresPatent = currentCitizenship?.requiresPatent !== false;
+    // passportType берем из формы, чтобы было актуально
+    const currentPassportType = values.passportType || passportType;
     
-    // Пересчитываем requiredFieldsByTab с учетом актуального гражданства
-    const currentRequiredFieldsByTab = {
-      '1': ['inn', 'lastName', 'firstName', 'gender', 'positionId', 'citizenshipId', 'birthCountryId', 'birthDate', 'registrationAddress', 'phone'],
-      '2': currentRequiresPatent 
-        ? ['snils', 'kig', 'kigEndDate', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer']
-        : ['snils', 'passportType', 'passportNumber', 'passportDate', 'passportIssuer'],
-      '3': ['patentNumber', 'patentIssueDate', 'blankNumber'],
-    };
-    
-    if (!currentRequiresPatent) {
-      delete currentRequiredFieldsByTab['3'];
-    }
+    const currentRequiredFieldsByTab = getRequiredFieldsByTab(currentRequiresPatent, currentPassportType);
     
     Object.entries(currentRequiredFieldsByTab).forEach(([tabKey, fields]) => {
       if (!fields) {
