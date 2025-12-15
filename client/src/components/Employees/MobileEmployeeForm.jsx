@@ -429,286 +429,310 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     key: 'personal',
     label: <Title level={5} style={{ margin: 0 }}>📋 Личная информация</Title>,
     children: (
-        <>
-            <Form.Item
-              label="ИНН"
-              name="inn"
-              hidden={getFieldProps('inn').hidden}
-              rules={[
-                ...getFieldProps('inn').rules,
-                {
-                  validator: (_, value) => {
-                    if (!value) return Promise.resolve();
-                    const digits = value.replace(/[^\d]/g, '');
-                    if (digits.length === 10 || digits.length === 12) return Promise.resolve();
-                    return Promise.reject(new Error('ИНН должен содержать 10 или 12 цифр'));
-                  },
-                },
-              ]}
-              getValueFromEvent={(e) => formatInn(e.target.value)}
-            >
-              <Input 
-                placeholder="1234-567890-12" 
-                size="large" 
-                onBlur={handleInnBlur}
-                {...noAutoFillProps}
-              />
-            </Form.Item>
-
-            <div style={{ display: getFieldProps('gender').hidden ? 'none' : 'flex', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
-              <label style={{ marginBottom: 0, minWidth: '70px', fontWeight: 500 }}>
-                Пол {getFieldProps('gender').required && <span style={{ color: '#ff4d4f' }}>*</span>}
-              </label>
+      <>
+            {!getFieldProps('inn').hidden && (
               <Form.Item
-                name="gender"
-                rules={getFieldProps('gender').rules}
-                style={{ marginBottom: 0 }}
+                label="ИНН"
+                name="inn"
+                required={getFieldProps('inn').required}
+                rules={[
+                  ...getFieldProps('inn').rules,
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const digits = value.replace(/[^\d]/g, '');
+                      if (digits.length === 10 || digits.length === 12) return Promise.resolve();
+                      return Promise.reject(new Error('ИНН должен содержать 10 или 12 цифр'));
+                    },
+                  },
+                ]}
+                getValueFromEvent={(e) => formatInn(e.target.value)}
               >
-                <Radio.Group style={{ display: 'flex', gap: '16px' }}>
-                  <Radio value="male">Муж</Radio>
-                  <Radio value="female">Жен</Radio>
-                </Radio.Group>
+                <Input 
+                  placeholder="1234-567890-12" 
+                  size="large" 
+                  onBlur={handleInnBlur}
+                  {...noAutoFillProps}
+                />
               </Form.Item>
-            </div>
+            )}
 
-            <Form.Item
-              label="Фамилия"
-              name="lastName"
-              hidden={getFieldProps('lastName').hidden}
-              rules={getFieldProps('lastName').rules}
-              validateStatus={latinInputError === 'lastName' ? 'error' : ''}
-              help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
-            >
-              <Input 
-                id={antiAutofillIds.lastName}
-                name={antiAutofillIds.lastName}
-                placeholder="Иванов" 
-                size="large" 
-                {...noAutoFillProps}
-                onChange={(e) => handleFullNameChange('lastName', e.target.value)}
-              />
-            </Form.Item>
+            {!getFieldProps('gender').hidden && (
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
+                <label style={{ marginBottom: 0, minWidth: '70px', fontWeight: 500 }}>
+                  Пол {getFieldProps('gender').required && <span style={{ color: '#ff4d4f' }}>*</span>}
+                </label>
+                <Form.Item
+                  name="gender"
+                  rules={getFieldProps('gender').rules}
+                  style={{ marginBottom: 0 }}
+                >
+                  <Radio.Group style={{ display: 'flex', gap: '16px' }}>
+                    <Radio value="male">Муж</Radio>
+                    <Radio value="female">Жен</Radio>
+                  </Radio.Group>
+                </Form.Item>
+              </div>
+            )}
 
-            <Form.Item
-              label="Имя"
-              name="firstName"
-              hidden={getFieldProps('firstName').hidden}
-              rules={getFieldProps('firstName').rules}
-              validateStatus={latinInputError === 'firstName' ? 'error' : ''}
-              help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
-            >
-              <Input 
-                id={antiAutofillIds.firstName}
-                name={antiAutofillIds.firstName}
-                placeholder="Иван" 
-                size="large" 
-                {...noAutoFillProps}
-                onChange={(e) => handleFullNameChange('firstName', e.target.value)}
-              />
-            </Form.Item>
-
-            <Form.Item 
-              label="Отчество" 
-              name="middleName"
-              hidden={getFieldProps('middleName').hidden}
-              rules={getFieldProps('middleName').rules}
-              validateStatus={latinInputError === 'middleName' ? 'error' : ''}
-              help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
-            >
-              <Input 
-                id={antiAutofillIds.middleName}
-                name={antiAutofillIds.middleName}
-                placeholder="Иванович" 
-                size="large" 
-                {...noAutoFillProps}
-                onChange={(e) => handleFullNameChange('middleName', e.target.value)}
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Должность"
-              name="positionId"
-              hidden={getFieldProps('positionId').hidden}
-              rules={getFieldProps('positionId').rules}
-            >
-              <Select 
-                placeholder="Выберите должность" 
-                size="large" 
-                showSearch
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  option.children.toLowerCase().includes(input.toLowerCase())
-                }
-                virtual={false}
-                listHeight={400}
-                loading={loadingReferences}
-                disabled={loadingReferences || positions.length === 0}
-                autoComplete="off"
+            {!getFieldProps('lastName').hidden && (
+              <Form.Item
+                label="Фамилия"
+                name="lastName"
+                required={getFieldProps('lastName').required}
+                rules={getFieldProps('lastName').rules}
+                validateStatus={latinInputError === 'lastName' ? 'error' : ''}
+                help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
               >
-                {positions.map((pos) => (
-                  <Option key={pos.id} value={pos.id}>
-                    {pos.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+                <Input 
+                  id={antiAutofillIds.lastName}
+                  name={antiAutofillIds.lastName}
+                  placeholder="Иванов" 
+                  size="large" 
+                  {...noAutoFillProps}
+                  onChange={(e) => handleFullNameChange('lastName', e.target.value)}
+                />
+              </Form.Item>
+            )}
 
-            <Form.Item
-              label="Гражданство"
-              name="citizenshipId"
-              hidden={getFieldProps('citizenshipId').hidden}
-              rules={getFieldProps('citizenshipId').rules}
-            >
-              <Select
-                placeholder="Выберите гражданство"
-                size="large"
-                showSearch
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  option.children.toLowerCase().includes(input.toLowerCase())
-                }
-                virtual={false}
-                onChange={handleCitizenshipChange}
-                loading={loadingReferences}
-                disabled={loadingReferences || citizenships.length === 0}
-                autoComplete="off"
+            {!getFieldProps('firstName').hidden && (
+              <Form.Item
+                label="Имя"
+                name="firstName"
+                required={getFieldProps('firstName').required}
+                rules={getFieldProps('firstName').rules}
+                validateStatus={latinInputError === 'firstName' ? 'error' : ''}
+                help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
               >
-                {citizenships.map((c) => (
-                  <Option key={c.id} value={c.id}>
-                    {c.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+                <Input 
+                  id={antiAutofillIds.firstName}
+                  name={antiAutofillIds.firstName}
+                  placeholder="Иван" 
+                  size="large" 
+                  {...noAutoFillProps}
+                  onChange={(e) => handleFullNameChange('firstName', e.target.value)}
+                />
+              </Form.Item>
+            )}
 
-            <Form.Item
-              label="Дата рождения"
-              name="birthDate"
-              hidden={getFieldProps('birthDate').hidden}
-              rules={[
-                ...getFieldProps('birthDate').rules,
-                {
-                  pattern: /^\d{2}\.\d{2}\.\d{4}$/,
-                  message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
-                },
-                {
-                  validator: (_, value) => {
-                    if (!value) {
-                      return Promise.resolve();
-                    }
-                    try {
-                      const dateObj = dayjs(value, DATE_FORMAT, true);
-                      if (!dateObj.isValid()) {
+            {!getFieldProps('middleName').hidden && (
+              <Form.Item 
+                label="Отчество" 
+                name="middleName"
+                required={getFieldProps('middleName').required}
+                rules={getFieldProps('middleName').rules}
+                validateStatus={latinInputError === 'middleName' ? 'error' : ''}
+                help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
+              >
+                <Input 
+                  id={antiAutofillIds.middleName}
+                  name={antiAutofillIds.middleName}
+                  placeholder="Иванович" 
+                  size="large" 
+                  {...noAutoFillProps}
+                  onChange={(e) => handleFullNameChange('middleName', e.target.value)}
+                />
+              </Form.Item>
+            )}
+
+            {!getFieldProps('positionId').hidden && (
+              <Form.Item
+                label="Должность"
+                name="positionId"
+                required={getFieldProps('positionId').required}
+                rules={getFieldProps('positionId').rules}
+              >
+                <Select 
+                  placeholder="Выберите должность" 
+                  size="large" 
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
+                  virtual={false}
+                  listHeight={400}
+                  loading={loadingReferences}
+                  disabled={loadingReferences || positions.length === 0}
+                  autoComplete="off"
+                >
+                  {positions.map((pos) => (
+                    <Option key={pos.id} value={pos.id}>
+                      {pos.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            )}
+
+            {!getFieldProps('citizenshipId').hidden && (
+              <Form.Item
+                label="Гражданство"
+                name="citizenshipId"
+                required={getFieldProps('citizenshipId').required}
+                rules={getFieldProps('citizenshipId').rules}
+              >
+                <Select
+                  placeholder="Выберите гражданство"
+                  size="large"
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
+                  virtual={false}
+                  onChange={handleCitizenshipChange}
+                  loading={loadingReferences}
+                  disabled={loadingReferences || citizenships.length === 0}
+                  autoComplete="off"
+                >
+                  {citizenships.map((c) => (
+                    <Option key={c.id} value={c.id}>
+                      {c.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            )}
+
+            {!getFieldProps('birthDate').hidden && (
+              <Form.Item
+                label="Дата рождения"
+                name="birthDate"
+                required={getFieldProps('birthDate').required}
+                rules={[
+                  ...getFieldProps('birthDate').rules,
+                  {
+                    pattern: /^\d{2}\.\d{2}\.\d{4}$/,
+                    message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
+                  },
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+                      try {
+                        const dateObj = dayjs(value, DATE_FORMAT, true);
+                        if (!dateObj.isValid()) {
+                          return Promise.reject(new Error('Некорректная дата'));
+                        }
+                        const age = dayjs().diff(dateObj, 'year');
+                        if (age < 18) {
+                          return Promise.reject(new Error('Возраст сотрудника должен быть не менее 18 лет'));
+                        }
+                        if (age > 80) {
+                          return Promise.reject(new Error('Возраст сотрудника должен быть не более 80 лет'));
+                        }
+                      } catch (e) {
                         return Promise.reject(new Error('Некорректная дата'));
                       }
-                      const age = dayjs().diff(dateObj, 'year');
-                      if (age < 18) {
-                        return Promise.reject(new Error('Возраст сотрудника должен быть не менее 18 лет'));
-                      }
-                      if (age > 80) {
-                        return Promise.reject(new Error('Возраст сотрудника должен быть не более 80 лет'));
-                      }
-                    } catch (e) {
-                      return Promise.reject(new Error('Некорректная дата'));
+                      return Promise.resolve();
                     }
-                    return Promise.resolve();
                   }
-                }
-              ]}
-              normalize={(value) => {
-                if (!value) return value;
-                // Если это строка, возвращаем как есть
-                if (typeof value === 'string') return value;
-                // Если это dayjs объект, форматируем в строку
-                if (value && value.format) return value.format(DATE_FORMAT);
-                return value;
-              }}
-            >
-              <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
-            </Form.Item>
-
-            <Form.Item
-              label="Страна рождения"
-              name="birthCountryId"
-              hidden={getFieldProps('birthCountryId').hidden}
-              rules={getFieldProps('birthCountryId').rules}
-            >
-              <Select
-                popupMatchSelectWidth
-                placeholder="Выберите страну рождения"
-                size="large"
-                showSearch
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  option.children.toLowerCase().includes(input.toLowerCase())
-                }
-                virtual={false}
-                onChange={(value) => {
-                  // После выбора просто устанавливаем значение в форму
-                  // Form.Item сам срабатит на onChange
+                ]}
+                normalize={(value) => {
+                  if (!value) return value;
+                  // Если это строка, возвращаем как есть
+                  if (typeof value === 'string') return value;
+                  // Если это dayjs объект, форматируем в строку
+                  if (value && value.format) return value.format(DATE_FORMAT);
+                  return value;
                 }}
-                loading={loadingReferences}
-                disabled={loadingReferences || citizenships.length === 0}
-                autoComplete="off"
               >
-                {citizenships.map((c) => (
-                  <Option key={c.id} value={c.id}>
-                    {c.name}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+                <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
+              </Form.Item>
+            )}
 
-            <Form.Item
-              label="Адрес регистрации"
-              name="registrationAddress"
-              hidden={getFieldProps('registrationAddress').hidden}
-              rules={getFieldProps('registrationAddress').rules}
-            >
-              <TextArea 
-                id={antiAutofillIds.registrationAddress}
-                name={antiAutofillIds.registrationAddress}
-                placeholder="г. Москва, ул. Ленина, д. 1" 
-                rows={3} 
-                size="large" 
-                {...noAutoFillProps}
-              />
-            </Form.Item>
+            {!getFieldProps('birthCountryId').hidden && (
+              <Form.Item
+                label="Страна рождения"
+                name="birthCountryId"
+                required={getFieldProps('birthCountryId').required}
+                rules={getFieldProps('birthCountryId').rules}
+              >
+                <Select
+                  popupMatchSelectWidth
+                  placeholder="Выберите страну рождения"
+                  size="large"
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
+                  virtual={false}
+                  onChange={(value) => {
+                    // После выбора просто устанавливаем значение в форму
+                    // Form.Item сам срабатит на onChange
+                  }}
+                  loading={loadingReferences}
+                  disabled={loadingReferences || citizenships.length === 0}
+                  autoComplete="off"
+                >
+                  {citizenships.map((c) => (
+                    <Option key={c.id} value={c.id}>
+                      {c.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            )}
 
-            <Form.Item
-              label="Телефон"
-              name="phone"
-              hidden={getFieldProps('phone').hidden}
-              rules={[
-                ...getFieldProps('phone').rules,
-                {
-                  validator: (_, value) => {
-                    if (!value) return Promise.resolve();
-                    const digits = value.replace(/[^\d]/g, '');
-                    if (digits.length === 11) return Promise.resolve();
-                    return Promise.reject(new Error('Телефон должен содержать 11 цифр'));
+            {!getFieldProps('registrationAddress').hidden && (
+              <Form.Item
+                label="Адрес регистрации"
+                name="registrationAddress"
+                required={getFieldProps('registrationAddress').required}
+                rules={getFieldProps('registrationAddress').rules}
+              >
+                <TextArea 
+                  id={antiAutofillIds.registrationAddress}
+                  name={antiAutofillIds.registrationAddress}
+                  placeholder="г. Москва, ул. Ленина, д. 1" 
+                  rows={3} 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
+              </Form.Item>
+            )}
+
+            {!getFieldProps('phone').hidden && (
+              <Form.Item
+                label="Телефон"
+                name="phone"
+                required={getFieldProps('phone').required}
+                rules={[
+                  ...getFieldProps('phone').rules,
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const digits = value.replace(/[^\d]/g, '');
+                      if (digits.length === 11) return Promise.resolve();
+                      return Promise.reject(new Error('Телефон должен содержать 11 цифр'));
+                    },
                   },
-                },
-              ]}
-              getValueFromEvent={(e) => formatPhoneNumber(e.target.value)}
-            >
-              <Input 
-                id={antiAutofillIds.phone}
-                name={antiAutofillIds.phone}
-                placeholder="+7 (___) ___-__-__" 
-                size="large" 
-                {...noAutoFillProps}
-              />
-            </Form.Item>
+                ]}
+                getValueFromEvent={(e) => formatPhoneNumber(e.target.value)}
+              >
+                <Input 
+                  id={antiAutofillIds.phone}
+                  name={antiAutofillIds.phone}
+                  placeholder="+7 (___) ___-__-__" 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
+              </Form.Item>
+            )}
 
-            <Form.Item label="Примечание" name="notes" hidden={getFieldProps('notes').hidden} rules={getFieldProps('notes').rules}>
-              <TextArea 
-                rows={2} 
-                placeholder="Дополнительная информация" 
-                size="large" 
-                {...noAutoFillProps}
-              />
-            </Form.Item>
+            {!getFieldProps('notes').hidden && (
+              <Form.Item label="Примечание" name="notes" required={getFieldProps('notes').required} rules={getFieldProps('notes').rules}>
+                <TextArea 
+                  rows={2} 
+                  placeholder="Дополнительная информация" 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
+              </Form.Item>
+            )}
         </>
     ),
   });
@@ -719,35 +743,37 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
     label: <Title level={5} style={{ margin: 0 }}>📄 Документы</Title>,
     children: (
         <>
-            <Form.Item
-              label="СНИЛС"
-              name="snils"
-              hidden={getFieldProps('snils').hidden}
-              rules={[
-                ...getFieldProps('snils').rules,
-                {
-                  validator: (_, value) => {
-                    if (!value) return Promise.resolve();
-                    const digits = value.replace(/[^\d]/g, '');
-                    if (digits.length === 11) return Promise.resolve();
-                    return Promise.reject(new Error('СНИЛС должен содержать 11 цифр'));
+            {!getFieldProps('snils').hidden && (
+              <Form.Item
+                label="СНИЛС"
+                name="snils"
+                required={getFieldProps('snils').required}
+                rules={[
+                  ...getFieldProps('snils').rules,
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const digits = value.replace(/[^\d]/g, '');
+                      if (digits.length === 11) return Promise.resolve();
+                      return Promise.reject(new Error('СНИЛС должен содержать 11 цифр'));
+                    },
                   },
-                },
-              ]}
-              getValueFromEvent={(e) => formatSnils(e.target.value)}
-            >
-              <Input 
-                placeholder="123-456-789 00" 
-                size="large" 
-                {...noAutoFillProps}
-              />
-            </Form.Item>
+                ]}
+                getValueFromEvent={(e) => formatSnils(e.target.value)}
+              >
+                <Input 
+                  placeholder="123-456-789 00" 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
+              </Form.Item>
+            )}
 
-            {requiresPatent && (
+            {requiresPatent && !getFieldProps('kig').hidden && (
               <Form.Item
                 label="КИГ (Карта иностранного гражданина)"
                 name="kig"
-                hidden={getFieldProps('kig').hidden}
+                required={getFieldProps('kig').required}
                 rules={[
                   ...getFieldProps('kig').rules,
                   {
@@ -766,11 +792,11 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               </Form.Item>
             )}
 
-            {requiresPatent && (
+            {requiresPatent && !getFieldProps('kigEndDate').hidden && (
               <Form.Item
                 label="Дата окончания КИГ"
                 name="kigEndDate"
-                hidden={getFieldProps('kigEndDate').hidden}
+                required={getFieldProps('kigEndDate').required}
                 rules={[
                   ...getFieldProps('kigEndDate').rules,
                   {
@@ -805,153 +831,54 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
               </Form.Item>
             )}
 
-            <Form.Item
-              label="Тип паспорта"
-              name="passportType"
-              hidden={getFieldProps('passportType').hidden}
-              rules={getFieldProps('passportType').rules}
-            >
-              <Select 
-                placeholder="Выберите тип паспорта" 
-                size="large"
-                onChange={(value) => setPassportType(value)}
-                autoComplete="off"
-              >
-                <Option value="russian">Российский</Option>
-                <Option value="foreign">Иностранного гражданина</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              label="Паспорт (серия и номер)"
-              name="passportNumber"
-              hidden={getFieldProps('passportNumber').hidden}
-              rules={getFieldProps('passportNumber').rules}
-              getValueFromEvent={(e) => {
-                if (passportType === 'russian') {
-                  return formatRussianPassportNumber(e.target.value);
-                }
-                return e.target.value;
-              }}
-            >
-              <Input 
-                placeholder={passportType === 'russian' ? '1234 №123456' : 'Номер паспорта'} 
-                size="large"
-                maxLength={passportType === 'russian' ? 13 : undefined}
-                {...noAutoFillProps}
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Дата выдачи паспорта"
-              name="passportDate"
-              hidden={getFieldProps('passportDate').hidden}
-              rules={[
-                ...getFieldProps('passportDate').rules,
-                {
-                  pattern: /^\d{2}\.\d{2}\.\d{4}$/,
-                  message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
-                },
-                {
-                  validator: (_, value) => {
-                    if (!value) {
-                      return Promise.resolve();
-                    }
-                    try {
-                      const dateObj = dayjs(value, DATE_FORMAT, true);
-                      if (!dateObj.isValid()) {
-                        return Promise.reject(new Error('Некорректная дата'));
-                      }
-                    } catch (e) {
-                      return Promise.reject(new Error('Некорректная дата'));
-                    }
-                    return Promise.resolve();
-                  }
-                }
-              ]}
-              normalize={(value) => {
-                if (!value) return value;
-                if (typeof value === 'string') return value;
-                if (value && value.format) return value.format(DATE_FORMAT);
-                return value;
-              }}
-            >
-              <Input 
-                placeholder="ДД.ММ.ГГГГ" 
-                size="large" 
-                {...noAutoFillProps}
-              />
-            </Form.Item>
-
-            {passportType === 'foreign' && (
+            {!getFieldProps('passportType').hidden && (
               <Form.Item
-                label="Дата окончания паспорта"
-                name="passportExpiryDate"
-                hidden={getFieldProps('passportExpiryDate').hidden}
-                rules={getFieldProps('passportExpiryDate').rules}
+                label="Тип паспорта"
+                name="passportType"
+                required={getFieldProps('passportType').required}
+                rules={getFieldProps('passportType').rules}
+              >
+                <Select 
+                  placeholder="Выберите тип паспорта" 
+                  size="large"
+                  onChange={(value) => setPassportType(value)}
+                  autoComplete="off"
+                >
+                  <Option value="russian">Российский</Option>
+                  <Option value="foreign">Иностранного гражданина</Option>
+                </Select>
+              </Form.Item>
+            )}
+
+            {!getFieldProps('passportNumber').hidden && (
+              <Form.Item
+                label="Паспорт (серия и номер)"
+                name="passportNumber"
+                required={getFieldProps('passportNumber').required}
+                rules={getFieldProps('passportNumber').rules}
+                getValueFromEvent={(e) => {
+                  if (passportType === 'russian') {
+                    return formatRussianPassportNumber(e.target.value);
+                  }
+                  return e.target.value;
+                }}
               >
                 <Input 
-                  placeholder="ДД.ММ.ГГГГ" 
-                  size="large" 
+                  placeholder={passportType === 'russian' ? '1234 №123456' : 'Номер паспорта'} 
+                  size="large"
+                  maxLength={passportType === 'russian' ? 13 : undefined}
                   {...noAutoFillProps}
                 />
               </Form.Item>
             )}
 
-            <Form.Item
-              label="Кем выдан паспорт"
-              name="passportIssuer"
-              hidden={getFieldProps('passportIssuer').hidden}
-              rules={getFieldProps('passportIssuer').rules}
-            >
-              <TextArea 
-                placeholder="Наименование органа выдачи" 
-                rows={3} 
-                size="large" 
-                {...noAutoFillProps}
-              />
-            </Form.Item>
-        </>
-    ),
-  });
-
-  // Блок 3: Патент (если требуется)
-  if (requiresPatent) {
-    collapseItems.push({
-      key: 'patent',
-      label: <Title level={5} style={{ margin: 0 }}>📑 Патент</Title>,
-      children: (
-        <>
+            {!getFieldProps('passportDate').hidden && (
               <Form.Item
-                label="Номер патента"
-                name="patentNumber"
-                hidden={getFieldProps('patentNumber').hidden}
+                label="Дата выдачи паспорта"
+                name="passportDate"
+                required={getFieldProps('passportDate').required}
                 rules={[
-                  ...getFieldProps('patentNumber').rules,
-                  {
-                    validator: (_, value) => {
-                      if (!value) return Promise.resolve();
-                      const digits = value.replace(/[^\d]/g, '');
-                      if (digits.length === 12) return Promise.resolve();
-                      return Promise.reject(new Error('Номер патента должен содержать 12 цифр'));
-                    },
-                  },
-                ]}
-                getValueFromEvent={(e) => formatPatentNumber(e.target.value)}
-              >
-                <Input 
-                  placeholder="01 №1234567890" 
-                  size="large" 
-                  {...noAutoFillProps}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Дата выдачи патента"
-                name="patentIssueDate"
-                hidden={getFieldProps('patentIssueDate').hidden}
-                rules={[
-                  ...getFieldProps('patentIssueDate').rules,
+                  ...getFieldProps('passportDate').rules,
                   {
                     pattern: /^\d{2}\.\d{2}\.\d{4}$/,
                     message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
@@ -980,29 +907,142 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                   return value;
                 }}
               >
-                <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
-              </Form.Item>
-
-              <Form.Item
-                label="Номер бланка"
-                name="blankNumber"
-                hidden={getFieldProps('blankNumber').hidden}
-                rules={[
-                  ...getFieldProps('blankNumber').rules,
-                  {
-                    pattern: /^[А-ЯЁ]{2}\d{7}$/,
-                    message: 'Номер бланка должен быть в формате: ПР1234567',
-                  },
-                ]}
-                getValueFromEvent={(e) => formatBlankNumber(e.target.value)}
-              >
                 <Input 
-                  placeholder="ПР1234567" 
+                  placeholder="ДД.ММ.ГГГГ" 
                   size="large" 
-                  maxLength={9} 
                   {...noAutoFillProps}
                 />
               </Form.Item>
+            )}
+
+            {passportType === 'foreign' && !getFieldProps('passportExpiryDate').hidden && (
+              <Form.Item
+                label="Дата окончания паспорта"
+                name="passportExpiryDate"
+                required={getFieldProps('passportExpiryDate').required}
+                rules={getFieldProps('passportExpiryDate').rules}
+              >
+                <Input 
+                  placeholder="ДД.ММ.ГГГГ" 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
+              </Form.Item>
+            )}
+
+            {!getFieldProps('passportIssuer').hidden && (
+              <Form.Item
+                label="Кем выдан паспорт"
+                name="passportIssuer"
+                required={getFieldProps('passportIssuer').required}
+                rules={getFieldProps('passportIssuer').rules}
+              >
+                <TextArea 
+                  placeholder="Наименование органа выдачи" 
+                  rows={3} 
+                  size="large" 
+                  {...noAutoFillProps}
+                />
+              </Form.Item>
+            )}
+        </>
+    ),
+  });
+
+  // Блок 3: Патент (если требуется)
+  if (requiresPatent) {
+    collapseItems.push({
+      key: 'patent',
+      label: <Title level={5} style={{ margin: 0 }}>📑 Патент</Title>,
+      children: (
+        <>
+              {!getFieldProps('patentNumber').hidden && (
+                <Form.Item
+                  label="Номер патента"
+                  name="patentNumber"
+                  required={getFieldProps('patentNumber').required}
+                  rules={[
+                    ...getFieldProps('patentNumber').rules,
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+                        const digits = value.replace(/[^\d]/g, '');
+                        if (digits.length === 12) return Promise.resolve();
+                        return Promise.reject(new Error('Номер патента должен содержать 12 цифр'));
+                      },
+                    },
+                  ]}
+                  getValueFromEvent={(e) => formatPatentNumber(e.target.value)}
+                >
+                  <Input 
+                    placeholder="01 №1234567890" 
+                    size="large" 
+                    {...noAutoFillProps}
+                  />
+                </Form.Item>
+              )}
+
+              {!getFieldProps('patentIssueDate').hidden && (
+                <Form.Item
+                  label="Дата выдачи патента"
+                  name="patentIssueDate"
+                  required={getFieldProps('patentIssueDate').required}
+                  rules={[
+                    ...getFieldProps('patentIssueDate').rules,
+                    {
+                      pattern: /^\d{2}\.\d{2}\.\d{4}$/,
+                      message: 'Дата должна быть в формате ДД.ММ.ГГГГ'
+                    },
+                    {
+                      validator: (_, value) => {
+                        if (!value) {
+                          return Promise.resolve();
+                        }
+                        try {
+                          const dateObj = dayjs(value, DATE_FORMAT, true);
+                          if (!dateObj.isValid()) {
+                            return Promise.reject(new Error('Некорректная дата'));
+                          }
+                        } catch (e) {
+                          return Promise.reject(new Error('Некорректная дата'));
+                        }
+                        return Promise.resolve();
+                      }
+                    }
+                  ]}
+                  normalize={(value) => {
+                    if (!value) return value;
+                    if (typeof value === 'string') return value;
+                    if (value && value.format) return value.format(DATE_FORMAT);
+                    return value;
+                  }}
+                >
+                  <Input placeholder="ДД.ММ.ГГГГ" size="large" {...noAutoFillProps} />
+                </Form.Item>
+              )}
+
+              {!getFieldProps('blankNumber').hidden && (
+                <Form.Item
+                  label="Номер бланка"
+                  name="blankNumber"
+                  required={getFieldProps('blankNumber').required}
+                  rules={[
+                    ...getFieldProps('blankNumber').rules,
+                    {
+                      pattern: /^[А-ЯЁ]{2}\d{7}$/,
+                      message: 'Номер бланка должен быть в формате: ПР1234567',
+                    },
+                  ]}
+                  getValueFromEvent={(e) => formatBlankNumber(e.target.value)}
+                >
+                  <Input 
+                    placeholder="ПР1234567" 
+                    size="large" 
+                    maxLength={9} 
+                    {...noAutoFillProps}
+                  />
+                </Form.Item>
+              )}
         </>
       ),
     });

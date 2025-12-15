@@ -1227,271 +1227,309 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             
             {/* ИНН и Пол - первая строка */}
             <Row gutter={16}>
-              <Col xs={24} sm={3} md={3} lg={3} hidden={getFieldProps('inn').hidden}>
-                <Form.Item 
-                  name="inn" 
-                  label="ИНН"
-                  rules={[
-                    ...getFieldProps('inn').rules,
-                    {
-                      pattern: /^\d{4}-\d{5}-\d{1}$|^\d{4}-\d{6}-\d{2}$/,
-                      message: 'ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX'
-                    }
-                  ]}
-                  normalize={(value) => {
-                    return formatInn(value);
-                  }}
-                >
-                  <Input 
-                    maxLength={14} 
-                    placeholder="XXXX-XXXXX-X" 
-                    onBlur={handleInnBlur}
-                    {...noAutoFillProps} 
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={3} md={3} lg={3} hidden={getFieldProps('gender').hidden}>
-                <Form.Item
-                  name="gender"
-                  label="Пол"
-                  rules={getFieldProps('gender').rules}
-                >
-                  <Radio.Group style={{ display: 'flex', gap: '8px' }}>
-                    <Radio value="male">Муж</Radio>
-                    <Radio value="female">Жен</Radio>
-                  </Radio.Group>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={6} md={6} lg={6} hidden={getFieldProps('lastName').hidden}>
-                <Form.Item
-                  name="lastName"
-                  label="Фамилия"
-                  rules={getFieldProps('lastName').rules}
-                  validateStatus={latinInputError === 'lastName' ? 'error' : ''}
-                  help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
-                >
-                  <Input 
-                    id={antiAutofillIds.lastName} 
-                    name={antiAutofillIds.lastName} 
-                    {...noAutoFillProps}
-                    onChange={(e) => handleFullNameChange('lastName', e.target.value)}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={6} md={6} lg={6} hidden={getFieldProps('firstName').hidden}>
-                <Form.Item
-                  name="firstName"
-                  label="Имя"
-                  rules={getFieldProps('firstName').rules}
-                  validateStatus={latinInputError === 'firstName' ? 'error' : ''}
-                  help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
-                >
-                  <Input 
-                    id={antiAutofillIds.firstName} 
-                    name={antiAutofillIds.firstName} 
-                    {...noAutoFillProps}
-                    onChange={(e) => handleFullNameChange('firstName', e.target.value)}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={6} md={6} lg={6} hidden={getFieldProps('middleName').hidden}>
-                <Form.Item 
-                  name="middleName" 
-                  label="Отчество"
-                  rules={getFieldProps('middleName').rules}
-                  validateStatus={latinInputError === 'middleName' ? 'error' : ''}
-                  help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
-                >
-                  <Input 
-                    id={antiAutofillIds.middleName} 
-                    name={antiAutofillIds.middleName} 
-                    {...noAutoFillProps}
-                    onChange={(e) => handleFullNameChange('middleName', e.target.value)}
-                  />
-                </Form.Item>
-              </Col>
+              {!getFieldProps('inn').hidden && (
+                <Col xs={24} sm={3} md={3} lg={3}>
+                  <Form.Item 
+                    name="inn" 
+                    label="ИНН"
+                    required={getFieldProps('inn').required}
+                    rules={[
+                      ...getFieldProps('inn').rules,
+                      {
+                        pattern: /^\d{4}-\d{5}-\d{1}$|^\d{4}-\d{6}-\d{2}$/,
+                        message: 'ИНН должен быть в формате XXXX-XXXXX-X или XXXX-XXXXXX-XX'
+                      }
+                    ]}
+                    normalize={(value) => {
+                      return formatInn(value);
+                    }}
+                  >
+                    <Input 
+                      maxLength={14} 
+                      placeholder="XXXX-XXXXX-X" 
+                      onBlur={handleInnBlur}
+                      {...noAutoFillProps} 
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('gender').hidden && (
+                <Col xs={24} sm={3} md={3} lg={3}>
+                  <Form.Item
+                    name="gender"
+                    label="Пол"
+                    required={getFieldProps('gender').required}
+                    rules={getFieldProps('gender').rules}
+                  >
+                    <Radio.Group style={{ display: 'flex', gap: '8px' }}>
+                      <Radio value="male">Муж</Radio>
+                      <Radio value="female">Жен</Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('lastName').hidden && (
+                <Col xs={24} sm={6} md={6} lg={6}>
+                  <Form.Item
+                    name="lastName"
+                    label="Фамилия"
+                    required={getFieldProps('lastName').required}
+                    rules={getFieldProps('lastName').rules}
+                    validateStatus={latinInputError === 'lastName' ? 'error' : ''}
+                    help={latinInputError === 'lastName' ? 'Ввод только на кириллице' : ''}
+                  >
+                    <Input 
+                      id={antiAutofillIds.lastName} 
+                      name={antiAutofillIds.lastName} 
+                      {...noAutoFillProps}
+                      onChange={(e) => handleFullNameChange('lastName', e.target.value)}
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('firstName').hidden && (
+                <Col xs={24} sm={6} md={6} lg={6}>
+                  <Form.Item
+                    name="firstName"
+                    label="Имя"
+                    required={getFieldProps('firstName').required}
+                    rules={getFieldProps('firstName').rules}
+                    validateStatus={latinInputError === 'firstName' ? 'error' : ''}
+                    help={latinInputError === 'firstName' ? 'Ввод только на кириллице' : ''}
+                  >
+                    <Input 
+                      id={antiAutofillIds.firstName} 
+                      name={antiAutofillIds.firstName} 
+                      {...noAutoFillProps}
+                      onChange={(e) => handleFullNameChange('firstName', e.target.value)}
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('middleName').hidden && (
+                <Col xs={24} sm={6} md={6} lg={6}>
+                  <Form.Item 
+                    name="middleName" 
+                    label="Отчество"
+                    required={getFieldProps('middleName').required}
+                    rules={getFieldProps('middleName').rules}
+                    validateStatus={latinInputError === 'middleName' ? 'error' : ''}
+                    help={latinInputError === 'middleName' ? 'Ввод только на кириллице' : ''}
+                  >
+                    <Input 
+                      id={antiAutofillIds.middleName} 
+                      name={antiAutofillIds.middleName} 
+                      {...noAutoFillProps}
+                      onChange={(e) => handleFullNameChange('middleName', e.target.value)}
+                    />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
 
             {/* Должность на отдельной строке с гражданством и датой рождения */}
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('positionId').hidden}>
-                <Form.Item
-                  name="positionId"
-                  label="Должность"
-                  rules={getFieldProps('positionId').rules}
-                >
-                  <Select
-                    placeholder="Выберите должность"
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                    filterOption={(input, option) =>
-                      option.children.toLowerCase().includes(input.toLowerCase())
-                    }
-                    virtual={false}
-                    listHeight={400}
-                    popupMatchSelectWidth={false}
-                    classNames={{ popup: { root: 'dropdown-wide' } }}
-                    autoComplete="off"
+              {!getFieldProps('positionId').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item
+                    name="positionId"
+                    label="Должность"
+                    required={getFieldProps('positionId').required}
+                    rules={getFieldProps('positionId').rules}
                   >
-                    {positions.map((p) => (
-                      <Option key={p.id} value={p.id}>
-                        {p.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('citizenshipId').hidden}>
-                <Form.Item 
-                  name="citizenshipId" 
-                  label="Гражданство"
-                  rules={getFieldProps('citizenshipId').rules}
-                >
-                  <Select
-                    placeholder="Выберите гражданство"
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                    virtual={false}
-                    onChange={handleCitizenshipChange}
-                    autoComplete="off"
+                    <Select
+                      placeholder="Выберите должность"
+                      allowClear
+                      showSearch
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                      virtual={false}
+                      listHeight={400}
+                      popupMatchSelectWidth={false}
+                      classNames={{ popup: { root: 'dropdown-wide' } }}
+                      autoComplete="off"
+                    >
+                      {positions.map((p) => (
+                        <Option key={p.id} value={p.id}>
+                          {p.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('citizenshipId').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="citizenshipId" 
+                    label="Гражданство"
+                    required={getFieldProps('citizenshipId').required}
+                    rules={getFieldProps('citizenshipId').rules}
                   >
-                    {citizenships.map((c) => (
-                      <Option key={c.id} value={c.id}>
-                        {c.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('birthDate').hidden}>
-                <Form.Item 
-                  name="birthDate" 
-                  label="Дата рождения"
-                  rules={[
-                    ...getFieldProps('birthDate').rules,
-                    {
-                      validator: (_, value) => {
-                        if (!value) {
+                    <Select
+                      placeholder="Выберите гражданство"
+                      allowClear
+                      showSearch
+                      optionFilterProp="children"
+                      virtual={false}
+                      onChange={handleCitizenshipChange}
+                      autoComplete="off"
+                    >
+                      {citizenships.map((c) => (
+                        <Option key={c.id} value={c.id}>
+                          {c.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('birthDate').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="birthDate" 
+                    label="Дата рождения"
+                    required={getFieldProps('birthDate').required}
+                    rules={[
+                      ...getFieldProps('birthDate').rules,
+                      {
+                        validator: (_, value) => {
+                          if (!value) {
+                            return Promise.resolve();
+                          }
+                          const age = dayjs().diff(value, 'year');
+                          if (age < 16) {
+                            return Promise.reject(new Error('Возраст сотрудника должен быть не менее 16 лет'));
+                          }
+                          if (age > 80) {
+                            return Promise.reject(new Error('Возраст сотрудника должен быть не менее 80 лет'));
+                          }
                           return Promise.resolve();
                         }
-                        const age = dayjs().diff(value, 'year');
-                        if (age < 16) {
-                          return Promise.reject(new Error('Возраст сотрудника должен быть не менее 16 лет'));
-                        }
-                        if (age > 80) {
-                          return Promise.reject(new Error('Возраст сотрудника должен быть не более 80 лет'));
-                        }
-                        return Promise.resolve();
                       }
-                    }
-                  ]}
-                >
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    format={DATE_FORMAT}
-                    placeholder="ДД.ММ.ГГГГ"
-                  />
-                </Form.Item>
-              </Col>
+                    ]}
+                  >
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      format={DATE_FORMAT}
+                      placeholder="ДД.ММ.ГГГГ"
+                    />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
 
             {/* Дата рождения (мобила) + Страна рождения + Адрес регистрации */}
             <Row gutter={16}>
-              <Col xs={24} sm={12} md={8} lg={8} hidden={getFieldProps('birthCountryId').hidden}>
-                <Form.Item 
-                  name="birthCountryId" 
-                  label="Страна рождения"
-                  rules={getFieldProps('birthCountryId').rules}
-                  trigger="onChange"
-                >
-                  <Select
-                    placeholder="Выберите страну рождения"
-                    allowClear
-                    showSearch
-                    optionFilterProp="children"
-                    virtual={false}
-                    onChange={() => {
-                      // После выбора гарантированно запускаем валидацию
-                      setTimeout(() => {
-                        if (dataLoaded) {
-                          scheduleValidation();
-                        }
-                      }, 0);
-                    }}
-                    autoComplete="off"
+              {!getFieldProps('birthCountryId').hidden && (
+                <Col xs={24} sm={12} md={8} lg={8}>
+                  <Form.Item 
+                    name="birthCountryId" 
+                    label="Страна рождения"
+                    required={getFieldProps('birthCountryId').required}
+                    rules={getFieldProps('birthCountryId').rules}
+                    trigger="onChange"
                   >
-                    {citizenships.map((c) => (
-                      <Option key={c.id} value={c.id}>
-                        {c.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={16} lg={16} hidden={getFieldProps('registrationAddress').hidden}>
-                <Form.Item 
-                  name="registrationAddress" 
-                  label="Адрес регистрации"
-                  rules={getFieldProps('registrationAddress').rules}
-                >
-                <Input id={antiAutofillIds.registrationAddress} name={antiAutofillIds.registrationAddress} placeholder="г. Москва, ул. Тверская, д.21, кв.11" {...noAutoFillProps} />
-                </Form.Item>
-              </Col>
+                    <Select
+                      placeholder="Выберите страну рождения"
+                      allowClear
+                      showSearch
+                      optionFilterProp="children"
+                      virtual={false}
+                      onChange={() => {
+                        // После выбора гарантированно запускаем валидацию
+                        setTimeout(() => {
+                          if (dataLoaded) {
+                            scheduleValidation();
+                          }
+                        }, 0);
+                      }}
+                      autoComplete="off"
+                    >
+                      {citizenships.map((c) => (
+                        <Option key={c.id} value={c.id}>
+                          {c.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('registrationAddress').hidden && (
+                <Col xs={24} sm={12} md={16} lg={16}>
+                  <Form.Item 
+                    name="registrationAddress" 
+                    label="Адрес регистрации"
+                    required={getFieldProps('registrationAddress').required}
+                    rules={getFieldProps('registrationAddress').rules}
+                  >
+                  <Input id={antiAutofillIds.registrationAddress} name={antiAutofillIds.registrationAddress} placeholder="г. Москва, ул. Тверская, д.21, кв.11" {...noAutoFillProps} />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
 
             {/* Контакты */}
             <Row gutter={16}>
-              <Col xs={24} sm={12} md={12} lg={12} hidden={getFieldProps('email').hidden}>
-                <Form.Item
-                  name="email"
-                  label="Email"
-                  rules={[
-                    ...getFieldProps('email').rules,
-                    { 
-                      type: 'email', 
-                      message: 'Введите корректный email (например: ivanov@example.com)' 
-                    }
-                  ]}
-                >
-                  <Input placeholder="ivanov@example.com" {...noAutoFillProps} />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={12} lg={12} hidden={getFieldProps('phone').hidden}>
-                <Form.Item 
-                  name="phone" 
-                  label="Телефон"
-                  rules={[
-                    ...getFieldProps('phone').rules,
-                    {
-                      pattern: /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/,
-                      message: 'Телефон должен быть в формате +7 (999) 123-45-67'
-                    }
-                  ]}
-                  normalize={(value) => {
-                    return formatPhoneNumber(value);
-                  }}
-                >
-                  <Input 
-                    id={antiAutofillIds.phone}
-                    name={antiAutofillIds.phone}
-                    placeholder="+7 (999) 123-45-67"
-                    maxLength={18}
-                    {...noAutoFillProps}
-                  />
-                </Form.Item>
-              </Col>
+              {!getFieldProps('email').hidden && (
+                <Col xs={24} sm={12} md={12} lg={12}>
+                  <Form.Item
+                    name="email"
+                    label="Email"
+                    required={getFieldProps('email').required}
+                    rules={[
+                      ...getFieldProps('email').rules,
+                      { 
+                        type: 'email', 
+                        message: 'Введите корректный email (например: ivanov@example.com)' 
+                      }
+                    ]}
+                  >
+                    <Input placeholder="ivanov@example.com" {...noAutoFillProps} />
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('phone').hidden && (
+                <Col xs={24} sm={12} md={12} lg={12}>
+                  <Form.Item 
+                    name="phone" 
+                    label="Телефон"
+                    required={getFieldProps('phone').required}
+                    rules={[
+                      ...getFieldProps('phone').rules,
+                      {
+                        pattern: /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/,
+                        message: 'Телефон должен быть в формате +7 (999) 123-45-67'
+                      }
+                    ]}
+                    normalize={(value) => {
+                      return formatPhoneNumber(value);
+                    }}
+                  >
+                    <Input 
+                      id={antiAutofillIds.phone}
+                      name={antiAutofillIds.phone}
+                      placeholder="+7 (999) 123-45-67"
+                      maxLength={18}
+                      {...noAutoFillProps}
+                    />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
 
             {/* Примечания */}
-            <Row gutter={16}>
-              <Col span={24} hidden={getFieldProps('notes').hidden}>
-                <Form.Item name="notes" label="Примечания" rules={getFieldProps('notes').rules}>
-                  <TextArea rows={2} {...noAutoFillProps} />
-                </Form.Item>
-              </Col>
-            </Row>
+            {!getFieldProps('notes').hidden && (
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item name="notes" label="Примечания" required={getFieldProps('notes').required} rules={getFieldProps('notes').rules}>
+                    <TextArea rows={2} {...noAutoFillProps} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            )}
           </>
         ),
       },
@@ -1507,29 +1545,33 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         children: (
           <>
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('snils').hidden}>
-                <Form.Item 
-                  name="snils" 
-                  label="СНИЛС"
-                  rules={[
-                    ...getFieldProps('snils').rules,
-                    {
-                      pattern: /^\d{3}-\d{3}-\d{3}\s\d{2}$/,
-                      message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX'
-                    }
-                  ]}
-                  normalize={(value) => {
-                    return formatSnils(value);
-                  }}
-                >
-                  <Input maxLength={14} placeholder="123-456-789 00" {...noAutoFillProps} />
-                </Form.Item>
-              </Col>
-              {requiresPatent && (
-                <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('kig').hidden}>
+              {!getFieldProps('snils').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="snils" 
+                    label="СНИЛС"
+                    required={getFieldProps('snils').required}
+                    rules={[
+                      ...getFieldProps('snils').rules,
+                      {
+                        pattern: /^\d{3}-\d{3}-\d{3}\s\d{2}$/,
+                        message: 'СНИЛС должен быть в формате XXX-XXX-XXX XX'
+                      }
+                    ]}
+                    normalize={(value) => {
+                      return formatSnils(value);
+                    }}
+                  >
+                    <Input maxLength={14} placeholder="123-456-789 00" {...noAutoFillProps} />
+                  </Form.Item>
+                </Col>
+              )}
+              {requiresPatent && !getFieldProps('kig').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
                   <Form.Item 
                     name="kig" 
                     label="КИГ"
+                    required={getFieldProps('kig').required}
                     rules={[
                       ...getFieldProps('kig').rules,
                       {
@@ -1545,11 +1587,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              {requiresPatent && (
-                <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('kigEndDate').hidden}>
+              {requiresPatent && !getFieldProps('kigEndDate').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
                   <Form.Item 
                     name="kigEndDate" 
                     label="Дата окончания КИГ"
+                    required={getFieldProps('kigEndDate').required}
                     rules={getFieldProps('kigEndDate').rules}
                   >
                     <DatePicker
@@ -1563,64 +1606,74 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             </Row>
 
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('passportType').hidden}>
-                <Form.Item 
-                  name="passportType" 
-                  label="Тип паспорта"
-                  rules={getFieldProps('passportType').rules}
-                >
-                  <Select 
-                    placeholder="Выберите тип паспорта" 
-                    allowClear 
-                    autoComplete="off"
-                    onChange={(value) => setPassportType(value)}
+              {!getFieldProps('passportType').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="passportType" 
+                    label="Тип паспорта"
+                    required={getFieldProps('passportType').required}
+                    rules={getFieldProps('passportType').rules}
                   >
-                    <Option value="russian">Российский</Option>
-                    <Option value="foreign">Иностранного гражданина</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('passportNumber').hidden}>
-                <Form.Item 
-                  name="passportNumber" 
-                  label="№ паспорта"
-                  rules={getFieldProps('passportNumber').rules}
-                  getValueFromEvent={(e) => {
-                    // Применяем маску только для российского паспорта
-                    if (passportType === 'russian') {
-                      return formatRussianPassportNumber(e.target.value);
-                    }
-                    return e.target.value;
-                  }}
-                >
-                  <Input 
-                    {...noAutoFillProps}
-                    placeholder={passportType === 'russian' ? '1234 №123456' : 'Номер паспорта'}
-                    maxLength={passportType === 'russian' ? 13 : undefined}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('passportDate').hidden}>
-                <Form.Item 
-                  name="passportDate" 
-                  label="Дата выдачи паспорта"
-                  rules={getFieldProps('passportDate').rules}
-                >
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    format={DATE_FORMAT}
-                    placeholder="ДД.ММ.ГГГГ"
-                  />
-                </Form.Item>
-              </Col>
+                    <Select 
+                      placeholder="Выберите тип паспорта" 
+                      allowClear 
+                      autoComplete="off"
+                      onChange={(value) => setPassportType(value)}
+                    >
+                      <Option value="russian">Российский</Option>
+                      <Option value="foreign">Иностранного гражданина</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('passportNumber').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="passportNumber" 
+                    label="№ паспорта"
+                    required={getFieldProps('passportNumber').required}
+                    rules={getFieldProps('passportNumber').rules}
+                    getValueFromEvent={(e) => {
+                      // Применяем маску только для российского паспорта
+                      if (passportType === 'russian') {
+                        return formatRussianPassportNumber(e.target.value);
+                      }
+                      return e.target.value;
+                    }}
+                  >
+                    <Input 
+                      {...noAutoFillProps}
+                      placeholder={passportType === 'russian' ? '1234 №123456' : 'Номер паспорта'}
+                      maxLength={passportType === 'russian' ? 13 : undefined}
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('passportDate').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="passportDate" 
+                    label="Дата выдачи паспорта"
+                    required={getFieldProps('passportDate').required}
+                    rules={getFieldProps('passportDate').rules}
+                  >
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      format={DATE_FORMAT}
+                      placeholder="ДД.ММ.ГГГГ"
+                    />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
 
             <Row gutter={16}>
-              {passportType === 'foreign' && (
-                <Col xs={24} sm={12} md={12} lg={12} hidden={getFieldProps('passportExpiryDate').hidden}>
+              {passportType === 'foreign' && !getFieldProps('passportExpiryDate').hidden && (
+                <Col xs={24} sm={12} md={12} lg={12}>
                   <Form.Item 
                     name="passportExpiryDate" 
                     label="Дата окончания паспорта"
+                    required={getFieldProps('passportExpiryDate').required}
                     rules={getFieldProps('passportExpiryDate').rules}
                   >
                     <DatePicker
@@ -1631,15 +1684,18 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
                   </Form.Item>
                 </Col>
               )}
-              <Col xs={24} sm={passportType === 'foreign' ? 12 : 24} md={passportType === 'foreign' ? 12 : 24} lg={passportType === 'foreign' ? 12 : 24} hidden={getFieldProps('passportIssuer').hidden}>
-                <Form.Item 
-                  name="passportIssuer" 
-                  label="Кем выдан паспорт"
-                  rules={getFieldProps('passportIssuer').rules}
-                >
-                  <Input placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20" {...noAutoFillProps} />
-                </Form.Item>
-              </Col>
+              {!getFieldProps('passportIssuer').hidden && (
+                <Col xs={24} sm={passportType === 'foreign' ? 12 : 24} md={passportType === 'foreign' ? 12 : 24} lg={passportType === 'foreign' ? 12 : 24}>
+                  <Form.Item 
+                    name="passportIssuer" 
+                    label="Кем выдан паспорт"
+                    required={getFieldProps('passportIssuer').required}
+                    rules={getFieldProps('passportIssuer').rules}
+                  >
+                    <Input placeholder="ГУ МВД России, г.Москва, ул. Тверская, д.20" {...noAutoFillProps} />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
           </>
         ),
@@ -1665,63 +1721,72 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         ) : (
           <>
             <Row gutter={16}>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('patentNumber').hidden}>
-                <Form.Item 
-                  name="patentNumber" 
-                  label="Номер патента"
-                  rules={[
-                    ...getFieldProps('patentNumber').rules,
-                    {
-                      pattern: /^\d{2}\s№\d{10}$/,
-                      message: 'Номер патента должен быть в формате XX №1234567890 (где XX - код от 01 до 99)'
-                    }
-                  ]}
-                  normalize={(value) => {
-                    return formatPatentNumber(value);
-                  }}
-                >
-                  <Input 
-                    placeholder="01 №1234567890 (код 01-99)"
-                    maxLength={15}
-                    {...noAutoFillProps}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('patentIssueDate').hidden}>
-                <Form.Item 
-                  name="patentIssueDate" 
-                  label="Дата выдачи патента"
-                  rules={getFieldProps('patentIssueDate').rules}
-                >
-                  <DatePicker
-                    style={{ width: '100%' }}
-                    format={DATE_FORMAT}
-                    placeholder="ДД.ММ.ГГГГ"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={8} md={8} lg={8} hidden={getFieldProps('blankNumber').hidden}>
-                <Form.Item 
-                  name="blankNumber" 
-                  label="Номер бланка"
-                  rules={[
-                    ...getFieldProps('blankNumber').rules,
-                    {
-                      pattern: /^[А-ЯЁ]{2}\d{7}$/,
-                      message: 'Номер бланка должен быть в формате ПР1234567 (кириллица)'
-                    }
-                  ]}
-                  normalize={(value) => {
-                    return formatBlankNumber(value);
-                  }}
-                >
-                  <Input 
-                    placeholder="ПР1234567 (буквы - кириллица)"
-                    maxLength={9}
-                    {...noAutoFillProps}
-                  />
-                </Form.Item>
-              </Col>
+              {!getFieldProps('patentNumber').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="patentNumber" 
+                    label="Номер патента"
+                    required={getFieldProps('patentNumber').required}
+                    rules={[
+                      ...getFieldProps('patentNumber').rules,
+                      {
+                        pattern: /^\d{2}\s№\d{10}$/,
+                        message: 'Номер патента должен быть в формате XX №1234567890 (где XX - код от 01 до 99)'
+                      }
+                    ]}
+                    normalize={(value) => {
+                      return formatPatentNumber(value);
+                    }}
+                  >
+                    <Input 
+                      placeholder="01 №1234567890 (код 01-99)"
+                      maxLength={15}
+                      {...noAutoFillProps}
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('patentIssueDate').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="patentIssueDate" 
+                    label="Дата выдачи патента"
+                    required={getFieldProps('patentIssueDate').required}
+                    rules={getFieldProps('patentIssueDate').rules}
+                  >
+                    <DatePicker
+                      style={{ width: '100%' }}
+                      format={DATE_FORMAT}
+                      placeholder="ДД.ММ.ГГГГ"
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+              {!getFieldProps('blankNumber').hidden && (
+                <Col xs={24} sm={8} md={8} lg={8}>
+                  <Form.Item 
+                    name="blankNumber" 
+                    label="Номер бланка"
+                    required={getFieldProps('blankNumber').required}
+                    rules={[
+                      ...getFieldProps('blankNumber').rules,
+                      {
+                        pattern: /^[А-ЯЁ]{2}\d{7}$/,
+                        message: 'Номер бланка должен быть в формате ПР1234567 (кириллица)'
+                      }
+                    ]}
+                    normalize={(value) => {
+                      return formatBlankNumber(value);
+                    }}
+                  >
+                    <Input 
+                      placeholder="ПР1234567 (буквы - кириллица)"
+                      maxLength={9}
+                      {...noAutoFillProps}
+                    />
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
           </>
         ),
