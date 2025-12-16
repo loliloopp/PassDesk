@@ -61,7 +61,7 @@ export const DocumentExpiryStatus = ({ employee }) => {
   }
   
   return (
-    <Tooltip title={tooltipTitle} color="#fff" overlayStyle={{ padding: '8px' }}>
+    <Tooltip title={tooltipTitle} color="#fff" styles={{ root: { padding: '8px' } }}>
       <span style={{ color, fontSize: 16, cursor: 'help' }}>
         {icon}
       </span>

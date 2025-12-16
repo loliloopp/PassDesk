@@ -6,6 +6,7 @@ import { buildEmployeeFilePath } from '../utils/transliterate.js';
 import { checkEmployeeAccess } from '../utils/permissionUtils.js';
 import { AppError } from '../middleware/errorHandler.js';
 import EmployeeStatusService from '../services/employeeStatusService.js';
+import { isEmployeeCardComplete, DEFAULT_FORM_CONFIG } from '../utils/employeeFieldsConfig.js';
 
 // Опции для загрузки сотрудника с маппингами (для проверки прав)
 const employeeAccessInclude = [
@@ -21,37 +22,61 @@ const employeeAccessInclude = [
 ];
 
 // Функция для вычисления статуса заполнения карточки сотрудника
-const calculateStatusCard = (employee) => {
-  const requiresPatent = employee.citizenship?.requiresPatent !== false;
-  
-  // Базовые обязательные поля
-  const baseRequiredFields = [
-    employee.lastName,
-    employee.firstName,
-    employee.positionId, // Изменено с position на positionId
-    employee.citizenshipId,
-    employee.birthDate,
-    employee.inn,
-    employee.snils,
-    employee.passportNumber,
-    employee.passportDate,
-    employee.passportIssuer,
-    employee.registrationAddress,
-    employee.phone
-  ];
-  
-  // Поля, зависящие от гражданства
-  const conditionalFields = requiresPatent ? [
-    employee.kig,
-    employee.patentNumber,
-    employee.patentIssueDate,
-    employee.blankNumber
-  ] : [];
-  
-  const allRequiredFields = [...baseRequiredFields, ...conditionalFields];
-  const allFilled = allRequiredFields.every(field => field !== null && field !== undefined && field !== '');
-  
-  return allFilled ? 'completed' : 'draft';
+// с учетом конфигурации обязательных полей контрагента
+const calculateStatusCard = (employee, formConfig = DEFAULT_FORM_CONFIG, debug = false) => {
+  const isComplete = isEmployeeCardComplete(employee, formConfig, debug);
+  return isComplete ? 'completed' : 'draft';
+};
+
+/**
+ * Загрузить конфигурацию полей для контрагента сотрудника
+ * @param {Object} employee - объект сотрудника с маппингами
+ * @returns {Object} - formConfig (default или external)
+ */
+const getEmployeeFormConfig = async (employee) => {
+  try {
+    // Получаем ID контрагента сотрудника
+    const counterpartyId = employee.employeeCounterpartyMappings?.[0]?.counterpartyId;
+    
+    if (!counterpartyId) {
+      // Если контрагент не указан - используем дефолтную конфигурацию
+      return DEFAULT_FORM_CONFIG;
+    }
+
+    // Загружаем настройки
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    const isDefaultCounterparty = counterpartyId === defaultCounterpartyId;
+
+    // Загружаем конфигурации из настроек
+    const configDefaultStr = await Setting.getSetting('employee_form_config_default');
+    const configExternalStr = await Setting.getSetting('employee_form_config_external');
+
+    // Парсим JSON (с fallback на DEFAULT_FORM_CONFIG)
+    let formConfigDefault = DEFAULT_FORM_CONFIG;
+    let formConfigExternal = DEFAULT_FORM_CONFIG;
+
+    if (configDefaultStr) {
+      try {
+        formConfigDefault = JSON.parse(configDefaultStr);
+      } catch (e) {
+        console.warn('Failed to parse employee_form_config_default, using DEFAULT_FORM_CONFIG');
+      }
+    }
+
+    if (configExternalStr) {
+      try {
+        formConfigExternal = JSON.parse(configExternalStr);
+      } catch (e) {
+        console.warn('Failed to parse employee_form_config_external, using DEFAULT_FORM_CONFIG');
+      }
+    }
+
+    // Возвращаем нужную конфигурацию
+    return isDefaultCounterparty ? formConfigDefault : formConfigExternal;
+  } catch (error) {
+    console.warn('Error loading form config, using DEFAULT_FORM_CONFIG:', error.message);
+    return DEFAULT_FORM_CONFIG;
+  }
 };
 
 export const getAllEmployees = async (req, res, next) => {
@@ -345,10 +370,45 @@ export const getAllEmployees = async (req, res, next) => {
       });
     }
 
-    // Пересчитываем statusCard для каждого сотрудника
+    // Загружаем настройки полей для расчета statusCard
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    const configDefaultStr = await Setting.getSetting('employee_form_config_default');
+    const configExternalStr = await Setting.getSetting('employee_form_config_external');
+
+    let formConfigDefault = DEFAULT_FORM_CONFIG;
+    let formConfigExternal = DEFAULT_FORM_CONFIG;
+
+    if (configDefaultStr) {
+      try {
+        formConfigDefault = JSON.parse(configDefaultStr);
+      } catch (e) {
+        console.warn('Failed to parse employee_form_config_default');
+      }
+    }
+
+    if (configExternalStr) {
+      try {
+        formConfigExternal = JSON.parse(configExternalStr);
+      } catch (e) {
+        console.warn('Failed to parse employee_form_config_external');
+      }
+    }
+
+    // Пересчитываем statusCard для каждого сотрудника с учетом настроек контрагента
     const employeesWithStatus = filteredRows.map(employee => {
       const employeeData = employee.toJSON();
-      employeeData.statusCard = calculateStatusCard(employeeData);
+      
+      // Определяем контрагента сотрудника
+      const counterpartyId = employeeData.employeeCounterpartyMappings?.[0]?.counterpartyId;
+      const isDefaultCounterparty = counterpartyId === defaultCounterpartyId;
+      
+      // Выбираем конфигурацию
+      const formConfig = isDefaultCounterparty ? formConfigDefault : formConfigExternal;
+      
+      // Рассчитываем статус
+      const isComplete = isEmployeeCardComplete(employeeData, formConfig, false);
+      employeeData.statusCard = isComplete ? 'completed' : 'draft';
+      
       return employeeData;
     });
 
@@ -464,9 +524,10 @@ export const getEmployeeById = async (req, res, next) => {
     // ПРОВЕРКА ПРАВ ДОСТУПА (операция READ - разрешаем чтение для привязки)
     await checkEmployeeAccess(req.user, employee, 'read');
 
-    // Пересчитываем statusCard
+    // Пересчитываем statusCard с учетом настроек контрагента
     const employeeData = employee.toJSON();
-    employeeData.statusCard = calculateStatusCard(employeeData);
+    const formConfig = await getEmployeeFormConfig(employeeData);
+    employeeData.statusCard = calculateStatusCard(employeeData, formConfig);
 
     res.json({
       success: true,
@@ -590,7 +651,8 @@ export const createEmployee = async (req, res, next) => {
       });
       
       const employeeData = linkedEmployee.toJSON();
-      const calculatedStatusCard = calculateStatusCard(employeeData);
+      const formConfig = await getEmployeeFormConfig(employeeData);
+      const calculatedStatusCard = calculateStatusCard(employeeData, formConfig);
       employeeData.statusCard = calculatedStatusCard;
       
       return res.status(201).json({
@@ -668,7 +730,8 @@ export const createEmployee = async (req, res, next) => {
     });
     
     const employeeDataWithStatus = createdEmployee.toJSON();
-    const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus);
+    const formConfig = await getEmployeeFormConfig(employeeDataWithStatus);
+    const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus, formConfig);
     employeeDataWithStatus.statusCard = calculatedStatusCard;
 
     // Если все поля заполнены (статус 'completed') - обновляем статусы с draft на новые
@@ -876,12 +939,24 @@ export const updateEmployee = async (req, res, next) => {
           model: Position, // Добавлена связь с Position
           as: 'position',
           attributes: ['id', 'name']
+        },
+        {
+          model: EmployeeCounterpartyMapping,
+          as: 'employeeCounterpartyMappings',
+          include: [
+            {
+              model: Counterparty,
+              as: 'counterparty',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ]
     });
     
     const employeeDataWithStatus = updatedEmployee.toJSON();
-    const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus);
+    const formConfig = await getEmployeeFormConfig(employeeDataWithStatus);
+    const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus, formConfig);
     employeeDataWithStatus.statusCard = calculatedStatusCard;
 
     // Обновляем статусы на основе текущего состояния

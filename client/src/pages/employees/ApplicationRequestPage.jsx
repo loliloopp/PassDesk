@@ -123,10 +123,12 @@ const ApplicationRequestPage = () => {
       const priority = getStatusPriority(emp);
       
       // Приоритеты: 1-blocked, 2-fired, 3-inactive, 4-draft, 5-new, 6-tb_passed, 7-processed, 8-other
-      // Исключаем: заблокированных (1), черновиков (4), деактивированных (3)
+      // Исключаем: заблокированных (1), деактивированных (3)
       if (priority === 1) return false; // status_secure_block
       if (priority === 3) return false; // status_active_inactive
-      if (priority === 4) return false; // status_card_draft или status_draft
+      
+      // Для черновиков используем statusCard из ответа сервера (уже пересчитан с учетом настроек контрагента)
+      if (emp.statusCard === 'draft') return false;
       
       // Исключаем уволенных если не включена опция
       if (!includeFired && priority === 2) return false; // status_active_fired

@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "db:check": "node src/database/check-connection.js"
+    "db:check": "node src/database/check-connection.js",
+    "recalculate-statuses": "node src/scripts/recalculateEmployeeStatuses.js"
   },
   "keywords": [
     "passdesk",
