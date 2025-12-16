@@ -55,9 +55,16 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
           .finally(() => setSitesLoading(false));
       } else {
         // Объекты контрагента
+        if (!userCounterpartyId) {
+          setAvailableSites([]);
+          setSitesLoading(false);
+          return;
+        }
+
         constructionSiteService.getCounterpartyObjects(userCounterpartyId)
           .then(response => {
-            const rawSites = response?.data?.data?.constructionSites || response?.data?.constructionSites || [];
+            // Сервер возвращает: { success: true, data: [...] }
+            const rawSites = response?.data?.data || [];
             const sites = Array.isArray(rawSites) ? rawSites : [];
             setAvailableSites(sites);
           })

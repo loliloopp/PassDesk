@@ -63,9 +63,16 @@ const ApplicationRequestPage = () => {
         .finally(() => setSitesLoading(false));
     } else {
       // Объекты контрагента
+      if (!user?.counterpartyId) {
+        setAvailableSites([]);
+        setSitesLoading(false);
+        return;
+      }
+
       constructionSiteService.getCounterpartyObjects(user?.counterpartyId)
         .then(response => {
-          const rawSites = response?.data?.data?.constructionSites || response?.data?.constructionSites || [];
+          // Сервер возвращает: { success: true, data: [...] }
+          const rawSites = response?.data?.data || [];
           const sites = Array.isArray(rawSites) ? rawSites : [];
           setAvailableSites(sites);
         })

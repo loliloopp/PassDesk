@@ -43,6 +43,13 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
 
   useEffect(() => {
     if (visible) {
+      // Сбрасываем состояние при открытии
+      setSites([]);
+      setEmployees([]);
+      setContracts({ generalContract: null, subcontracts: [] });
+      setSelectedCounterparty(null);
+      setSelectedSite(null);
+      
       loadUserCounterparty();
       if (editingId) {
         fetchApplication();
@@ -52,19 +59,12 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     }
   }, [visible, editingId]);
 
-  // Загружаем объекты при выборе контрагента
-  useEffect(() => {
-    if (visible && selectedCounterparty) {
-      fetchSites();
-    }
-  }, [visible, selectedCounterparty]);
-
   const loadUserCounterparty = async () => {
     try {
       const { data } = await getCurrentUser();
       const user = data.user;
       const counterpartyId = user.counterpartyId;
-      
+
       if (counterpartyId) {
         setSelectedCounterparty(counterpartyId);
         
@@ -73,8 +73,16 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
         const counterparty = counterpartyResponse.data.data;
         setCounterpartyType(counterparty.type);
         
+        // Проверяем, является ли контрагент default
+        const settingsResponse = await settingsService.getPublicSettings();
+        const defaultCounterpartyId = settingsResponse?.data?.defaultCounterpartyId;
+        const isDefaultCounterparty = counterpartyId === defaultCounterpartyId;
+
         // Загружаем сотрудников
         fetchEmployees(counterpartyId);
+        
+        // Загружаем объекты строительства
+        await fetchSitesForCounterparty(counterpartyId, isDefaultCounterparty);
       }
     } catch (error) {
       console.error('Error loading user counterparty:', error);
@@ -82,27 +90,26 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
     }
   };
 
-  const fetchSites = async () => {
+  const fetchSitesForCounterparty = async (counterpartyId, isDefaultCounterparty = false) => {
     try {
-      // Если контрагент еще не выбран, не загружаем объекты
-      if (!selectedCounterparty) {
+      if (!counterpartyId) {
         setSites([]);
         return;
       }
 
-      // Получаем публичные настройки (доступно всем пользователям)
-      const settingsResponse = await settingsService.getPublicSettings();
-      const defaultCounterpartyId = settingsResponse?.data?.defaultCounterpartyId;
-
+      let sites = [];
       // Если это default контрагент - загружаем все объекты
-      if (selectedCounterparty === defaultCounterpartyId) {
-        const { data } = await constructionSiteService.getAll({ limit: 100 });
-        setSites(data.data.constructionSites);
+      if (isDefaultCounterparty) {
+        const response = await constructionSiteService.getAll({ limit: 100 });
+        sites = response?.data?.data?.constructionSites || [];
       } else {
         // Для остальных контрагентов - только назначенные объекты
-        const { data } = await constructionSiteService.getCounterpartyObjects(selectedCounterparty);
-        setSites(data.data || []);
+        const response = await constructionSiteService.getCounterpartyObjects(counterpartyId);
+        // Сервер возвращает { success: true, data: [...] }
+        sites = response?.data?.data || [];
       }
+      
+      setSites(sites);
     } catch (error) {
       console.error('Error loading sites:', error);
       // Не показываем ошибку, если просто нет объектов
