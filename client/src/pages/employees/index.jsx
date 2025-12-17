@@ -19,6 +19,7 @@ import EmployeeFilesModal from '@/components/Employees/EmployeeFilesModal';
 import EmployeeSitesModal from '@/components/Employees/EmployeeSitesModal';
 import ApplicationRequestModal from '@/components/Employees/ApplicationRequestModal';
 import ExportToExcelModal from '@/components/Employees/ExportToExcelModal';
+import EmployeeImportModal from '@/components/Employees/EmployeeImportModal';
 import SecurityModal from '@/components/Employees/SecurityModal';
 
 const { Title } = Typography;
@@ -79,6 +80,7 @@ const EmployeesPage = () => {
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isSitesModalOpen, setIsSitesModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
@@ -432,6 +434,7 @@ const EmployeesPage = () => {
           <EmployeeActions
             onAdd={handleAdd}
             onRequest={handleRequest}
+            onImport={() => setIsImportModalOpen(true)}
             onSecurity={() => setIsSecurityModalOpen(true)}
             canExport={canExport}
           />
@@ -464,7 +467,16 @@ const EmployeesPage = () => {
               size="large"
               style={{ flex: 1, background: '#52c41a', borderColor: '#52c41a' }}
             >
-              Заявка Excel
+              Заявка
+            </Button>
+            <Button
+              type="default"
+              icon={<FileExcelOutlined />}
+              onClick={() => setIsImportModalOpen(true)}
+              size="large"
+              style={{ flex: 1 }}
+            >
+              Импорт
             </Button>
           </div>
         </div>
@@ -589,6 +601,12 @@ const EmployeesPage = () => {
           setIsExportModalOpen(false);
           refetchEmployees();
         }}
+      />
+
+      <EmployeeImportModal
+        visible={isImportModalOpen}
+        onCancel={() => setIsImportModalOpen(false)}
+        onSuccess={() => refetchEmployees()}
       />
 
       <SecurityModal

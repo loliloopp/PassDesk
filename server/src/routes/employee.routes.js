@@ -78,9 +78,9 @@ router.put('/my-profile', updateMyProfileValidation, validate, employeeControlle
 router.get('/check-inn', employeeController.checkEmployeeByInn); // Проверить наличие сотрудника по ИНН
 router.get('/search', employeeController.searchEmployees); // Поиск
 
-// Импорт сотрудников из Excel (только admin) - ДОЛЖНО быть перед /:id
-router.post('/import/validate', authorize('admin'), employeeController.validateEmployeesImport); // Валидация данных
-router.post('/import/execute', authorize('admin'), employeeController.importEmployees); // Финальный импорт
+// Импорт сотрудников из Excel (доступен всем авторизованным) - ДОЛЖНО быть перед /:id
+router.post('/import/validate', employeeController.validateEmployeesImport); // Валидация данных
+router.post('/import/execute', employeeController.importEmployees); // Финальный импорт
 
 // Общие маршруты
 // Если есть activeOnly=true, используем отдельный контроллер для выгрузки

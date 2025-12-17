@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Modal, Steps, Button, Upload, Table, Space, App, Spin, Empty, Radio, message } from 'antd';
-import { UploadOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Modal, Steps, Button, Upload, Table, Space, App, Spin, Empty, Radio, message, Tooltip, Divider, Tag } from 'antd';
+import { UploadOutlined, CheckCircleOutlined, ExclamationCircleOutlined, DownloadOutlined, LinkOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 import { employeeApi } from '@/entities/employee';
 
 /**
@@ -40,24 +43,89 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
         console.log('📋 Доступные колонки в Excel:', Object.keys(rawData[0] || {}));
         
         // Маппируем данные из Excel
+        // Поддерживаем оба формата: с явными названиями и с заголовком "Ф.И.О."
         const mappedData = rawData.map((row, idx) => {
+          let lastName = '';
+          let firstName = '';
+          let middleName = '';
+          
+          // Формат 1: Если есть столбец "Ф.И.О." (заголовок для фамилии) + __EMPTY (имя) + __EMPTY_1 (отчество)
+          if (row['Ф.И.О.']) {
+            lastName = String(row['Ф.И.О.'] || '').trim();
+            firstName = String(row['__EMPTY'] || '').trim();
+            middleName = String(row['__EMPTY_1'] || '').trim();
+          }
+          // Формат 2: Явные названия столбцов
+          else if (row['Фамилия']) {
+            lastName = String(row['Фамилия'] || '').trim();
+            firstName = String(row['Имя'] || '').trim();
+            middleName = String(row['Отчество'] || '').trim();
+          }
+          // Формат 3: Английские названия
+          else {
+            lastName = String(row['last_name'] || '').trim();
+            firstName = String(row['first_name'] || '').trim();
+            middleName = String(row['middle_name'] || '').trim();
+          }
+          
+          // КИГ может быть в разных форматах
+          let kig = row['КИГ'] || row['kig'] || '';
+          if (!kig && row['КИГ \r\nКарта иностранного гражданина']) {
+            kig = row['КИГ \r\nКарта иностранного гражданина'];
+          }
+          
+          // Функция нормализации: убирает точки в конце, лишние пробелы
+          const normalize = (value) => {
+            if (!value) return '';
+            return String(value).trim().replace(/\.+$/g, ''); // Убираем точки в конце
+          };
+          
+          // Функция парсинга даты из Excel
+          const parseDate = (value) => {
+            if (!value) return null;
+            
+            // Если это число (Excel serial date)
+            if (typeof value === 'number') {
+              const date = XLSX.SSF.parse_date_code(value);
+              return dayjs(new Date(date.y, date.m - 1, date.d)).format('YYYY-MM-DD');
+            }
+            
+            // Если это строка - пытаемся распарсить
+            const normalized = normalize(value);
+            if (!normalized) return null;
+            
+            // Пробуем разные форматы: DD.MM.YYYY, DD/MM/YYYY, YYYY-MM-DD
+            const parsed = dayjs(normalized, ['DD.MM.YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'], true);
+            if (parsed.isValid()) {
+              return parsed.format('YYYY-MM-DD');
+            }
+            
+            return null;
+          };
+          
           const mapped = {
-            counterpartyInn: row['ИНН'] || row['inn'] || '',
-            lastName: row['Фамилия'] || row['last_name'] || '',
-            firstName: row['Имя'] || row['first_name'] || '',
-            middleName: row['Отчество'] || row['middle_name'] || '',
-            inn: row['ИНН Сотрудник'] || row['employee_inn'] || '',
-            snils: row['СНИЛС Сотрудник'] || row['snils'] || '',
-            idAll: row['id_all'] || ''
+            counterpartyInn: normalize(row['ИНН организации'] || row['inn_organization']),
+            counterpartyKpp: normalize(row['КПП организации'] || row['kpp_organization']),
+            lastName: lastName,
+            firstName: firstName,
+            middleName: middleName,
+            inn: normalize(row['ИНН сотрудника'] || row['employee_inn']),
+            snils: normalize(row['СНИЛС'] || row['snils']),
+            kig: normalize(kig),
+            kigEndDate: parseDate(row['Срок окончания КИГ'] || row['kig_end_date']),
+            citizenship: normalize(row['Гражданство'] || row['citizenship']),
+            birthDate: parseDate(row['Дата рождения'] || row['birth_date']),
+            position: normalize(row['Должность'] || row['position']),
+            organization: normalize(row['Организация'] || row['organization'])
           };
           
           // Логируем ВСЕ данные для диагностики
           if (idx < 3) {
             console.log(`\n📌 Строка ${idx + 1} RAW:`, row);
             console.log(`📌 Строка ${idx + 1} MAPPED:`, mapped);
-            console.log(`  - counterpartyInn: "${mapped.counterpartyInn}" (from: "${row['ИНН']}")`);
-            console.log(`  - lastName: "${mapped.lastName}" (from: "${row['Фамилия']}")`);
-            console.log(`  - inn: "${mapped.inn}" (from: "${row['ИНН Сотрудник']}")`);
+            console.log(`  - ФИО: "${mapped.lastName}" "${mapped.firstName}" "${mapped.middleName}"`);
+            console.log(`  - counterpartyInn: "${mapped.counterpartyInn}"`);
+            console.log(`  - inn: "${mapped.inn}"`);
           }
           
           return mapped;
@@ -162,22 +230,53 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
 
   // Шаг 0 - Загрузка файла
   const renderStep0 = () => (
-    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-      <Upload
-        maxCount={1}
-        accept=".xlsx,.xls"
-        beforeUpload={handleFileSelect}
-        fileList={fileData ? [{ name: 'employees.xlsx', uid: '-1' }] : []}
-      >
-        <Button icon={<UploadOutlined />} size="large">
-          Выберите файл Excel
+    <div style={{ padding: '40px 20px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <Upload
+          maxCount={1}
+          accept=".xlsx,.xls"
+          beforeUpload={handleFileSelect}
+          fileList={fileData ? [{ name: 'employees.xlsx', uid: '-1' }] : []}
+          droppable
+        >
+          <Button icon={<UploadOutlined />} size="large">
+            Выберите файл Excel
+          </Button>
+        </Upload>
+        <p style={{ marginTop: '12px', color: '#666', fontSize: '12px' }}>
+          или перетащите файл сюда
+        </p>
+      </div>
+
+      <Divider />
+
+      <div style={{ marginBottom: '24px' }}>
+        <h4 style={{ marginBottom: '12px' }}>📋 Структура файла:</h4>
+        <p style={{ color: '#666', marginBottom: '8px', fontSize: '12px' }}>
+          Файл должен содержать следующие столбцы:
+        </p>
+        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '4px', fontSize: '12px' }}>
+          <div>№, Фамилия, Имя, Отчество, КИГ, Срок окончания КИГ, Гражданство,</div>
+          <div>Дата рождения, СНИЛС, Должность, ИНН сотрудника,</div>
+          <div>Организация, <strong>ИНН организации</strong>, <strong>КПП организации</strong></div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <h4 style={{ marginBottom: '8px' }}>🔗 Скачать шаблон:</h4>
+        <Button 
+          type="link" 
+          icon={<LinkOutlined />} 
+          onClick={() => window.open('https://docs.google.com/spreadsheets/d/1oho6qSjuhuq524-RZXmvN8XJh6-lSXSjAyYaRunzTP8/edit?usp=sharing', '_blank')}
+          style={{ padding: 0 }}
+        >
+          Google таблица с бланком
         </Button>
-      </Upload>
-      <p style={{ marginTop: '16px', color: '#666' }}>
-        Формат: .xlsx или .xls
-        <br />
-        Обязательные столбцы: ИНН, Фамилия, Имя, Отчество, ИНН Сотрудник, СНИЛС Сотрудник, id_all
-      </p>
+      </div>
+
+      <div style={{ background: '#e6f7ff', padding: '12px', borderRadius: '4px', fontSize: '12px' }}>
+        <strong>ℹ️ Примечание:</strong> Столбец № пропускается. Столбцы, не указанные выше, игнорируются.
+      </div>
     </div>
   );
 
@@ -197,14 +296,21 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
               width: 40,
               align: 'center'
             },
-            { title: 'Фамилия', dataIndex: 'lastName', key: 'lastName', ellipsis: true },
-            { title: 'Имя', dataIndex: 'firstName', key: 'firstName', ellipsis: true },
-            { title: 'ИНН контрагента', dataIndex: 'counterpartyInn', key: 'counterpartyInn' },
-            { title: 'ИНН сотрудника', dataIndex: 'inn', key: 'inn', ellipsis: true }
+            { title: 'Фамилия', dataIndex: 'lastName', key: 'lastName', ellipsis: true, width: 120 },
+            { title: 'Имя', dataIndex: 'firstName', key: 'firstName', ellipsis: true, width: 120 },
+            { 
+              title: 'Дата рождения', 
+              dataIndex: 'birthDate', 
+              key: 'birthDate', 
+              width: 120,
+              render: (date) => date ? dayjs(date).format('DD.MM.YYYY') : '-'
+            },
+            { title: 'ИНН контрагента', dataIndex: 'counterpartyInn', key: 'counterpartyInn', width: 120 },
+            { title: 'ИНН сотрудника', dataIndex: 'inn', key: 'inn', ellipsis: true, width: 120 }
           ]}
           pagination={{ pageSize: 5, size: 'small' }}
           size="small"
-          scroll={{ x: 700 }}
+          scroll={{ x: 900 }}
           rowKey="_key"
         />
       ) : (
@@ -266,20 +372,24 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
 
         {hasConflicts && (
           <div>
-            <h4>Конфликты ИНН сотрудников ({validationResult.conflictingInns.length})</h4>
+            <h4 style={{ color: '#faad14' }}>⚠️ Конфликты ИНН сотрудников ({validationResult.conflictingInns.length})</h4>
             <Space style={{ marginBottom: '16px', width: '100%' }} direction="vertical">
-              <p>Эти ИНН уже существуют в системе. Выберите действие:</p>
-              <Space>
-                <Button
-                  type="primary"
-                  onClick={() => handleResolveAllConflicts('update')}
-                  size="small"
-                >
-                  Перезаписать все
-                </Button>
-                <Button onClick={() => handleResolveAllConflicts('skip')} size="small">
-                  Пропустить все
-                </Button>
+              <p>Эти ИНН уже существуют в системе. Выберите действие для каждого или для всех сразу:</p>
+              <Space wrap>
+                <Tooltip title="Заменить все существующие сотрудники новыми данными из файла">
+                  <Button
+                    type="primary"
+                    onClick={() => handleResolveAllConflicts('update')}
+                    size="small"
+                  >
+                    Заменить всех
+                  </Button>
+                </Tooltip>
+                <Tooltip title="Пропустить все конфликтующие записи из файла">
+                  <Button onClick={() => handleResolveAllConflicts('skip')} size="small">
+                    Пропустить всех
+                  </Button>
+                </Tooltip>
               </Space>
             </Space>
 
@@ -290,25 +400,31 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
                   title: 'ИНН',
                   dataIndex: 'inn',
                   key: 'inn',
-                  width: 120
+                  width: 100
                 },
                 {
-                  title: 'Существующий сотрудник',
+                  title: 'На портале',
                   render: (_, record) => (
-                    <div>
-                      {record.existingEmployee.lastName} {record.existingEmployee.firstName}
+                    <div style={{ fontSize: '12px' }}>
+                      <div><strong>{record.existingEmployee.lastName} {record.existingEmployee.firstName} {record.existingEmployee.middleName || ''}</strong></div>
+                      <div style={{ color: '#999' }}>ИНН: {record.existingEmployee.inn}</div>
+                      {record.existingEmployee.snils && <div style={{ color: '#999' }}>СНИЛС: {record.existingEmployee.snils}</div>}
+                      {record.existingEmployee.birthDate && <div style={{ color: '#999' }}>Дата рожд.: {dayjs(record.existingEmployee.birthDate).format('DD.MM.YYYY')}</div>}
                     </div>
                   ),
-                  ellipsis: true
+                  width: 220
                 },
                 {
-                  title: 'Новый сотрудник',
+                  title: 'В файле',
                   render: (_, record) => (
-                    <div>
-                      {record.newEmployee.lastName} {record.newEmployee.firstName}
+                    <div style={{ fontSize: '12px' }}>
+                      <div><strong>{record.newEmployee.lastName} {record.newEmployee.firstName} {record.newEmployee.middleName || ''}</strong></div>
+                      <div style={{ color: '#999' }}>ИНН: {record.newEmployee.inn}</div>
+                      {record.newEmployee.snils && <div style={{ color: '#999' }}>СНИЛС: {record.newEmployee.snils}</div>}
+                      {record.newEmployee.birthDate && <div style={{ color: '#999' }}>Дата рожд.: {dayjs(record.newEmployee.birthDate).format('DD.MM.YYYY')}</div>}
                     </div>
                   ),
-                  ellipsis: true
+                  width: 220
                 },
                 {
                   title: 'Действие',
@@ -317,16 +433,17 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
                       value={conflictResolutions[record.inn] || 'skip'}
                       onChange={(e) => handleConflictRadioChange(record.inn, e.target.value)}
                     >
-                      <Radio value="update">Перезаписать</Radio>
+                      <Radio value="update">Заменить</Radio>
                       <Radio value="skip">Пропустить</Radio>
                     </Radio.Group>
                   ),
-                  width: 200
+                  width: 150
                 }
               ]}
               pagination={{ pageSize: 5 }}
               size="small"
               rowKey="inn"
+              scroll={{ x: 700 }}
             />
           </div>
         )}
@@ -353,64 +470,88 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
   );
 
   // Шаг 4 - Результаты импорта
-  const renderStep4 = () => (
-    <div>
-      <div style={{ marginBottom: '24px', padding: '12px', background: '#f6f8fb', borderRadius: '4px' }}>
-        <h4>Результаты импорта:</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
-              {importResult?.created || 0}
+  const renderStep4 = () => {
+    const totalProcessed = (importResult?.created || 0) + (importResult?.updated || 0) + (importResult?.skipped || 0);
+    const hasErrors = importResult?.errors?.length > 0;
+    
+    return (
+      <div>
+        <div style={{ marginBottom: '24px', padding: '16px', background: '#f6f8fb', borderRadius: '8px' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>📊 Результаты импорта</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div style={{ textAlign: 'center', padding: '12px', background: '#fff', borderRadius: '4px' }}>
+              <div style={{ fontSize: 32, fontWeight: 'bold', color: '#52c41a' }}>
+                {importResult?.created || 0}
+              </div>
+              <div style={{ color: '#666', fontSize: 14, marginTop: '4px' }}>✅ Создано</div>
             </div>
-            <div style={{ color: '#666', fontSize: 12 }}>Создано</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#faad14' }}>
-              {importResult?.updated || 0}
+            <div style={{ textAlign: 'center', padding: '12px', background: '#fff', borderRadius: '4px' }}>
+              <div style={{ fontSize: 32, fontWeight: 'bold', color: '#faad14' }}>
+                {importResult?.updated || 0}
+              </div>
+              <div style={{ color: '#666', fontSize: 14, marginTop: '4px' }}>🔄 Обновлено</div>
             </div>
-            <div style={{ color: '#666', fontSize: 12 }}>Обновлено</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 24, fontWeight: 'bold', color: '#ff7a7a' }}>
-              {importResult?.skipped || 0}
+            <div style={{ textAlign: 'center', padding: '12px', background: '#fff', borderRadius: '4px' }}>
+              <div style={{ fontSize: 32, fontWeight: 'bold', color: '#999' }}>
+                {importResult?.skipped || 0}
+              </div>
+              <div style={{ color: '#666', fontSize: 14, marginTop: '4px' }}>⏭️ Пропущено</div>
             </div>
-            <div style={{ color: '#666', fontSize: 12 }}>Пропущено</div>
           </div>
+          
+          {totalProcessed > 0 && (
+            <div style={{ marginTop: '16px', textAlign: 'center', color: '#52c41a', fontSize: 16 }}>
+              <CheckCircleOutlined /> Всего обработано: <strong>{totalProcessed}</strong> {totalProcessed === 1 ? 'сотрудник' : totalProcessed < 5 ? 'сотрудника' : 'сотрудников'}
+            </div>
+          )}
         </div>
-      </div>
 
-      {importResult?.errors?.length > 0 && (
-        <div>
-          <h4 style={{ color: '#d9534f' }}>Ошибки при импорте ({importResult.errors.length}):</h4>
-          <Table
-            dataSource={importResult.errors}
-            columns={[
-              {
-                title: 'Строка',
-                dataIndex: 'rowIndex',
-                width: 60,
-                align: 'center'
-              },
-              {
-                title: 'Фамилия',
-                dataIndex: 'lastName',
-                key: 'lastName'
-              },
-              {
-                title: 'Ошибка',
-                dataIndex: 'error',
-                key: 'error',
-                render: (error) => <span style={{ color: '#d9534f' }}>{error}</span>
-              }
-            ]}
-            pagination={{ pageSize: 5 }}
-            size="small"
-            rowKey={(record) => `${record.rowIndex}-${record.lastName}`}
-          />
-        </div>
-      )}
-    </div>
-  );
+        {hasErrors && (
+          <div style={{ padding: '12px', background: '#fff7e6', borderRadius: '8px', border: '1px solid #ffd591' }}>
+            <h4 style={{ color: '#d46b08', margin: '0 0 12px 0' }}>
+              ⚠️ Предупреждения ({importResult.errors.length})
+            </h4>
+            <div style={{ color: '#8c8c8c', fontSize: 12, marginBottom: 12 }}>
+              Сотрудники успешно созданы, но возникли проблемы при дополнительной обработке
+            </div>
+            <Table
+              dataSource={importResult.errors}
+              columns={[
+                {
+                  title: 'Строка',
+                  dataIndex: 'rowIndex',
+                  width: 70,
+                  align: 'center'
+                },
+                {
+                  title: 'Фамилия',
+                  dataIndex: 'lastName',
+                  key: 'lastName',
+                  width: 150
+                },
+                {
+                  title: 'Предупреждение',
+                  dataIndex: 'error',
+                  key: 'error',
+                  render: (error) => (
+                    <span style={{ color: '#d46b08' }}>
+                      {error.includes('counterparty.update') 
+                        ? 'Ошибка обновления КПП контрагента (не критично)'
+                        : error
+                      }
+                    </span>
+                  )
+                }
+              ]}
+              pagination={{ pageSize: 5 }}
+              size="small"
+              rowKey={(record) => `${record.rowIndex}-${record.lastName}`}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Шаги
   const steps = [
@@ -470,9 +611,25 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
     return 'Далее';
   };
 
+  const getModalTitle = () => {
+    if (step === 4) {
+      const hasErrors = importResult?.errors?.length > 0;
+      const created = importResult?.created || 0;
+      const updated = importResult?.updated || 0;
+      
+      if (created > 0 || updated > 0) {
+        return hasErrors 
+          ? '✅ Импорт завершен с предупреждениями'
+          : '✅ Импорт успешно завершен';
+      }
+      return 'Результаты импорта';
+    }
+    return 'Загрузка сотрудников из Excel';
+  };
+
   return (
     <Modal
-      title="Загрузка сотрудников из Excel"
+      title={getModalTitle()}
       open={visible}
       onCancel={onCancel}
       width="90vw"
