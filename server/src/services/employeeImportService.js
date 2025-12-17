@@ -9,7 +9,8 @@ import {
   Position,
   Status,
   EmployeeCounterpartyMapping,
-  EmployeeStatusMapping
+  EmployeeStatusMapping,
+  Setting
 } from '../models/index.js';
 import {
   validateEmployeeForImport,
@@ -18,6 +19,8 @@ import {
 } from '../utils/importValidation.js';
 import { AppError } from '../middleware/errorHandler.js';
 import { Op } from 'sequelize';
+import { getImportStatuses, updateEmployeeStatusesByCompleteness } from '../utils/employeeStatusUpdater.js';
+import { DEFAULT_FORM_CONFIG } from '../utils/employeeFieldsConfig.js';
 
 /**
  * Валидирует данные для импорта сотрудников
@@ -203,21 +206,31 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
 
   console.log(`✅ Все ${validatedEmployees.length} сотрудников относятся к контрагенту пользователя`);
 
-  // Получаем статусы
-  const statuses = await Status.findAll({
-    where: { name: ['status_draft', 'status_card_draft'] }
-  });
+  // Получаем все необходимые статусы (включая для полных карточек)
+  const statusMap = await getImportStatuses();
 
-  const statusMap = {};
-  statuses.forEach(s => {
-    statusMap[s.name] = s.id;
-  });
+  // Загружаем конфигурацию полей для контрагента пользователя
+  const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+  const isDefaultCounterparty = userCounterparty.id === defaultCounterpartyId;
 
-  if (!statusMap['status_draft'] || !statusMap['status_card_draft']) {
-    throw new AppError('Ошибка системы: не найдены требуемые статусы', 500);
+  let formConfig = DEFAULT_FORM_CONFIG;
+
+  try {
+    const configKey = isDefaultCounterparty 
+      ? 'employee_form_config_default' 
+      : 'employee_form_config_external';
+    
+    const configStr = await Setting.getSetting(configKey);
+    
+    if (configStr) {
+      formConfig = JSON.parse(configStr);
+      console.log(`✅ Загружена конфигурация полей: ${configKey}`);
+    } else {
+      console.log(`⚠️  Конфигурация ${configKey} не найдена, используется дефолтная`);
+    }
+  } catch (error) {
+    console.warn('⚠️  Ошибка загрузки конфигурации полей, используется дефолтная:', error.message);
   }
-
-  console.log('✅ Все требуемые статусы найдены');
 
   const results = {
     created: 0,
@@ -437,23 +450,36 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
             console.log(`   ℹ️  Маппинг уже существует (ID: ${existingMapping.id})`);
           }
 
-          // Устанавливаем статусы черновика если это новый сотрудник
-          if (isCreated) {
-            // status_draft (основной статус)
-            await EmployeeStatusMapping.create({
-              employeeId: employee.id,
-              statusId: statusMap['status_draft'],
-              statusGroup: 'status',
-              createdBy: userId
-            });
+          // 🎯 АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ СТАТУСОВ в зависимости от полноты данных
+          // Перезагружаем сотрудника с включенным citizenship для проверки полноты
+          await employee.reload({
+            include: [{
+              model: Citizenship,
+              as: 'citizenship'
+            }]
+          });
 
-            // status_card_draft (статус карточки)
-            await EmployeeStatusMapping.create({
-              employeeId: employee.id,
-              statusId: statusMap['status_card_draft'],
-              statusGroup: 'status_card',
-              createdBy: userId
-            });
+          // Обновляем статусы на основе полноты карточки
+          const { isComplete, statusNames, missingFields } = await updateEmployeeStatusesByCompleteness(
+            employee,
+            formConfig,
+            statusMap,
+            userId
+          );
+
+          // Логируем результаты проверки полноты
+          if (isComplete) {
+            if (isCreated) {
+              console.log(`   🎉 НОВЫЙ сотрудник с ПОЛНЫМИ данными → активен!`);
+            } else {
+              console.log(`   🎉 Сотрудник ОБНОВЛЕН и имеет ПОЛНЫЕ данные → активен!`);
+            }
+          } else {
+            if (isCreated) {
+              console.log(`   📝 Новый сотрудник в статусе ЧЕРНОВИК (не хватает ${missingFields.length} полей)`);
+            } else {
+              console.log(`   📝 Сотрудник обновлен, статус ЧЕРНОВИК сохранен (не хватает ${missingFields.length} полей)`);
+            }
           }
 
           // Обновляем КПП контрагента если нужно (некритичная операция)

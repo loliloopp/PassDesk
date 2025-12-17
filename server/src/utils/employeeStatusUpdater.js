@@ -1,0 +1,112 @@
+/**
+ * Утилита для автоматического обновления статусов сотрудника
+ * в зависимости от полноты заполнения карточки
+ */
+
+import { EmployeeStatusMapping, Status } from '../models/index.js';
+import { isEmployeeCardComplete } from './employeeFieldsConfig.js';
+
+/**
+ * Обновляет статусы сотрудника в зависимости от полноты данных
+ * @param {Object} employee - объект сотрудника (должен включать citizenship)
+ * @param {Object} formConfig - конфигурация полей для контрагента
+ * @param {Object} statusMap - маппинг статусов {status_draft: id, status_new: id, ...}
+ * @param {string} userId - ID пользователя для createdBy/updatedBy
+ * @returns {Promise<{isComplete: boolean, statusNames: {status: string, statusCard: string}, missingFields: Array<string>}>}
+ */
+export const updateEmployeeStatusesByCompleteness = async (employee, formConfig, statusMap, userId) => {
+  // Импортируем функцию получения недостающих полей
+  const { getMissingRequiredFields } = await import('./employeeFieldsConfig.js');
+  
+  // Проверяем полноту карточки
+  const isComplete = isEmployeeCardComplete(employee, formConfig, false);
+  const missingFields = !isComplete ? getMissingRequiredFields(employee, formConfig) : [];
+
+  console.log(`   📊 ПРОВЕРКА ПОЛНОТЫ ДАННЫХ:`);
+  console.log(`      Сотрудник: ${employee.lastName} ${employee.firstName}`);
+  console.log(`      Результат: ${isComplete ? '✅ ВСЕ ОБЯЗАТЕЛЬНЫЕ ПОЛЯ ЗАПОЛНЕНЫ' : '⚠️  ЕСТЬ НЕЗАПОЛНЕННЫЕ ОБЯЗАТЕЛЬНЫЕ ПОЛЯ'}`);
+  
+  if (!isComplete && missingFields.length > 0) {
+    console.log(`      Незаполненные поля (${missingFields.length}): ${missingFields.join(', ')}`);
+  }
+
+  // Определяем целевые статусы
+  const targetStatuses = isComplete
+    ? {
+        status: 'status_new',
+        statusCard: 'status_card_completed'
+      }
+    : {
+        status: 'status_draft',
+        statusCard: 'status_card_draft'
+      };
+
+  console.log(`   🏷️  ЦЕЛЕВЫЕ СТАТУСЫ: ${targetStatuses.status} + ${targetStatuses.statusCard}`);
+
+  // Обновляем или создаем статус (основной)
+  const [statusMapping, statusCreated] = await EmployeeStatusMapping.upsert({
+    employeeId: employee.id,
+    statusId: statusMap[targetStatuses.status],
+    statusGroup: 'status',
+    createdBy: userId,
+    updatedBy: userId
+  }, {
+    returning: true,
+    conflictFields: ['employee_id', 'status_group']
+  });
+
+  console.log(`   ${statusCreated ? '✨ СОЗДАН' : '🔄 ОБНОВЛЕН'} основной статус: ${targetStatuses.status}`);
+
+  // Обновляем или создаем статус карточки
+  const [statusCardMapping, statusCardCreated] = await EmployeeStatusMapping.upsert({
+    employeeId: employee.id,
+    statusId: statusMap[targetStatuses.statusCard],
+    statusGroup: 'status_card',
+    createdBy: userId,
+    updatedBy: userId
+  }, {
+    returning: true,
+    conflictFields: ['employee_id', 'status_group']
+  });
+
+  console.log(`   ${statusCardCreated ? '✨ СОЗДАН' : '🔄 ОБНОВЛЕН'} статус карточки: ${targetStatuses.statusCard}`);
+
+  return {
+    isComplete,
+    statusNames: {
+      status: targetStatuses.status,
+      statusCard: targetStatuses.statusCard
+    },
+    missingFields
+  };
+};
+
+/**
+ * Получает все необходимые статусы для импорта
+ * @returns {Promise<Object>} - маппинг статусов {status_draft: id, status_new: id, ...}
+ */
+export const getImportStatuses = async () => {
+  const statuses = await Status.findAll({
+    where: {
+      name: ['status_draft', 'status_card_draft', 'status_new', 'status_card_completed']
+    }
+  });
+
+  const statusMap = {};
+  statuses.forEach(s => {
+    statusMap[s.name] = s.id;
+  });
+
+  // Проверяем что все статусы найдены
+  const requiredStatuses = ['status_draft', 'status_card_draft', 'status_new', 'status_card_completed'];
+  const missingStatuses = requiredStatuses.filter(name => !statusMap[name]);
+
+  if (missingStatuses.length > 0) {
+    throw new Error(`Не найдены статусы: ${missingStatuses.join(', ')}`);
+  }
+
+  console.log('✅ Все необходимые статусы загружены:', Object.keys(statusMap).join(', '));
+
+  return statusMap;
+};
+
