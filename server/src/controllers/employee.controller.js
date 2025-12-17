@@ -7,6 +7,7 @@ import { checkEmployeeAccess } from '../utils/permissionUtils.js';
 import { AppError } from '../middleware/errorHandler.js';
 import EmployeeStatusService from '../services/employeeStatusService.js';
 import { isEmployeeCardComplete, DEFAULT_FORM_CONFIG } from '../utils/employeeFieldsConfig.js';
+import { updateEmployeeStatusesByCompleteness, getImportStatuses } from '../utils/employeeStatusUpdater.js';
 
 // Опции для загрузки сотрудника с маппингами (для проверки прав)
 const employeeAccessInclude = [
@@ -734,18 +735,13 @@ export const createEmployee = async (req, res, next) => {
     const calculatedStatusCard = calculateStatusCard(employeeDataWithStatus, formConfig);
     employeeDataWithStatus.statusCard = calculatedStatusCard;
 
-    // Если все поля заполнены (статус 'completed') - обновляем статусы с draft на новые
-    if (calculatedStatusCard === 'completed') {
-      try {
-        // Меняем status_draft → status_new
-        await EmployeeStatusService.setStatusByName(employee.id, 'status_new', req.user.id);
-        // Меняем status_card_draft → status_card_completed
-        await EmployeeStatusService.setStatusByName(employee.id, 'status_card_completed', req.user.id);
-        console.log('✓ Employee statuses updated to completed');
-      } catch (statusError) {
-        console.warn('Warning: could not update statuses:', statusError.message);
-        // Не прерываем создание, если ошибка со статусами
-      }
+    try {
+      // Используем единую логику обновления статусов
+      const statusMap = await getImportStatuses();
+      await updateEmployeeStatusesByCompleteness(employeeDataWithStatus, formConfig, statusMap, req.user.id);
+      console.log('✓ Employee statuses updated');
+    } catch (statusError) {
+      console.warn('Warning: could not update statuses:', statusError.message);
     }
 
     res.status(201).json({
@@ -961,20 +957,10 @@ export const updateEmployee = async (req, res, next) => {
 
     // Обновляем статусы на основе текущего состояния
     try {
-      // Если все поля заполнены (статус 'completed') - меняем статусы с draft на новые
-      if (calculatedStatusCard === 'completed') {
-        // Меняем status_draft → status_new (если был в draft)
-        const currentStatusMapping = await EmployeeStatusService.getCurrentStatus(id, 'status');
-        if (currentStatusMapping?.status?.name === 'status_draft') {
-          await EmployeeStatusService.setStatusByName(id, 'status_new', req.user.id);
-        }
-        // Меняем status_card_draft → status_card_completed (если был в draft)
-        const currentCardStatus = await EmployeeStatusService.getCurrentStatus(id, 'status_card');
-        if (currentCardStatus?.status?.name === 'status_card_draft') {
-          await EmployeeStatusService.setStatusByName(id, 'status_card_completed', req.user.id);
-        }
-        console.log('✓ Employee statuses updated to completed');
-      }
+      // Используем единую логику обновления статусов (как при импорте)
+      // Это обеспечивает корректный переход между draft/completed статусами для всех контрагентов
+      const statusMap = await getImportStatuses();
+      await updateEmployeeStatusesByCompleteness(employeeDataWithStatus, formConfig, statusMap, req.user.id);
 
       // НОВАЯ ЛОГИКА: если в группе status_hr есть активный статус с is_upload=true - очищаем группу и активируем status_hr_edited
       console.log('=== CHECKING STATUS_HR GROUP ===');
