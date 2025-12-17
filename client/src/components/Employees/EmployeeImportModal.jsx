@@ -194,7 +194,47 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
       setLoading(true);
 
       // Фильтруем данные для импорта с учетом разрешений конфликтов
-      const filteredEmployees = validationResult.validEmployees;
+      let filteredEmployees = [...validationResult.validEmployees];
+
+      // Добавляем конфликтующих сотрудников, которых пользователь решил "Заменить"
+      validationResult?.conflictingInns?.forEach((conflict) => {
+        if (conflictResolutions[conflict.inn] === 'update') {
+          // Находим исходные данные сотрудника из fileData по ИНН конфликта
+          const originalData = fileData.find(emp => {
+            // Нормализуем ИНН для сравнения (убираем пробелы и приводим к строке)
+            const empInn = String(emp.inn || '').replace(/\s/g, '');
+            const conflictInn = String(conflict.inn || '').replace(/\s/g, '');
+            return empInn === conflictInn;
+          });
+          
+          console.log('🔍 Ищем исходные данные для конфликта:', {
+            conflictInn: conflict.inn,
+            found: !!originalData,
+            originalCounterpartyInn: originalData?.counterpartyInn
+          });
+          
+          if (originalData) {
+            // Добавляем counterparty данные из исходного файла
+            const employeeWithCounterparty = {
+              ...conflict.newEmployee,
+              counterpartyInn: originalData.counterpartyInn,
+              counterpartyKpp: originalData.counterpartyKpp
+            };
+            console.log('✅ Добавили counterparty данные к сотруднику:', employeeWithCounterparty);
+            filteredEmployees.push(employeeWithCounterparty);
+          } else {
+            console.warn('⚠️ Не нашли исходные данные для ИНН:', conflict.inn);
+            // Fallback: если не нашли исходные данные, добавляем как есть
+            filteredEmployees.push(conflict.newEmployee);
+          }
+        }
+      });
+
+      console.log('📤 Отправляем для импорта:', {
+        total: filteredEmployees.length,
+        validEmployees: validationResult.validEmployees.length,
+        conflictsToUpdate: Object.values(conflictResolutions).filter(r => r === 'update').length
+      });
 
       const response = await employeeApi.importEmployees(
         filteredEmployees,
@@ -204,6 +244,7 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
       setImportResult(response?.data?.data);
       setStep(4);
       messageApp.success('Импорт завершен');
+      onSuccess?.(); // Обновляем список сотрудников сразу после успешного импорта
     } catch (error) {
       console.error('❌ Import error:', error);
       console.error('Error response:', error.response?.data);
@@ -335,18 +376,31 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
               dataSource={validationResult.validationErrors}
               columns={[
                 {
-                  title: 'Строка',
+                  title: '№',
                   dataIndex: 'rowIndex',
-                  width: 60,
+                  width: 50,
                   align: 'center'
                 },
                 {
                   title: 'Фамилия',
                   dataIndex: 'lastName',
-                  key: 'lastName'
+                  key: 'lastName',
+                  width: 100
                 },
                 {
-                  title: 'Ошибки',
+                  title: 'Имя',
+                  dataIndex: 'firstName',
+                  key: 'firstName',
+                  width: 100
+                },
+                {
+                  title: 'ИНН',
+                  dataIndex: 'inn',
+                  key: 'inn',
+                  width: 110
+                },
+                {
+                  title: 'Ошибка',
                   dataIndex: 'errors',
                   key: 'errors',
                   render: (errors) => (
@@ -396,6 +450,13 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
             <Table
               dataSource={validationResult.conflictingInns}
               columns={[
+                {
+                  title: 'Имя',
+                  render: (_, record) => (
+                    <div>{record.newEmployee.lastName} {record.newEmployee.firstName}</div>
+                  ),
+                  width: 120
+                },
                 {
                   title: 'ИНН',
                   dataIndex: 'inn',
@@ -456,18 +517,34 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
   };
 
   // Шаг 3 - Готовность к импорту
-  const renderStep3 = () => (
-    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-      <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
-      <p style={{ fontSize: 16, marginBottom: 24 }}>
-        Данные готовы к импорту
-        <br />
-        <strong>
-          {validationResult?.validEmployees?.length || 0} сотрудников
-        </strong>
-      </p>
-    </div>
-  );
+  const renderStep3 = () => {
+    // Рассчитываем количество сотрудников с учетом разрешений конфликтов
+    let totalEmployees = validationResult?.validEmployees?.length || 0;
+    
+    validationResult?.conflictingInns?.forEach((conflict) => {
+      if (conflictResolutions[conflict.inn] === 'update') {
+        totalEmployees++;
+      }
+    });
+
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a', marginBottom: 16 }} />
+        <p style={{ fontSize: 16, marginBottom: 24 }}>
+          Данные готовы к импорту
+          <br />
+          <strong>
+            {totalEmployees} сотрудников
+          </strong>
+        </p>
+        {totalEmployees === 0 && (
+          <p style={{ color: '#ff4d4f', fontSize: '14px' }}>
+            ⚠️ Не выбрано ни одного сотрудника для импорта
+          </p>
+        )}
+      </div>
+    );
+  };
 
   // Шаг 4 - Результаты импорта
   const renderStep4 = () => {

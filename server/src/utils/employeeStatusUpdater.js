@@ -43,31 +43,89 @@ export const updateEmployeeStatusesByCompleteness = async (employee, formConfig,
 
   console.log(`   🏷️  ЦЕЛЕВЫЕ СТАТУСЫ: ${targetStatuses.status} + ${targetStatuses.statusCard}`);
 
+  // Деактивируем все старые статусы группы 'status' и 'draft'
+  await EmployeeStatusMapping.update(
+    { isActive: false, updatedBy: userId, updatedAt: new Date() },
+    { 
+      where: { 
+        employeeId: employee.id,
+        statusGroup: ['status', 'draft'] // Учитываем старые группы
+      }
+    }
+  );
+
   // Обновляем или создаем статус (основной)
-  const [statusMapping, statusCreated] = await EmployeeStatusMapping.upsert({
-    employeeId: employee.id,
-    statusId: statusMap[targetStatuses.status],
-    statusGroup: 'status',
-    createdBy: userId,
-    updatedBy: userId
-  }, {
-    returning: true,
-    conflictFields: ['employee_id', 'status_group']
+  let statusMapping;
+  let statusCreated = false;
+  const existingStatus = await EmployeeStatusMapping.findOne({
+    where: {
+      employeeId: employee.id,
+      statusGroup: 'status',
+      statusId: statusMap[targetStatuses.status]
+    }
   });
+
+  if (existingStatus) {
+    await existingStatus.update({
+      isActive: true,
+      updatedBy: userId,
+      updatedAt: new Date()
+    });
+    statusMapping = existingStatus;
+  } else {
+    statusMapping = await EmployeeStatusMapping.create({
+      employeeId: employee.id,
+      statusId: statusMap[targetStatuses.status],
+      statusGroup: 'status',
+      isActive: true,
+      createdBy: userId,
+      updatedBy: userId
+    });
+    statusCreated = true;
+  }
 
   console.log(`   ${statusCreated ? '✨ СОЗДАН' : '🔄 ОБНОВЛЕН'} основной статус: ${targetStatuses.status}`);
 
+  // Деактивируем все старые статусы группы 'status_card' и 'card draft'
+  await EmployeeStatusMapping.update(
+    { isActive: false, updatedBy: userId, updatedAt: new Date() },
+    { 
+      where: { 
+        employeeId: employee.id,
+        statusGroup: ['status_card', 'card draft'] // Учитываем старые группы
+      }
+    }
+  );
+
   // Обновляем или создаем статус карточки
-  const [statusCardMapping, statusCardCreated] = await EmployeeStatusMapping.upsert({
-    employeeId: employee.id,
-    statusId: statusMap[targetStatuses.statusCard],
-    statusGroup: 'status_card',
-    createdBy: userId,
-    updatedBy: userId
-  }, {
-    returning: true,
-    conflictFields: ['employee_id', 'status_group']
+  let statusCardMapping;
+  let statusCardCreated = false;
+  const existingStatusCard = await EmployeeStatusMapping.findOne({
+    where: {
+      employeeId: employee.id,
+      statusGroup: 'status_card',
+      statusId: statusMap[targetStatuses.statusCard]
+    }
   });
+
+  if (existingStatusCard) {
+    await existingStatusCard.update({
+      isActive: true,
+      updatedBy: userId,
+      updatedAt: new Date()
+    });
+    statusCardMapping = existingStatusCard;
+  } else {
+    statusCardMapping = await EmployeeStatusMapping.create({
+      employeeId: employee.id,
+      statusId: statusMap[targetStatuses.statusCard],
+      statusGroup: 'status_card',
+      isActive: true,
+      createdBy: userId,
+      updatedBy: userId
+    });
+    statusCardCreated = true;
+  }
 
   console.log(`   ${statusCardCreated ? '✨ СОЗДАН' : '🔄 ОБНОВЛЕН'} статус карточки: ${targetStatuses.statusCard}`);
 

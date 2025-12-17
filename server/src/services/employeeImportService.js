@@ -64,6 +64,8 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
   const validationErrors = kppErrors.map(err => ({
     rowIndex: err.rowIndex,
     lastName: employees[err.rowIndex - 1]?.lastName || '',
+    firstName: employees[err.rowIndex - 1]?.firstName || '',
+    inn: employees[err.rowIndex - 1]?.inn || '',
     errors: [err.error]
   }));
 
@@ -87,6 +89,8 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
         validationErrors.push({
           rowIndex: index + 1,
           lastName: emp.lastName || '',
+          firstName: emp.firstName || '',
+          inn: emp.inn || '',
           errors: validation.errors
         });
         continue;
@@ -100,6 +104,8 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
         validationErrors.push({
           rowIndex: index + 1,
           lastName: emp.lastName || '',
+          firstName: emp.firstName || '',
+          inn: emp.inn || '',
           errors: [`Нет прав для импорта в контрагента "${validated.counterparty.name}". Вы можете импортировать только в своего контрагента.`]
         });
         continue;
@@ -123,7 +129,13 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
               lastName: validated.lastName,
               middleName: validated.middleName,
               inn: validated.inn,
-              snils: validated.snils
+              snils: validated.snils,
+              kig: validated.kig,
+              birthDate: validated.birthDate,
+              kigEndDate: validated.kigEndDate,
+              position: validated.position,
+              citizenship: validated.citizenship,
+              counterparty: validated.counterparty
             },
             existingEmployee: {
               id: existingByInn.id,
@@ -145,6 +157,8 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
       validationErrors.push({
         rowIndex: index + 1,
         lastName: emp.lastName || '',
+        firstName: emp.firstName || '',
+        inn: emp.inn || '',
         errors: [error.message]
       });
     }
@@ -451,35 +465,41 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
           }
 
           // 🎯 АВТОМАТИЧЕСКОЕ ОБНОВЛЕНИЕ СТАТУСОВ в зависимости от полноты данных
-          // Перезагружаем сотрудника с включенным citizenship для проверки полноты
-          await employee.reload({
-            include: [{
-              model: Citizenship,
-              as: 'citizenship'
-            }]
-          });
+          try {
+            // Перезагружаем сотрудника с включенным citizenship для проверки полноты
+            await employee.reload({
+              include: [{
+                model: Citizenship,
+                as: 'citizenship'
+              }]
+            });
 
-          // Обновляем статусы на основе полноты карточки
-          const { isComplete, statusNames, missingFields } = await updateEmployeeStatusesByCompleteness(
-            employee,
-            formConfig,
-            statusMap,
-            userId
-          );
+            // Обновляем статусы на основе полноты карточки
+            const { isComplete, statusNames, missingFields } = await updateEmployeeStatusesByCompleteness(
+              employee,
+              formConfig,
+              statusMap,
+              userId
+            );
 
-          // Логируем результаты проверки полноты
-          if (isComplete) {
-            if (isCreated) {
-              console.log(`   🎉 НОВЫЙ сотрудник с ПОЛНЫМИ данными → активен!`);
+            // Логируем результаты проверки полноты
+            if (isComplete) {
+              if (isCreated) {
+                console.log(`   🎉 НОВЫЙ сотрудник с ПОЛНЫМИ данными → активен!`);
+              } else {
+                console.log(`   🎉 Сотрудник ОБНОВЛЕН и имеет ПОЛНЫЕ данные → активен!`);
+              }
             } else {
-              console.log(`   🎉 Сотрудник ОБНОВЛЕН и имеет ПОЛНЫЕ данные → активен!`);
+              if (isCreated) {
+                console.log(`   📝 Новый сотрудник в статусе ЧЕРНОВИК (не хватает ${missingFields.length} полей)`);
+              } else {
+                console.log(`   📝 Сотрудник обновлен, статус ЧЕРНОВИК сохранен (не хватает ${missingFields.length} полей)`);
+              }
             }
-          } else {
-            if (isCreated) {
-              console.log(`   📝 Новый сотрудник в статусе ЧЕРНОВИК (не хватает ${missingFields.length} полей)`);
-            } else {
-              console.log(`   📝 Сотрудник обновлен, статус ЧЕРНОВИК сохранен (не хватает ${missingFields.length} полей)`);
-            }
+          } catch (statusError) {
+            console.error(`   ⚠️  Ошибка при обновлении статусов: ${statusError.message}`);
+            console.error(`   ℹ️  Сотрудник импортирован, но статусы не обновлены`);
+            // Не останавливаем импорт, продолжаем
           }
 
           // Обновляем КПП контрагента если нужно (некритичная операция)
