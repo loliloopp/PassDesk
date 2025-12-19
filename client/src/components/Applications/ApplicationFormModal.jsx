@@ -245,7 +245,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
       
       // Извлекаем имя файла из заголовка Content-Disposition или используем дефолтное
       const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'консенты_биометрия.zip';
+      let fileName = 'согласия_перс_данные.zip';
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="?([^"]*)"?/);
         if (fileNameMatch && fileNameMatch[1]) {
@@ -282,7 +282,7 @@ const ApplicationFormModal = ({ visible, editingId, onCancel, onSuccess }) => {
             onClick={handleDownloadConsents}
             loading={downloadingConsents}
           >
-            Выгрузить согласие на обработку биометрии
+            Выгрузить согласие на обработку перс. данных
           </Button>
           <Space>
             <Button key="cancel" onClick={onCancel}>

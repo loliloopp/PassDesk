@@ -95,7 +95,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
     }
   }, [visible, userRole]);
 
-  // Загружаем информацию о согласиях на биометрию для сотрудников
+  // Загружаем информацию о согласиях на перс. данные для сотрудников
   useEffect(() => {
     if (visible && allEmployees.length > 0) {
       const consentsMap = {};
@@ -337,7 +337,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       
       // Извлекаем имя файла из заголовка Content-Disposition или используем дефолтное
       const contentDisposition = response.headers['content-disposition'];
-      let fileName = 'консенты_биометрия.zip';
+      let fileName = 'согласия_перс_данные.zip';
       if (contentDisposition) {
         const fileNameMatch = contentDisposition.match(/filename="?([^"]*)"?/);
         if (fileNameMatch && fileNameMatch[1]) {
@@ -418,7 +418,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
             loading={downloadingConsents}
             disabled={selectedEmployees.length === 0}
           >
-            Выгрузить согласие на обработку биометрии
+            Выгрузить согласие на обработку перс. данных
           </Button>
           <Space>
             <Button onClick={onCancel}>Отмена</Button>

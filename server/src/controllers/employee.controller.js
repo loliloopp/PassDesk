@@ -201,7 +201,7 @@ export const getAllEmployees = async (req, res, next) => {
       }
     ];
 
-    // Добавляем загрузку файлов согласий на биометрию Застройщика
+    // Добавляем загрузку файлов согласий на перс. данные Застройщика
     employeeInclude.push({
       model: File,
       as: 'files',

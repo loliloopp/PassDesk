@@ -1031,7 +1031,7 @@ export const exportApplicationToWord = async (req, res) => {
   }
 };
 
-// Выгрузить согласия на обработку биометрии Застройщика в ZIP
+// Выгрузить согласия на обработку перс. данных Застройщика в ZIP
 export const downloadDeveloperBiometricConsents = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1067,7 +1067,7 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
       });
     }
     
-    // Получаем согласия на биометрию Застройщика для выбранных сотрудников
+    // Получаем согласия на перс. данные Застройщика для выбранных сотрудников
     const consentFiles = await File.findAll({
       where: {
         documentType: 'biometric_consent_developer',
@@ -1088,7 +1088,7 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
     if (consentFiles.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Нет согласий на обработку биометрии Застройщика для выбранных сотрудников'
+        message: 'Нет согласий на обработку перс. данных Застройщика для выбранных сотрудников'
       });
     }
     
@@ -1112,7 +1112,7 @@ export const downloadDeveloperBiometricConsents = async (req, res) => {
     });
     
     // Устанавливаем заголовки для скачивания ZIP
-    const fileName = `Согласия_Биометрия_${application.applicationNumber}_${new Date().toISOString().split('T')[0]}.zip`;
+    const fileName = `Согласия_ПерсДанные_${application.applicationNumber}_${new Date().toISOString().split('T')[0]}.zip`;
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
     

@@ -57,7 +57,7 @@ const applicationService = {
     return response;
   },
 
-  // Выгрузить согласия на биометрию Застройщика в ZIP
+  // Выгрузить согласия на перс. данные Застройщика в ZIP
   downloadDeveloperBiometricConsents: (applicationId, employeeIds) =>
     api.post(`/applications/${applicationId}/consents/developer-biometric/download`, { employeeIds }, {
       responseType: 'blob' // Важно для скачивания файлов
