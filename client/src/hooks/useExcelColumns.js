@@ -16,6 +16,8 @@ const DEFAULT_COLUMNS = [
   { key: 'registrationAddress', label: 'Адрес регистрации' },
   { key: 'phone', label: 'Телефон' },
   { key: 'counterparty', label: 'Контрагент' },
+  { key: 'counterpartyInn', label: 'ИНН контрагента' },
+  { key: 'counterpartyKpp', label: 'КПП контрагента' },
 ];
 
 export const AVAILABLE_COLUMNS = DEFAULT_COLUMNS;
@@ -48,7 +50,31 @@ export const useExcelColumns = () => {
         const parsed = JSON.parse(savedSelection);
         // Проверяем что это массив и есть все нужные поля
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setColumns(parsed);
+          // Синхронизируем с DEFAULT_COLUMNS - добавляем новые столбцы
+          const defaultKeys = DEFAULT_COLUMNS.map(col => col.key);
+          const savedKeys = parsed.map(col => col.key);
+          
+          // Находим новые столбцы, которых нет в сохраненных
+          const newColumns = DEFAULT_COLUMNS.filter(col => !savedKeys.includes(col.key));
+          
+          if (newColumns.length > 0) {
+            // Добавляем новые столбцы в конец с enabled: true
+            const maxOrder = Math.max(...parsed.map(col => col.order || 0));
+            const updatedColumns = [
+              ...parsed,
+              ...newColumns.map((col, index) => ({
+                key: col.key,
+                label: col.label,
+                enabled: true,
+                order: maxOrder + index + 1,
+              }))
+            ];
+            setColumns(updatedColumns);
+            // Сохраняем обновленный список
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedColumns));
+          } else {
+            setColumns(parsed);
+          }
         }
       }
     } catch (error) {

@@ -6,7 +6,8 @@ import {
   DeleteOutlined, 
   EditOutlined,
   StarOutlined,
-  StarFilled 
+  StarFilled,
+  SyncOutlined
 } from '@ant-design/icons';
 import { useState } from 'react';
 import { useExcelColumnSets } from '@/hooks/useExcelColumnSets';
@@ -97,6 +98,17 @@ const ExcelColumnsModal = ({
   const handleSetDefault = async (id) => {
     try {
       await setDefaultColumnSet(id);
+    } catch (error) {
+      // Ошибка уже обработана в хуке
+    }
+  };
+
+  // Обновить набор текущими настройками столбцов
+  const handleUpdateSetColumns = async (set) => {
+    try {
+      await updateColumnSet(set.id, {
+        columns: columns, // Текущее состояние столбцов
+      });
     } catch (error) {
       // Ошибка уже обработана в хуке
     }
@@ -286,8 +298,18 @@ const ExcelColumnsModal = ({
                               style={{ padding: '2px 4px' }}
                             />
                           </Tooltip>
+                          {/* Кнопка обновления текущими настройками */}
+                          <Tooltip title="Обновить текущими настройками">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<SyncOutlined />}
+                              onClick={() => handleUpdateSetColumns(set)}
+                              style={{ padding: '2px 4px' }}
+                            />
+                          </Tooltip>
                           {/* Кнопка редактирования */}
-                          <Tooltip title="Редактировать">
+                          <Tooltip title="Редактировать название">
                             <Button
                               type="text"
                               size="small"

@@ -228,6 +228,12 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
       case 'counterparty':
         const counterpartyName = employee.employeeCounterpartyMappings?.[0]?.counterparty?.name;
         return counterpartyName || '-';
+      case 'counterpartyInn':
+        const counterpartyInn = employee.employeeCounterpartyMappings?.[0]?.counterparty?.inn;
+        return counterpartyInn || '-';
+      case 'counterpartyKpp':
+        const counterpartyKpp = employee.employeeCounterpartyMappings?.[0]?.counterparty?.kpp;
+        return counterpartyKpp || '-';
       default:
         return '-';
     }
