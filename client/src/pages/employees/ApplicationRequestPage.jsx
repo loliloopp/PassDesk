@@ -211,12 +211,8 @@ const ApplicationRequestPage = () => {
     switch (columnKey) {
       case 'number':
         return '';
-      case 'lastName':
-        return employee.lastName || '-';
-      case 'firstName':
-        return employee.firstName || '-';
-      case 'middleName':
-        return employee.middleName || '-';
+      case 'fullName':
+        return `${employee.lastName || ''} ${employee.firstName || ''} ${employee.middleName || ''}`.trim() || '-';
       case 'kig':
         return formatKig(employee.kig) || '-';
       case 'citizenship':

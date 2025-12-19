@@ -198,12 +198,8 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
     switch (columnKey) {
       case 'number':
         return '';  // Будет добавляться как индекс
-      case 'lastName':
-        return employee.lastName || '-';
-      case 'firstName':
-        return employee.firstName || '-';
-      case 'middleName':
-        return employee.middleName || '-';
+      case 'fullName':
+        return `${employee.lastName || ''} ${employee.firstName || ''} ${employee.middleName || ''}`.trim() || '-';
       case 'kig':
         return formatKig(employee.kig) || '-';
       case 'citizenship':

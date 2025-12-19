@@ -3,9 +3,7 @@ import { useState, useEffect } from 'react';
 // Все доступные столбцы для экспорта (в стандартном порядке)
 const DEFAULT_COLUMNS = [
   { key: 'number', label: '№ п/п' },
-  { key: 'lastName', label: 'Фамилия' },
-  { key: 'firstName', label: 'Имя' },
-  { key: 'middleName', label: 'Отчество' },
+  { key: 'fullName', label: 'ФИО' },
   { key: 'kig', label: 'КИГ' },
   { key: 'citizenship', label: 'Гражданство' },
   { key: 'birthDate', label: 'Дата рождения' },
