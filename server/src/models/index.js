@@ -19,6 +19,7 @@ import Position from './Position.js';
 import Status from './Status.js';
 import EmployeeStatusMapping from './EmployeeStatusMapping.js';
 import CounterpartyConstructionSiteMapping from './CounterpartyConstructionSiteMapping.js';
+import ExcelColumnSet from './ExcelColumnSet.js';
 
 // Define associations
 
@@ -274,6 +275,16 @@ CounterpartyConstructionSiteMapping.belongsTo(Counterparty, { foreignKey: 'count
 ConstructionSite.hasMany(CounterpartyConstructionSiteMapping, { foreignKey: 'construction_site_id', as: 'counterpartyMappings' });
 CounterpartyConstructionSiteMapping.belongsTo(ConstructionSite, { foreignKey: 'construction_site_id', as: 'constructionSite' });
 
+// ExcelColumnSet -> Counterparty (набор столбцов -> контрагент)
+Counterparty.hasMany(ExcelColumnSet, { foreignKey: 'counterpartyId', as: 'excelColumnSets' });
+ExcelColumnSet.belongsTo(Counterparty, { foreignKey: 'counterpartyId', as: 'counterparty' });
+
+// User -> ExcelColumnSet (создатель/редактор набора столбцов)
+User.hasMany(ExcelColumnSet, { foreignKey: 'createdBy', as: 'createdExcelColumnSets' });
+User.hasMany(ExcelColumnSet, { foreignKey: 'updatedBy', as: 'updatedExcelColumnSets' });
+ExcelColumnSet.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+ExcelColumnSet.belongsTo(User, { foreignKey: 'updatedBy', as: 'updater' });
+
 export {
   sequelize,
   User,
@@ -295,7 +306,8 @@ export {
   Position,
   Status,
   EmployeeStatusMapping,
-  CounterpartyConstructionSiteMapping
+  CounterpartyConstructionSiteMapping,
+  ExcelColumnSet
 };
 
 

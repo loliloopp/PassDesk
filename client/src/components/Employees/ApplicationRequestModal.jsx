@@ -29,7 +29,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [employeesWithConsents, setEmployeesWithConsents] = useState({});
 
-  const { columns: selectedColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
+  const { columns: selectedColumns, updateColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
 
   // Загружаем доступные объекты строительства
   useEffect(() => {
@@ -544,6 +544,7 @@ const ApplicationRequestModal = ({ visible, onCancel, employees: allEmployees, t
         visible={isColumnsModalOpen}
         onCancel={() => setIsColumnsModalOpen(false)}
         columns={selectedColumns}
+        onUpdate={updateColumns}
         toggleColumn={toggleColumn}
         moveColumnUp={moveColumnUp}
         moveColumnDown={moveColumnDown}

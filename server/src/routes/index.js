@@ -13,6 +13,7 @@ import settingsRoutes from './settings.routes.js';
 import departmentRoutes from './department.routes.js';
 import positionRoutes from './position.routes.js';
 import employeeStatusRoutes from './employeeStatus.routes.js';
+import excelColumnSetRoutes from './excelColumnSet.routes.js';
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ router.use('/citizenships', citizenshipRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/positions', positionRoutes);
+router.use('/excel-column-sets', excelColumnSetRoutes);
 
 export default router;
 

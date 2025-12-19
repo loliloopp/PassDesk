@@ -35,7 +35,7 @@ const ApplicationRequestPage = () => {
 
   const { user } = useAuthStore();
   const { defaultCounterpartyId } = useSettings();
-  const { columns: selectedColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
+  const { columns: selectedColumns, updateColumns, toggleColumn, moveColumnUp, moveColumnDown, selectAll, deselectAll } = useExcelColumns();
 
   // Получаем список сотрудников
   const { employees, loading: employeesLoading, refetch: refetchEmployees } = useEmployees();
@@ -510,6 +510,7 @@ const ApplicationRequestPage = () => {
         visible={isColumnsModalOpen}
         onCancel={() => setIsColumnsModalOpen(false)}
         columns={selectedColumns}
+        onUpdate={updateColumns}
         toggleColumn={toggleColumn}
         moveColumnUp={moveColumnUp}
         moveColumnDown={moveColumnDown}
