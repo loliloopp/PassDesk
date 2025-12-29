@@ -473,6 +473,7 @@ const CounterpartiesPage = () => {
                   name="kpp" 
                   label="КПП"
                   rules={[
+                    { required: true, message: 'Введите КПП' },
                     { pattern: /^\d{9}$/, message: 'КПП должен содержать 9 цифр' }
                   ]}
                 >
