@@ -690,6 +690,7 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
             patentIssueDate: employee.patentIssueDate ? dayjs(employee.patentIssueDate) : null,
             kigEndDate: employee.kigEndDate ? dayjs(employee.kigEndDate) : null,
             constructionSiteId: mapping?.constructionSiteId || null,
+            counterpartyId: mapping?.counterpartyId || null, // Контрагент из маппинга
             birthCountryId: employee.birthCountryId || null,
             isFired: isFired,
             isInactive: isInactive,

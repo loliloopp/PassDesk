@@ -327,6 +327,7 @@ export const useEmployeeForm = (employee, visible, onSuccess) => {
         passportDate: passportDateValue,
         patentIssueDate: patentIssueDateValue,
         constructionSiteId: mapping?.constructionSiteId || null,
+        counterpartyId: mapping?.counterpartyId || null, // Контрагент из маппинга
         birthCountryId: employee.birthCountryId || null,
         isFired: isFired,
         isInactive: isInactive,
