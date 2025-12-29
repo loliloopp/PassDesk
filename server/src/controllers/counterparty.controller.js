@@ -1,4 +1,4 @@
-import { Counterparty, Employee, Position, ConstructionSite, CounterpartyConstructionSiteMapping, sequelize } from '../models/index.js';
+import { Counterparty, Employee, Position, ConstructionSite, CounterpartyConstructionSiteMapping, CounterpartySubcounterpartyMapping, CounterpartyTypeMapping, Setting, sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
 // Получить все контрагенты
@@ -11,7 +11,33 @@ export const getAllCounterparties = async (req, res) => {
     
     const where = {};
     
-    // Фильтр по типу
+    // Проверка прав доступа на основе роли и контрагента
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    if (req.user.role === 'admin') {
+      // admin видит всех контрагентов - без ограничений
+    } else if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
+      // user (default) - запретить доступ к справочнику контрагентов
+      return res.status(403).json({
+        success: false,
+        message: 'Доступ к справочнику контрагентов запрещен'
+      });
+    } else if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
+      // user (не default) - только свой контрагент + прямые субподрядчики
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: req.user.counterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const allowedIds = [
+        req.user.counterpartyId,
+        ...subcontractors.map(s => s.childCounterpartyId)
+      ];
+      
+      where.id = { [Op.in]: allowedIds };
+    }
+    
+    // Фильтр по типу (для будущего использования с новой системой типов)
     if (type) {
       where.type = type;
     }
@@ -29,13 +55,34 @@ export const getAllCounterparties = async (req, res) => {
     // Настройка include для связанных данных
     const includeOptions = [];
     
+    // ВСЕГДА включаем типы контрагентов
+    includeOptions.push({
+      model: CounterpartyTypeMapping,
+      as: 'typeMapping',
+      attributes: ['types'],
+      required: false
+    });
+    
+    // ВСЕГДА включаем информацию о родительском контрагенте
+    includeOptions.push({
+      model: CounterpartySubcounterpartyMapping,
+      as: 'parentMappings',
+      attributes: ['parentCounterpartyId'],
+      required: false,
+      include: [{
+        model: Counterparty,
+        as: 'parentCounterparty',
+        attributes: ['id', 'name']
+      }]
+    });
+    
     // Если запрошено включение construction_sites
     if (include && include.includes('construction_sites')) {
       includeOptions.push({
         model: ConstructionSite,
         as: 'constructionSites',
         attributes: ['id', 'shortName', 'fullName'],
-        through: { attributes: [] } // Не включаем атрибуты промежуточной таблицы
+        through: { attributes: [] }
       });
     }
     
@@ -45,13 +92,23 @@ export const getAllCounterparties = async (req, res) => {
       limit: actualLimit,
       offset: parseInt(offset),
       order: [['createdAt', 'DESC']],
-      distinct: true // Важно для правильного подсчета при JOIN
+      distinct: true
+    });
+    
+    // Преобразуем данные для фронтенда
+    const transformedRows = rows.map(row => {
+      const counterparty = row.toJSON();
+      // Добавляем parentCounterparty на верхний уровень для удобства
+      if (counterparty.parentMappings && counterparty.parentMappings.length > 0) {
+        counterparty.parentCounterparty = counterparty.parentMappings[0].parentCounterparty;
+      }
+      return counterparty;
     });
     
     res.json({
       success: true,
       data: {
-        counterparties: rows,
+        counterparties: transformedRows,
         pagination: {
           total: count,
           page: parseInt(page),
@@ -75,6 +132,37 @@ export const getCounterpartyById = async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Проверка прав доступа
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
+      // user (default) - запретить доступ
+      return res.status(403).json({
+        success: false,
+        message: 'Доступ к справочнику контрагентов запрещен'
+      });
+    }
+    
+    if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
+      // user (не default) - проверить доступ только к своим
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: req.user.counterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const allowedIds = [
+        req.user.counterpartyId,
+        ...subcontractors.map(s => s.childCounterpartyId)
+      ];
+      
+      if (!allowedIds.includes(id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Доступ к этому контрагенту запрещен'
+        });
+      }
+    }
+    
     const counterparty = await Counterparty.findByPk(id, {
       include: [
         {
@@ -88,6 +176,12 @@ export const getCounterpartyById = async (req, res) => {
             }
           ],
           attributes: ['id', 'firstName', 'lastName', 'positionId']
+        },
+        {
+          model: CounterpartyTypeMapping,
+          as: 'typeMapping',
+          attributes: ['types'],
+          required: false
         }
       ]
     });
@@ -118,6 +212,17 @@ export const createCounterparty = async (req, res) => {
   try {
     const counterpartyData = req.body;
     
+    // Проверка прав доступа
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
+      // user (default) - запретить доступ к справочнику
+      return res.status(403).json({
+        success: false,
+        message: 'Доступ к справочнику контрагентов запрещен'
+      });
+    }
+    
     // Очищаем пустые строки для необязательных полей
     if (counterpartyData.email === '') counterpartyData.email = null;
     if (counterpartyData.phone === '') counterpartyData.phone = null;
@@ -125,12 +230,53 @@ export const createCounterparty = async (req, res) => {
     if (counterpartyData.ogrn === '') counterpartyData.ogrn = null;
     if (counterpartyData.legalAddress === '') counterpartyData.legalAddress = null;
     
-    const counterparty = await Counterparty.create(counterpartyData);
+    // Используем транзакцию для создания контрагента и связанных записей
+    const result = await sequelize.transaction(async (t) => {
+      let counterparty;
+      let typeMapping;
+      
+      if (req.user.role === 'admin') {
+        // Admin создает контрагента с указанным типом
+        counterparty = await Counterparty.create({
+          ...counterpartyData,
+          type: counterpartyData.type || null // Для обратной совместимости
+        }, { transaction: t });
+        
+        // Создаем запись в counterparties_types_mapping
+        if (counterpartyData.type) {
+          typeMapping = await CounterpartyTypeMapping.create({
+            counterpartyId: counterparty.id,
+            types: [counterpartyData.type]
+          }, { transaction: t });
+        }
+      } else if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
+        // User (не default) создает субподрядчика
+        counterparty = await Counterparty.create({
+          ...counterpartyData,
+          type: null // Новая логика не использует это поле
+        }, { transaction: t });
+        
+        // Создаем запись в counterparties_types_mapping с типом subcontractor
+        typeMapping = await CounterpartyTypeMapping.create({
+          counterpartyId: counterparty.id,
+          types: ['subcontractor']
+        }, { transaction: t });
+        
+        // Создаем связь родитель-субподрядчик
+        await CounterpartySubcounterpartyMapping.create({
+          parentCounterpartyId: req.user.counterpartyId,
+          childCounterpartyId: counterparty.id,
+          createdBy: req.user.id
+        }, { transaction: t });
+      }
+      
+      return { counterparty, typeMapping };
+    });
     
     res.status(201).json({
       success: true,
       message: 'Контрагент успешно создан',
-      data: counterparty
+      data: result.counterparty
     });
   } catch (error) {
     console.error('Error creating counterparty:', error);
@@ -160,6 +306,34 @@ export const updateCounterparty = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
+    // Проверка прав доступа
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
+      // user (default) - запретить доступ
+      return res.status(403).json({
+        success: false,
+        message: 'Доступ к справочнику контрагентов запрещен'
+      });
+    }
+    
+    if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
+      // user (не default) - может редактировать только своих субподрядчиков
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: req.user.counterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const allowedIds = subcontractors.map(s => s.childCounterpartyId);
+      
+      if (!allowedIds.includes(id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Можно редактировать только своих субподрядчиков'
+        });
+      }
+    }
+    
     // Очищаем пустые строки для необязательных полей
     if (updates.email === '') updates.email = null;
     if (updates.phone === '') updates.phone = null;
@@ -176,7 +350,30 @@ export const updateCounterparty = async (req, res) => {
       });
     }
     
-    await counterparty.update(updates);
+    // Используем транзакцию для обновления
+    await sequelize.transaction(async (t) => {
+      // Обновляем контрагента
+      await counterparty.update(updates, { transaction: t });
+      
+      // Если admin обновляет тип - обновляем в counterparties_types_mapping
+      if (req.user.role === 'admin' && updates.type) {
+        const existingTypeMapping = await CounterpartyTypeMapping.findOne({
+          where: { counterpartyId: id },
+          transaction: t
+        });
+        
+        if (existingTypeMapping) {
+          await existingTypeMapping.update({
+            types: [updates.type]
+          }, { transaction: t });
+        } else {
+          await CounterpartyTypeMapping.create({
+            counterpartyId: id,
+            types: [updates.type]
+          }, { transaction: t });
+        }
+      }
+    });
     
     res.json({
       success: true,
@@ -209,6 +406,14 @@ export const updateCounterparty = async (req, res) => {
 export const deleteCounterparty = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Проверка прав доступа - только admin может удалять
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Только администратор может удалять контрагентов'
+      });
+    }
     
     const counterparty = await Counterparty.findByPk(id);
     

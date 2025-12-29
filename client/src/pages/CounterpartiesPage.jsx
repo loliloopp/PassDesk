@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App } from 'antd';
+import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
 import { constructionSiteService } from '../services/constructionSiteService';
+import settingsService from '../services/settingsService';
 import { CounterpartyObjectsModal } from './CounterpartiesPage/CounterpartyObjectsModal';
 import { useAuthStore } from '../store/authStore';
 
@@ -11,7 +12,8 @@ const { Title } = Typography;
 const typeMap = {
   customer: { label: 'Заказчик', color: 'blue' },
   contractor: { label: 'Подрядчик', color: 'green' },
-  general_contractor: { label: 'Генподрядчик', color: 'gold' }
+  general_contractor: { label: 'Генподрядчик', color: 'gold' },
+  subcontractor: { label: 'Субподрядчик', color: 'purple' }
 };
 
 const CounterpartiesPage = () => {
@@ -22,14 +24,37 @@ const CounterpartiesPage = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [objectsModalVisible, setObjectsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [editingRecord, setEditingRecord] = useState(null);
   const [selectedCounterpartyId, setSelectedCounterpartyId] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [filters, setFilters] = useState({});
   const [form] = Form.useForm();
   const debounceTimerRef = useRef(null);
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null);
 
   // Debounced фильтры для отправки на сервер
   const [debouncedFilters, setDebouncedFilters] = useState({});
+
+  // Загрузить defaultCounterpartyId при монтировании
+  useEffect(() => {
+    const loadDefaultCounterpartyId = async () => {
+      try {
+        const response = await settingsService.getPublicSettings();
+        if (response.success && response.data.defaultCounterpartyId) {
+          setDefaultCounterpartyId(response.data.defaultCounterpartyId);
+        }
+      } catch (error) {
+        console.error('Error loading default counterparty ID:', error);
+      }
+    };
+    
+    loadDefaultCounterpartyId();
+  }, []);
+
+  // Проверка: может ли user редактировать контрагентов
+  const canEditCounterparties = 
+    user?.role === 'admin' || 
+    (user?.role === 'user' && user?.counterpartyId && user?.counterpartyId !== defaultCounterpartyId);
 
   // Debounce для фильтров (500мс)
   useEffect(() => {
@@ -73,13 +98,24 @@ const CounterpartiesPage = () => {
 
   const handleAdd = () => {
     setEditingId(null);
+    setEditingRecord(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record) => {
     setEditingId(record.id);
-    form.setFieldsValue(record);
+    setEditingRecord(record);
+    
+    // Для admin устанавливаем все поля включая type
+    // Для user (не default) устанавливаем все кроме type
+    const formValues = { ...record };
+    if (user?.role === 'admin' && record.typeMapping?.types && record.typeMapping.types.length > 0) {
+      // Берем первый тип (для admin)
+      formValues.type = record.typeMapping.types[0];
+    }
+    
+    form.setFieldsValue(formValues);
     setModalVisible(true);
   };
 
@@ -186,9 +222,22 @@ const CounterpartiesPage = () => {
     { title: 'КПП', dataIndex: 'kpp', key: 'kpp' },
     { 
       title: 'Тип', 
-      dataIndex: 'type', 
+      dataIndex: 'typeMapping', 
       key: 'type',
-      render: (type) => <Tag color={typeMap[type]?.color}>{typeMap[type]?.label}</Tag>
+      render: (typeMapping) => {
+        const types = typeMapping?.types || [];
+        if (types.length === 0) return <span style={{ color: '#999' }}>-</span>;
+        
+        return (
+          <Space size={4} wrap>
+            {types.map(type => (
+              <Tag key={type} color={typeMap[type]?.color}>
+                {typeMap[type]?.label || type}
+              </Tag>
+            ))}
+          </Space>
+        );
+      }
     },
     { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
     { title: 'Email', dataIndex: 'email', key: 'email' },
@@ -226,34 +275,60 @@ const CounterpartiesPage = () => {
       }
     },
     {
+      title: 'Связанные',
+      key: 'parent',
+      render: (_, record) => {
+        const parentName = record.parentCounterparty?.name;
+        if (!parentName) return <span style={{ color: '#999' }}>-</span>;
+        
+        return (
+          <Tooltip title="Родительский контрагент">
+            <Tag color="cyan">{parentName}</Tag>
+          </Tooltip>
+        );
+      }
+    },
+    {
       title: 'Действия',
       key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Копировать ссылку для регистрации">
-            <Button 
-              icon={<LinkOutlined />} 
-              onClick={() => handleCopyRegistrationLink(record)}
-              size="small"
-            />
-          </Tooltip>
-          {user?.role === 'admin' && (
-            <>
+      render: (_, record) => {
+        // Проверяем, является ли контрагент субподрядчиком текущего user
+        const isSubcontractor = record.parentCounterparty?.id === user?.counterpartyId;
+        
+        return (
+          <Space>
+            <Tooltip title="Копировать ссылку для регистрации">
+              <Button 
+                icon={<LinkOutlined />} 
+                onClick={() => handleCopyRegistrationLink(record)}
+                size="small"
+              />
+            </Tooltip>
+            {user?.role === 'admin' && (
+              <>
+                <Button 
+                  icon={<EditOutlined />} 
+                  onClick={() => handleEdit(record)}
+                  size="small"
+                />
+                <Button 
+                  icon={<DeleteOutlined />} 
+                  danger 
+                  onClick={() => handleDelete(record.id)}
+                  size="small"
+                />
+              </>
+            )}
+            {user?.role === 'user' && isSubcontractor && (
               <Button 
                 icon={<EditOutlined />} 
                 onClick={() => handleEdit(record)}
                 size="small"
               />
-              <Button 
-                icon={<DeleteOutlined />} 
-                danger 
-                onClick={() => handleDelete(record.id)}
-                size="small"
-              />
-            </>
-          )}
-        </Space>
-      )
+            )}
+          </Space>
+        );
+      }
     }
   ];
 
@@ -285,7 +360,7 @@ const CounterpartiesPage = () => {
             <Select.Option value="contractor">Подрядчик</Select.Option>
             <Select.Option value="general_contractor">Генподрядчик</Select.Option>
           </Select>
-          {user?.role === 'admin' && (
+          {canEditCounterparties && (
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} style={{ marginLeft: 'auto' }}>
               Добавить
             </Button>
@@ -311,7 +386,7 @@ const CounterpartiesPage = () => {
         </div>
       </Card>
 
-      {user?.role === 'admin' && (
+      {canEditCounterparties && (
         <Modal
           title={editingId ? 'Редактировать контрагента' : 'Добавить контрагента'}
           open={modalVisible}
@@ -320,6 +395,17 @@ const CounterpartiesPage = () => {
           width={800}
         >
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
+            {/* Информация для user о создании субподрядчика */}
+            {user?.role === 'user' && !editingId && (
+              <Alert
+                message="Создание субподрядчика"
+                description="Создаваемый контрагент будет автоматически назначен субподрядчиком вашей организации"
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+            )}
+            
             <Row gutter={16}>
               <Col span={24}>
                 <Form.Item name="name" label="Название" rules={[{ required: true, message: 'Введите название' }]}>
@@ -366,15 +452,17 @@ const CounterpartiesPage = () => {
                   <Input maxLength={15} />
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item name="type" label="Тип" rules={[{ required: true }]}>
-                  <Select>
-                    <Select.Option value="customer">Заказчик</Select.Option>
-                    <Select.Option value="contractor">Подрядчик</Select.Option>
-                    <Select.Option value="general_contractor">Генподрядчик</Select.Option>
-                  </Select>
-                </Form.Item>
-              </Col>
+              {user?.role === 'admin' && (
+                <Col span={12}>
+                  <Form.Item name="type" label="Тип" rules={[{ required: true, message: 'Выберите тип' }]}>
+                    <Select>
+                      <Select.Option value="customer">Заказчик</Select.Option>
+                      <Select.Option value="contractor">Подрядчик</Select.Option>
+                      <Select.Option value="general_contractor">Генподрядчик</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              )}
             </Row>
 
             <Row gutter={16}>

@@ -26,12 +26,12 @@ router.get('/:id', getCounterpartyById);
 router.get('/:id/construction-sites', getCounterpartyConstructionSites);
 
 // ======================================
-// ИЗМЕНЕНИЕ - только для администраторов
+// ИЗМЕНЕНИЕ - только для администраторов и пользователей (не default)
 // ======================================
-router.post('/', authorize('admin'), createCounterparty);
+router.post('/', authorize('admin', 'user'), createCounterparty);
 router.post('/:id/generate-registration-code', authorize('admin'), generateRegistrationCode);
 router.post('/:id/construction-sites', authorize('admin'), saveCounterpartyConstructionSites);
-router.put('/:id', authorize('admin'), updateCounterparty);
+router.put('/:id', authorize('admin', 'user'), updateCounterparty);
 router.delete('/:id', authorize('admin'), deleteCounterparty);
 
 export default router;

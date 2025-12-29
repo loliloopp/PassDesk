@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu } from 'antd'
 import {
@@ -13,6 +13,7 @@ import {
   BookOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '@/store/authStore'
+import settingsService from '@/services/settingsService'
 
 const { Sider } = Layout
 
@@ -29,6 +30,28 @@ const Sidebar = () => {
   const location = useLocation()
   const { logout, user } = useAuthStore()
   const [collapsed, setCollapsed] = useState(false)
+  const [defaultCounterpartyId, setDefaultCounterpartyId] = useState(null)
+
+  // Загрузить defaultCounterpartyId при монтировании
+  useEffect(() => {
+    const loadDefaultCounterpartyId = async () => {
+      try {
+        const response = await settingsService.getPublicSettings()
+        if (response.success && response.data.defaultCounterpartyId) {
+          setDefaultCounterpartyId(response.data.defaultCounterpartyId)
+        }
+      } catch (error) {
+        console.error('Error loading default counterparty ID:', error)
+      }
+    }
+    
+    loadDefaultCounterpartyId()
+  }, [])
+
+  // Проверка: показывать ли меню Контрагенты для user
+  const showCounterpartiesMenu = 
+    user?.role === 'admin' || 
+    (user?.role === 'user' && user?.counterpartyId && user?.counterpartyId !== defaultCounterpartyId)
 
   // Меню для обычных пользователей (role: user)
   const userMenuItems = [
@@ -38,6 +61,22 @@ const Sidebar = () => {
       label: 'Сотрудники',
     }
   ]
+
+  // Добавляем Справочники для user (не default)
+  if (showCounterpartiesMenu) {
+    userMenuItems.push({
+      key: 'references',
+      icon: <BankOutlined />,
+      label: 'Справочники',
+      children: [
+        {
+          key: '/counterparties',
+          icon: <ShopOutlined />,
+          label: 'Контрагенты',
+        }
+      ]
+    })
+  }
 
   // Меню для администраторов
   const adminMenuItems = [

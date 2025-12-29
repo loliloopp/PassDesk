@@ -20,6 +20,8 @@ import Status from './Status.js';
 import EmployeeStatusMapping from './EmployeeStatusMapping.js';
 import CounterpartyConstructionSiteMapping from './CounterpartyConstructionSiteMapping.js';
 import ExcelColumnSet from './ExcelColumnSet.js';
+import CounterpartySubcounterpartyMapping from './CounterpartySubcounterpartyMapping.js';
+import CounterpartyTypeMapping from './CounterpartyTypeMapping.js';
 
 // Define associations
 
@@ -285,6 +287,19 @@ User.hasMany(ExcelColumnSet, { foreignKey: 'updatedBy', as: 'updatedExcelColumnS
 ExcelColumnSet.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 ExcelColumnSet.belongsTo(User, { foreignKey: 'updatedBy', as: 'updater' });
 
+// Counterparty -> CounterpartyTypeMapping (контрагент -> типы)
+Counterparty.hasOne(CounterpartyTypeMapping, { foreignKey: 'counterpartyId', as: 'typeMapping' });
+CounterpartyTypeMapping.belongsTo(Counterparty, { foreignKey: 'counterpartyId', as: 'counterparty' });
+
+// CounterpartySubcounterpartyMapping ассоциации
+CounterpartySubcounterpartyMapping.belongsTo(Counterparty, { foreignKey: 'parentCounterpartyId', as: 'parentCounterparty' });
+CounterpartySubcounterpartyMapping.belongsTo(Counterparty, { foreignKey: 'childCounterpartyId', as: 'childCounterparty' });
+CounterpartySubcounterpartyMapping.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
+
+// Counterparty -> CounterpartySubcounterpartyMapping (родитель -> дети)
+Counterparty.hasMany(CounterpartySubcounterpartyMapping, { foreignKey: 'parentCounterpartyId', as: 'childMappings' });
+Counterparty.hasMany(CounterpartySubcounterpartyMapping, { foreignKey: 'childCounterpartyId', as: 'parentMappings' });
+
 export {
   sequelize,
   User,
@@ -307,7 +322,9 @@ export {
   Status,
   EmployeeStatusMapping,
   CounterpartyConstructionSiteMapping,
-  ExcelColumnSet
+  ExcelColumnSet,
+  CounterpartySubcounterpartyMapping,
+  CounterpartyTypeMapping
 };
 
 

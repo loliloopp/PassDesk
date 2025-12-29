@@ -91,14 +91,14 @@ const Counterparty = sequelize.define('Counterparty', {
   },
   type: {
     type: DataTypes.ENUM('customer', 'contractor', 'general_contractor'),
-    allowNull: false,
+    allowNull: true,
     validate: {
       isIn: {
         args: [['customer', 'contractor', 'general_contractor']],
         msg: 'Тип должен быть: customer, contractor или general_contractor'
       }
     },
-    comment: 'customer - заказчик, contractor - подрядчик, general_contractor - генподрядчик'
+    comment: 'DEPRECATED: Используется для обратной совместимости. Новая логика использует counterparties_types_mapping'
   },
   createdBy: {
     type: DataTypes.UUID,
