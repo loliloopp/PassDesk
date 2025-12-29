@@ -26,6 +26,23 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
   const [importResult, setImportResult] = useState(null);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
+  // Функция сброса состояния модального окна
+  const resetModal = () => {
+    setStep(0);
+    setLoading(false);
+    setFileData(null);
+    setValidationResult(null);
+    setConflictResolutions({});
+    setImportResult(null);
+    setPagination({ current: 1, pageSize: 10 });
+  };
+
+  // Обработчик закрытия модального окна
+  const handleCancel = () => {
+    resetModal();
+    onCancel();
+  };
+
   // Обработка выбора файла
   const handleFileSelect = (file) => {
     console.log('📁 Файл выбран:', file.name, 'размер:', file.size);
@@ -675,7 +692,7 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
     } else if (step === 4) {
       // Завершаем
       onSuccess?.();
-      onCancel();
+      handleCancel();
     }
   };
 
@@ -714,11 +731,11 @@ const EmployeeImportModal = ({ visible, onCancel, onSuccess }) => {
     <Modal
       title={getModalTitle()}
       open={visible}
-      onCancel={onCancel}
+      onCancel={handleCancel}
       width="90vw"
       style={{ maxWidth: '95vw' }}
       footer={[
-        <Button key="cancel" onClick={onCancel}>
+        <Button key="cancel" onClick={handleCancel}>
           Отмена
         </Button>,
         step > 0 && (

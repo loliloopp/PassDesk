@@ -92,10 +92,11 @@ export const validateFio = (firstName, lastName, middleName) => {
     errors.push('Имя должно быть кириллицей с заглавной буквой');
   }
   
-  if (!middleName || String(middleName).trim() === '') {
-    errors.push('Отчество обязательно');
-  } else if (!cyrillicRegex.test(String(middleName).trim())) {
-    errors.push('Отчество должно быть кириллицей с заглавной буквой');
+  // Отчество необязательно, но если указано - проверяем формат
+  if (middleName && String(middleName).trim() !== '') {
+    if (!cyrillicRegex.test(String(middleName).trim())) {
+      errors.push('Отчество должно быть кириллицей с заглавной буквой');
+    }
   }
   
   if (errors.length > 0) {
@@ -106,7 +107,7 @@ export const validateFio = (firstName, lastName, middleName) => {
     valid: true,
     lastName: String(lastName).trim(),
     firstName: String(firstName).trim(),
-    middleName: String(middleName).trim()
+    middleName: middleName ? String(middleName).trim() : null
   };
 };
 
