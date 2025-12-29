@@ -10,7 +10,8 @@ import {
   Status,
   EmployeeCounterpartyMapping,
   EmployeeStatusMapping,
-  Setting
+  Setting,
+  CounterpartySubcounterpartyMapping
 } from '../models/index.js';
 import {
   validateEmployeeForImport,
@@ -59,6 +60,17 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
 
   console.log('✅ Все требуемые статусы найдены');
 
+  // 🔒 Загружаем список разрешенных контрагентов (пользователь + его субподрядчики)
+  const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+    where: { parentCounterpartyId: userCounterpartyId },
+    attributes: ['childCounterpartyId']
+  });
+  const allowedCounterpartyIds = [
+    userCounterpartyId,
+    ...subcontractors.map(s => s.childCounterpartyId)
+  ];
+  console.log(`🔒 Разрешенные контрагенты для импорта: ${allowedCounterpartyIds.length} (свой + ${subcontractors.length} субподрядчиков)`);
+
   // Проверяем консистентность КПП для одного ИНН
   const kppErrors = validateKppConsistency(employees);
   const validationErrors = kppErrors.map(err => ({
@@ -99,14 +111,27 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
       const validated = validation.validated;
       validated.rowIndex = index + 1;
 
-      // 🔒 ПРОВЕРКА БЕЗОПАСНОСТИ: Контрагент должен принадлежать пользователю
-      if (validated.counterparty && validated.counterparty.id !== userCounterpartyId) {
+      // 🔒 ПРОВЕРКА БЕЗОПАСНОСТИ: Контрагент должен быть разрешен для импорта
+      if (validated.counterparty && !allowedCounterpartyIds.includes(validated.counterparty.id)) {
+        // Контрагент найден в БД, но не является субподрядчиком пользователя
         validationErrors.push({
           rowIndex: index + 1,
           lastName: emp.lastName || '',
           firstName: emp.firstName || '',
           inn: emp.inn || '',
-          errors: [`Нет прав для импорта в контрагента "${validated.counterparty.name}". Вы можете импортировать только в своего контрагента.`]
+          errors: [`Контрагент создан другой организацией. Вы не можете вносить данные о его сотрудниках.`]
+        });
+        continue;
+      }
+
+      if (!validated.counterparty && (emp.counterpartyInn || emp.counterpartyKpp)) {
+        // Контрагент НЕ найден в БД (по ИНН/КПП)
+        validationErrors.push({
+          rowIndex: index + 1,
+          lastName: emp.lastName || '',
+          firstName: emp.firstName || '',
+          inn: emp.inn || '',
+          errors: [`Контрагент не найден в базе данных. Добавьте его в справочнике Контрагенты.`]
         });
         continue;
       }
@@ -204,21 +229,29 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
   }
   console.log(`🏢 Контрагент пользователя: ${userCounterparty.name} (ИНН: ${userCounterparty.inn})`);
 
-  // 🔒 КРИТИЧЕСКАЯ ПРОВЕРКА: Все сотрудники должны относиться к контрагенту пользователя
-  const invalidEmployees = validatedEmployees.filter(emp => {
-    const empCounterpartyInn = emp.counterparty?.inn;
-    return empCounterpartyInn !== userCounterparty.inn;
+  // 🔒 Загружаем список разрешенных контрагентов (пользователь + его субподрядчики)
+  const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+    where: { parentCounterpartyId: userCounterpartyId },
+    attributes: ['childCounterpartyId']
+  });
+  const allowedCounterpartyIds = [
+    userCounterpartyId,
+    ...subcontractors.map(s => s.childCounterpartyId)
+  ];
+  console.log(`🔒 Разрешенные контрагенты для импорта: ${allowedCounterpartyIds.length} (свой + ${subcontractors.length} субподрядчиков)`);
+
+  // 🔒 БЕЗОПАСНОСТЬ: Проверяем что все контрагенты разрешены
+  validatedEmployees.forEach((emp) => {
+    const targetCounterpartyId = emp.counterparty?.id || userCounterpartyId;
+    if (!allowedCounterpartyIds.includes(targetCounterpartyId)) {
+      throw new AppError(
+        `Строка ${emp.rowIndex}: Контрагент "${emp.counterparty?.name}" не является вашим субподрядчиком`,
+        403
+      );
+    }
   });
 
-  if (invalidEmployees.length > 0) {
-    console.error('❌ Попытка импорта в чужого контрагента:', invalidEmployees.map(e => ({
-      fio: `${e.lastName} ${e.firstName}`,
-      counterpartyInn: e.counterparty?.inn
-    })));
-    throw new AppError('ЗАПРЕЩЕНО: попытка импорта сотрудников в контрагента, не принадлежащего пользователю', 403);
-  }
-
-  console.log(`✅ Все ${validatedEmployees.length} сотрудников относятся к контрагенту пользователя`);
+  console.log(`✅ Все ${validatedEmployees.length} сотрудников относятся к разрешенным контрагентам`);
 
   // Получаем все необходимые статусы (включая для полных карточек)
   const statusMap = await getImportStatuses();
@@ -445,21 +478,25 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
           }
 
           // 🔗 КРИТИЧЕСКИ ВАЖНО: Создаем маппинг сотрудник-контрагент
-          console.log(`   🔗 Проверка маппинга с контрагентом ${userCounterparty.name} (ИНН: ${userCounterparty.inn})`);
+          // Определяем целевого контрагента: из validated или пользователя
+          const targetCounterpartyId = emp.counterparty?.id || userCounterpartyId;
+          const targetCounterparty = emp.counterparty || userCounterparty;
+          
+          console.log(`   🔗 Проверка маппинга с контрагентом ${targetCounterparty.name} (ИНН: ${targetCounterparty.inn})`);
           const existingMapping = await EmployeeCounterpartyMapping.findOne({
             where: {
               employeeId: employee.id,
-              counterpartyId: userCounterparty.id
+              counterpartyId: targetCounterpartyId
             }
           });
 
           if (!existingMapping) {
             await EmployeeCounterpartyMapping.create({
               employeeId: employee.id,
-              counterpartyId: userCounterparty.id,
+              counterpartyId: targetCounterpartyId,
               createdBy: userId
             });
-            console.log(`   ✅ СОЗДАН маппинг сотрудник → контрагент (ID: ${userCounterparty.id})`);
+            console.log(`   ✅ СОЗДАН маппинг сотрудник → контрагент (ID: ${targetCounterpartyId}, ${targetCounterparty.name})`);
           } else {
             console.log(`   ℹ️  Маппинг уже существует (ID: ${existingMapping.id})`);
           }
