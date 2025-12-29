@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App, Alert } from 'antd';
+import { Card, Table, Button, Input, Space, Modal, Form, Select, message as msgStatic, Tag, Tooltip, Typography, Row, Col, App, Alert, Result } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, LinkOutlined, CopyOutlined } from '@ant-design/icons';
 import { counterpartyService } from '../services/counterpartyService';
 import { constructionSiteService } from '../services/constructionSiteService';
 import settingsService from '../services/settingsService';
 import { CounterpartyObjectsModal } from './CounterpartiesPage/CounterpartyObjectsModal';
 import { useAuthStore } from '../store/authStore';
+import { Link } from 'react-router-dom';
 
 const { Title } = Typography;
 
@@ -55,6 +56,27 @@ const CounterpartiesPage = () => {
   const canEditCounterparties = 
     user?.role === 'admin' || 
     (user?.role === 'user' && user?.counterpartyId && user?.counterpartyId !== defaultCounterpartyId);
+
+  // Проверка: может ли пользователь просматривать страницу
+  const canViewCounterparties = 
+    user?.role === 'admin' || 
+    (user?.role === 'user' && user?.counterpartyId && user?.counterpartyId !== defaultCounterpartyId);
+
+  // Если user (default) - показываем 403
+  if (defaultCounterpartyId !== null && user?.role === 'user' && user?.counterpartyId === defaultCounterpartyId) {
+    return (
+      <Result
+        status="403"
+        title="403 - Доступ запрещен"
+        subTitle="У вас нет доступа к справочнику контрагентов. Для работы доступны сотрудники вашей организации."
+        extra={
+          <Link to="/employees">
+            <Button type="primary">Перейти к сотрудникам</Button>
+          </Link>
+        }
+      />
+    );
+  }
 
   // Debounce для фильтров (500мс)
   useEffect(() => {

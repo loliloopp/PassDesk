@@ -70,7 +70,7 @@ function App() {
             />
             <Route 
               path="counterparties" 
-              element={<ProtectedRoute allowedRoles={['admin']}><CounterpartiesPage /></ProtectedRoute>} 
+              element={<ProtectedRoute allowedRoles={['admin', 'user']}><CounterpartiesPage /></ProtectedRoute>} 
             />
             <Route 
               path="construction-sites" 
