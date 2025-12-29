@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Row, Col, App, Tabs, Button, Space, Checkbox, Popconfirm, Radio } from 'antd';
 import { CheckCircleFilled, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { constructionSiteService } from '../../services/constructionSiteService';
+import { counterpartyService } from '../../services/counterpartyService';
 import { employeeStatusService } from '../../services/employeeStatusService';
 import { invalidateCache } from '../../utils/requestCache';
 import { capitalizeFirstLetter, filterCyrillicOnly } from '../../utils/formatters';
@@ -494,6 +495,8 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
   const { formConfigDefault, formConfigExternal } = useReferencesStore();
   const [transferModalVisible, setTransferModalVisible] = useState(false); // Модальное окно перевода сотрудника
   const [activeConfig, setActiveConfig] = useState(DEFAULT_FORM_CONFIG);
+  const [availableCounterparties, setAvailableCounterparties] = useState([]); // Доступные контрагенты
+  const [loadingCounterparties, setLoadingCounterparties] = useState(false); // Загрузка контрагентов
 
   // Определяем активный конфиг
   useEffect(() => {
@@ -637,11 +640,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
       
       try {
         // Загружаем справочники параллельно и получаем загруженные данные напрямую
-        const [loadedCitizenships, loadedSites, loadedPositions, loadedCounterpartyId] = await Promise.all([
+        const [loadedCitizenships, loadedSites, loadedPositions, loadedCounterpartyId, loadedCounterparties] = await Promise.all([
           fetchCitizenships(),
           fetchConstructionSites(),
           fetchPositions(),
-          fetchDefaultCounterparty()
+          fetchDefaultCounterparty(),
+          fetchCounterparties()
         ]);
         
         // Проверяем, не был ли запрос отменен
@@ -726,6 +730,12 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         } else {
           // Для нового сотрудника просто загружаем справочники
           form.resetFields();
+          
+          // Устанавливаем counterpartyId по умолчанию - контрагента текущего пользователя
+          if (user?.counterpartyId) {
+            form.setFieldsValue({ counterpartyId: user.counterpartyId });
+          }
+          
           setActiveTab('1');
           setTabsValidation({ '1': false, '2': false, '3': false });
           setSelectedCitizenship(null);
@@ -846,6 +856,24 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
     } catch (error) {
       console.error('Error loading default counterparty:', error);
       return null;
+    }
+  };
+
+  const fetchCounterparties = async () => {
+    try {
+      setLoadingCounterparties(true);
+      const response = await counterpartyService.getAvailable();
+      if (response.data.success) {
+        setAvailableCounterparties(response.data.data);
+        return response.data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading counterparties:', error);
+      setAvailableCounterparties([]);
+      return [];
+    } finally {
+      setLoadingCounterparties(false);
     }
   };
 
@@ -1811,6 +1839,60 @@ const EmployeeFormModal = ({ visible, employee, onCancel, onSuccess, onCheckInn 
         children: <DocumentTypeUploader employeeId={employee.id} readonly={false} onFilesUpdated={handleFilesChange} />,
       });
     }
+
+    // Вкладка 5: Контрагент (без галочки, не участвует в проверке обязательных полей)
+    items.push({
+      key: '5',
+      label: '🏢 Контрагент',
+      children: (
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="counterpartyId"
+              label="Контрагент"
+              required
+              rules={[
+                {
+                  required: true,
+                  message: 'Выберите контрагента'
+                }
+              ]}
+            >
+              <Select
+                placeholder="Выберите контрагента"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().includes(input.toLowerCase())
+                }
+                loading={loadingCounterparties}
+                disabled={loadingCounterparties || availableCounterparties.length === 0}
+                autoComplete="off"
+              >
+                {availableCounterparties.map((cp) => (
+                  <Option key={cp.id} value={cp.id}>
+                    {cp.name} {cp.inn && `(ИНН: ${cp.inn})`}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            {availableCounterparties.length === 0 && !loadingCounterparties && (
+              <div style={{ 
+                padding: 16, 
+                background: '#f5f5f5', 
+                borderRadius: 4,
+                textAlign: 'center',
+                color: '#8c8c8c',
+                marginTop: 16
+              }}>
+                📝 Нет доступных контрагентов
+              </div>
+            )}
+          </Col>
+        </Row>
+      ),
+    });
 
     return items;
   };

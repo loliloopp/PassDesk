@@ -8,7 +8,8 @@ import {
   getCounterpartiesStats,
   generateRegistrationCode,
   getCounterpartyConstructionSites,
-  saveCounterpartyConstructionSites
+  saveCounterpartyConstructionSites,
+  getAvailableCounterparties
 } from '../controllers/counterparty.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
@@ -21,6 +22,7 @@ router.use(authenticate);
 // ЧТЕНИЕ - доступно всем авторизованным пользователям
 // ======================================
 router.get('/', getAllCounterparties);
+router.get('/available', getAvailableCounterparties); // Список доступных контрагентов для выбора
 router.get('/stats', getCounterpartiesStats);
 router.get('/:id', getCounterpartyById);
 router.get('/:id/construction-sites', getCounterpartyConstructionSites);

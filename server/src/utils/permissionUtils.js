@@ -1,4 +1,4 @@
-import { EmployeeCounterpartyMapping, Setting, UserEmployeeMapping } from '../models/index.js';
+import { EmployeeCounterpartyMapping, Setting, UserEmployeeMapping, CounterpartySubcounterpartyMapping } from '../models/index.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 /**
@@ -61,11 +61,11 @@ export const checkEmployeeAccess = async (user, employee, operation = 'write') =
     }
   } else {
     // Пользователи конкретных контрагентов (подрядчики)
-    // могут управлять всеми сотрудниками своей организации
+    // могут управлять всеми сотрудниками своей организации И сотрудниками своих субподрядчиков
     
     let hasAccess = false;
 
-    // Если маппинги уже загружены
+    // Проверяем доступ к сотрудникам своего контрагента
     if (employee.employeeCounterpartyMappings) {
       hasAccess = employee.employeeCounterpartyMappings.some(
         mapping => mapping.counterpartyId === user.counterpartyId
@@ -81,8 +81,36 @@ export const checkEmployeeAccess = async (user, employee, operation = 'write') =
       hasAccess = !!mapping;
     }
 
+    // Если нет прямого доступа, проверяем, не является ли контрагент сотрудника субподрядчиком
     if (!hasAccess) {
-      throw new AppError('Недостаточно прав. Сотрудник не принадлежит вашей организации.', 403);
+      // Получаем список субподрядчиков текущего контрагента
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: user.counterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const subcontractorIds = subcontractors.map(s => s.childCounterpartyId);
+      
+      if (subcontractorIds.length > 0) {
+        // Проверяем, принадлежит ли сотрудник одному из субподрядчиков
+        if (employee.employeeCounterpartyMappings) {
+          hasAccess = employee.employeeCounterpartyMappings.some(
+            mapping => subcontractorIds.includes(mapping.counterpartyId)
+          );
+        } else {
+          const mapping = await EmployeeCounterpartyMapping.findOne({
+            where: {
+              employeeId: employee.id,
+              counterpartyId: subcontractorIds
+            }
+          });
+          hasAccess = !!mapping;
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      throw new AppError('Недостаточно прав. Сотрудник не принадлежит вашей организации или вашим субподрядчикам.', 403);
     }
   }
   

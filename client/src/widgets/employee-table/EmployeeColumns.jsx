@@ -28,6 +28,7 @@ export const useEmployeeColumns = ({
   onViewFiles,
   onDepartmentChange,
   canExport,
+  showCounterpartyColumn, // Новый параметр для показа столбца "Контрагент"
   canDeleteEmployee,
   uniqueFilters,
   filters = {}, // Состояние фильтров из localStorage
@@ -179,8 +180,8 @@ export const useEmployeeColumns = ({
             },
           ]
         : []),
-      // Столбец "Контрагент" виден только для пользователей контрагента по умолчанию
-      ...(canExport
+      // Столбец "Контрагент" виден для пользователей с правом экспорта и для пользователей с субподрядчиками
+      ...(showCounterpartyColumn
         ? [
             {
               title: 'Контрагент',

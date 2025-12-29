@@ -119,6 +119,7 @@ export const EmployeeTable = ({
   onViewFiles,
   onDepartmentChange,
   canExport,
+  showCounterpartyColumn, // Новый prop для показа столбца "Контрагент"
   canDeleteEmployee,
   uniqueFilters,
   onFiltersChange,
@@ -145,6 +146,7 @@ export const EmployeeTable = ({
     onViewFiles,
     onDepartmentChange,
     canExport,
+    showCounterpartyColumn, // Передаем новый prop
     canDeleteEmployee,
     uniqueFilters,
     filters, // Передаем фильтры в хук колонок

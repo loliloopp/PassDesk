@@ -50,6 +50,12 @@ const EmployeesPage = () => {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
 
+  // Получаем данные пользователя в самом начале
+  const { user } = useAuthStore();
+  
+  // Загружаем настройки (нужны для определения defaultCounterpartyId)
+  const { defaultCounterpartyId, loading: settingsLoading } = useSettings();
+
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
   // Инициализируем фильтры из localStorage
@@ -57,8 +63,10 @@ const EmployeesPage = () => {
   const [resetTrigger, setResetTrigger] = useState(0);
   // Маппинг имен контрагентов в ID для фильтрации на сервере
   const [counterpartyMap, setCounterpartyMap] = useState({});
+  const [hasSubcontractors, setHasSubcontractors] = useState(false); // Есть ли у пользователя субподрядчики
 
   // Загружаем список контрагентов для маппинга имя → ID
+  // И проверяем наличие субподрядчиков
   useEffect(() => {
     const loadCounterparties = async () => {
       try {
@@ -69,12 +77,24 @@ const EmployeesPage = () => {
           if (c.name) map[c.name] = c.id;
         });
         setCounterpartyMap(map);
+        
+        // Проверяем наличие субподрядчиков у текущего контрагента
+        if (user?.counterpartyId && user.counterpartyId !== defaultCounterpartyId) {
+          const availableResponse = await counterpartyService.getAvailable();
+          if (availableResponse.data.success) {
+            const available = availableResponse.data.data || [];
+            // Если доступно больше одного контрагента, значит есть субподрядчики
+            setHasSubcontractors(available.length > 1);
+          }
+        }
       } catch (error) {
         console.warn('Ошибка загрузки контрагентов:', error);
       }
     };
-    loadCounterparties();
-  }, []);
+    if (defaultCounterpartyId !== undefined) {
+      loadCounterparties();
+    }
+  }, [user?.counterpartyId, defaultCounterpartyId]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -87,8 +107,6 @@ const EmployeesPage = () => {
   const [viewingEmployee, setViewingEmployee] = useState(null);
   const [filesEmployee, setFilesEmployee] = useState(null);
   const [sitesEmployee, setSitesEmployee] = useState(null);
-
-  const { user } = useAuthStore();
 
   // Устанавливаем заголовок страницы для мобильной версии
   usePageTitle('Сотрудники', isMobile);
@@ -118,13 +136,16 @@ const EmployeesPage = () => {
     isCounterpartyFilterReady // Не загружаем пока маппинг не готов
   );
   const { departments, loading: departmentsLoading } = useDepartments();
-  const { defaultCounterpartyId, loading: settingsLoading } = useSettings();
 
   // Общий статус загрузки (только первоначальная загрузка)
   const loading = employeesLoading || departmentsLoading || settingsLoading;
 
   // Определяем права доступа
   const canExport = user?.counterpartyId === defaultCounterpartyId && user?.role !== 'user';
+  
+  // Определяем, должен ли быть виден столбец "Контрагент"
+  // Видно для: 1) пользователей с правом экспорта, 2) пользователей с субподрядчиками
+  const showCounterpartyColumn = canExport || hasSubcontractors;
   
   // Определяем, может ли пользователь удалять сотрудника
   // Удаление доступно только администраторам
@@ -506,6 +527,7 @@ const EmployeesPage = () => {
             onViewFiles={handleViewFiles}
             onDepartmentChange={handleDepartmentChange}
             canExport={canExport}
+            showCounterpartyColumn={showCounterpartyColumn}
             canDeleteEmployee={canDeleteEmployee}
             uniqueFilters={uniqueFilters}
             onFiltersChange={setTableFilters}

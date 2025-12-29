@@ -233,10 +233,20 @@ export const getAllEmployees = async (req, res, next) => {
           required: true
         });
       } else {
-        // Другие контрагенты: показываем всех сотрудников контрагента
+        // Другие контрагенты: показываем всех сотрудников контрагента И его субподрядчиков
+        // Получаем список субподрядчиков
+        const { CounterpartySubcounterpartyMapping } = await import('../models/index.js');
+        const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+          where: { parentCounterpartyId: userCounterpartyId },
+          attributes: ['childCounterpartyId']
+        });
+        
+        const subcontractorIds = subcontractors.map(s => s.childCounterpartyId);
+        const allowedCounterpartyIds = [userCounterpartyId, ...subcontractorIds];
+        
         // Фильтруем по EmployeeCounterpartyMapping (индекс 4)
         employeeInclude[4].where = {
-          counterpartyId: userCounterpartyId
+          counterpartyId: allowedCounterpartyIds
         };
         employeeInclude[4].required = true;
       }
@@ -261,13 +271,22 @@ export const getAllEmployees = async (req, res, next) => {
         }
       });
     } else if (userRole === 'user') {
-      // Для user в других контрагентах считаем через маппинг
+      // Для user в других контрагентах считаем через маппинг (включая субподрядчиков)
+      const { CounterpartySubcounterpartyMapping } = await import('../models/index.js');
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: userCounterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const subcontractorIds = subcontractors.map(s => s.childCounterpartyId);
+      const allowedCounterpartyIds = [userCounterpartyId, ...subcontractorIds];
+      
       totalCount = await Employee.count({
         where,
         include: [{
           model: EmployeeCounterpartyMapping,
           as: 'employeeCounterpartyMappings',
-          where: { counterpartyId: userCounterpartyId },
+          where: { counterpartyId: allowedCounterpartyIds },
           required: true,
           attributes: []
         }],
@@ -677,15 +696,18 @@ export const createEmployee = async (req, res, next) => {
     // Инициализируем статусы для нового сотрудника
     await EmployeeStatusService.initializeEmployeeStatuses(employee.id, req.user.id);
     
+    // Определяем контрагента: из body (если передан) или текущего пользователя
+    const targetCounterpartyId = counterpartyId || req.user.counterpartyId;
+    
     // Создаём запись в маппинге (сотрудник-контрагент-объект)
     await EmployeeCounterpartyMapping.create({
       employeeId: employee.id,
-      counterpartyId: req.user.counterpartyId,
+      counterpartyId: targetCounterpartyId,
       departmentId: null, // Подразделение можно будет назначить позже
       constructionSiteId: constructionSiteId || null // Объект из формы, если был выбран
     });
     
-    console.log('✓ Employee-Counterparty mapping created');
+    console.log('✓ Employee-Counterparty mapping created with counterpartyId:', targetCounterpartyId);
     
     // Для пользователей с контрагентом по умолчанию создаем UserEmployeeMapping
     const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
@@ -904,13 +926,30 @@ export const updateEmployee = async (req, res, next) => {
 
     await employee.update(updates);
     
+    // Если был передан counterpartyId, обновляем маппинг
+    if (counterpartyId !== undefined && counterpartyId !== null) {
+      // Получаем текущий маппинг сотрудника
+      const currentMapping = await EmployeeCounterpartyMapping.findOne({
+        where: { 
+          employeeId: id 
+        }
+      });
+      
+      // Если counterpartyId изменился, обновляем маппинг
+      if (currentMapping && currentMapping.counterpartyId !== counterpartyId) {
+        await currentMapping.update({
+          counterpartyId: counterpartyId
+        });
+        console.log('✓ Employee counterparty mapping updated:', { employeeId: id, oldCounterpartyId: currentMapping.counterpartyId, newCounterpartyId: counterpartyId });
+      }
+    }
+    
     // Если был передан constructionSiteId, обновляем маппинг
     if (constructionSiteId !== undefined) {
       // Сначала получаем текущий маппинг
       const currentMapping = await EmployeeCounterpartyMapping.findOne({
         where: { 
-          employeeId: id,
-          counterpartyId: req.user.counterpartyId 
+          employeeId: id
         }
       });
       

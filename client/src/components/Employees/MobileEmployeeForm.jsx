@@ -3,6 +3,7 @@ import { SaveOutlined, CaretRightOutlined, FileOutlined, ExclamationCircleOutlin
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useEmployeeForm } from './useEmployeeForm';
 import { employeeStatusService } from '../../services/employeeStatusService';
+import { counterpartyService } from '../../services/counterpartyService';
 import { invalidateCache } from '../../utils/requestCache';
 import { capitalizeFirstLetter, filterCyrillicOnly } from '../../utils/formatters';
 import EmployeeDocumentUpload from './EmployeeDocumentUpload';
@@ -154,7 +155,7 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
   const antiAutofillIds = useMemo(() => useAntiAutofillIds(), []);
 
   // Состояние для открытых панелей (по умолчанию все открыны)
-  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'statuses']);
+  const [activeKeys, setActiveKeys] = useState(['personal', 'documents', 'patent', 'photos', 'statuses', 'counterparty']);
   const [employeeIdOnLoad, setEmployeeIdOnLoad] = useState(null); // Отслеживаем id сотрудника при загрузке
   const [fireLoading, setFireLoading] = useState(false); // Состояние загрузки для увольнения
   const innCheckTimeoutRef = useRef(null); // Ref для хранения таймера проверки ИНН
@@ -163,6 +164,8 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
   const [latinInputError, setLatinInputError] = useState(null); // Поле, где был введен латинский символ
   const latinErrorTimeoutRef = useRef(null); // Ref для таймера очистки ошибки
   const isFormResetRef = useRef(false); // 🎯 Флаг для предотвращения проверки ИНН при сбросе формы
+  const [availableCounterparties, setAvailableCounterparties] = useState([]); // Доступные контрагенты
+  const [loadingCounterparties, setLoadingCounterparties] = useState(false); // Загрузка контрагентов
 
   // Инициализируем данные формы при изменении сотрудника или справочников
   useEffect(() => {
@@ -191,6 +194,32 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
       }
     }
   }, [employee?.id, citizenships.length, positions.length]);
+
+  // Загружаем доступные контрагенты
+  useEffect(() => {
+    const loadCounterparties = async () => {
+      setLoadingCounterparties(true);
+      try {
+        const response = await counterpartyService.getAvailable();
+        if (response.data.success) {
+          setAvailableCounterparties(response.data.data);
+          
+          // Если это новый сотрудник и контрагент еще не задан, устанавливаем контрагент текущего пользователя
+          if (!employee?.id && user?.counterpartyId && !form.getFieldValue('counterpartyId')) {
+            form.setFieldsValue({ counterpartyId: user.counterpartyId });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading counterparties:', error);
+      } finally {
+        setLoadingCounterparties(false);
+      }
+    };
+    
+    if (user?.counterpartyId) {
+      loadCounterparties();
+    }
+  }, [user?.counterpartyId, employee?.id]);
 
   // 🎯 Обертки для обработки сохранения с очисткой таймера ИНН
   const handleSaveWithReset = async () => {
@@ -1197,6 +1226,58 @@ const MobileEmployeeForm = ({ employee, onSuccess, onCancel, onCheckInn }) => {
                 />
               </>
             )}
+      </>
+    ),
+  });
+
+  // Блок 5: Контрагент (без галочки в label, не участвует в проверке обязательных полей)
+  collapseItems.push({
+    key: 'counterparty',
+    label: <Title level={5} style={{ margin: 0 }}>🏢 Контрагент</Title>,
+    children: (
+      <>
+        <Form.Item
+          label="Контрагент"
+          name="counterpartyId"
+          required
+          rules={[
+            {
+              required: true,
+              message: 'Выберите контрагента'
+            }
+          ]}
+        >
+          <Select
+            placeholder="Выберите контрагента"
+            size="large"
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option.children.toLowerCase().includes(input.toLowerCase())
+            }
+            loading={loadingCounterparties}
+            disabled={loadingCounterparties || availableCounterparties.length === 0}
+            autoComplete="off"
+          >
+            {availableCounterparties.map((cp) => (
+              <Option key={cp.id} value={cp.id}>
+                {cp.name} {cp.inn && `(ИНН: ${cp.inn})`}
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        {availableCounterparties.length === 0 && !loadingCounterparties && (
+          <div style={{ 
+            padding: 16, 
+            background: '#f5f5f5', 
+            borderRadius: 4,
+            textAlign: 'center',
+            color: '#8c8c8c'
+          }}>
+            📝 Нет доступных контрагентов
+          </div>
+        )}
       </>
     ),
   });

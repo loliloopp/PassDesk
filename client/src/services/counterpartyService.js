@@ -9,6 +9,7 @@ export const counterpartyService = {
   getStats: () => api.get('/counterparties/stats'),
   generateRegistrationCode: (id) => api.post(`/counterparties/${id}/generate-registration-code`),
   getConstructionSites: (counterpartyId) => api.get(`/counterparties/${counterpartyId}/construction-sites`),
-  saveConstructionSites: (counterpartyId, constructionSiteIds) => api.post(`/counterparties/${counterpartyId}/construction-sites`, { constructionSiteIds })
+  saveConstructionSites: (counterpartyId, constructionSiteIds) => api.post(`/counterparties/${counterpartyId}/construction-sites`, { constructionSiteIds }),
+  getAvailable: () => api.get('/counterparties/available') // Список доступных контрагентов для текущего пользователя
 };
 

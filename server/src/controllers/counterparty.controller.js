@@ -723,3 +723,56 @@ export const saveCounterpartyConstructionSites = async (req, res) => {
   }
 };
 
+// Получить список доступных контрагентов для текущего пользователя
+export const getAvailableCounterparties = async (req, res) => {
+  try {
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    let where = {};
+    
+    if (req.user.role === 'admin') {
+      // admin видит всех контрагентов
+    } else if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
+      // user (default) - только свой контрагент
+      where.id = req.user.counterpartyId;
+    } else if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
+      // user (не default) - свой контрагент + субподрядчики
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: req.user.counterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const allowedIds = [
+        req.user.counterpartyId,
+        ...subcontractors.map(s => s.childCounterpartyId)
+      ];
+      
+      where.id = { [Op.in]: allowedIds };
+    }
+    
+    const counterparties = await Counterparty.findAll({
+      where,
+      attributes: ['id', 'name', 'inn'],
+      include: [{
+        model: CounterpartyTypeMapping,
+        as: 'typeMapping',
+        attributes: ['types'],
+        required: false
+      }],
+      order: [['name', 'ASC']]
+    });
+    
+    res.json({
+      success: true,
+      data: counterparties
+    });
+  } catch (error) {
+    console.error('Error fetching available counterparties:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении списка контрагентов',
+      error: error.message
+    });
+  }
+};
+
