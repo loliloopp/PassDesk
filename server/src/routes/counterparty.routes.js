@@ -30,7 +30,7 @@ router.get('/:id/construction-sites', getCounterpartyConstructionSites);
 // ======================================
 router.post('/', authorize('admin', 'user'), createCounterparty);
 router.post('/:id/generate-registration-code', authorize('admin'), generateRegistrationCode);
-router.post('/:id/construction-sites', authorize('admin'), saveCounterpartyConstructionSites);
+router.post('/:id/construction-sites', authorize('admin', 'user'), saveCounterpartyConstructionSites);
 router.put('/:id', authorize('admin', 'user'), updateCounterparty);
 router.delete('/:id', authorize('admin'), deleteCounterparty);
 

@@ -576,6 +576,36 @@ export const getCounterpartyConstructionSites = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Проверка прав доступа
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Доступ запрещен'
+      });
+    }
+    
+    if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
+      // user (не default) может получать объекты для своего контрагента и своих субподрядчиков
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: req.user.counterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const allowedIds = [
+        req.user.counterpartyId,
+        ...subcontractors.map(s => s.childCounterpartyId)
+      ];
+      
+      if (!allowedIds.includes(id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Можно просматривать объекты только своего контрагента и своих субподрядчиков'
+        });
+      }
+    }
+
     const counterparty = await Counterparty.findByPk(id);
     
     if (!counterparty) {
@@ -609,6 +639,52 @@ export const saveCounterpartyConstructionSites = async (req, res) => {
   try {
     const { id } = req.params;
     const { constructionSiteIds } = req.body;
+
+    // Проверка прав доступа
+    const defaultCounterpartyId = await Setting.getSetting('default_counterparty_id');
+    
+    if (req.user.role === 'user' && req.user.counterpartyId === defaultCounterpartyId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Доступ запрещен'
+      });
+    }
+    
+    if (req.user.role === 'user' && req.user.counterpartyId !== defaultCounterpartyId) {
+      // user (не default) может назначать объекты только своим субподрядчикам
+      const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
+        where: { parentCounterpartyId: req.user.counterpartyId },
+        attributes: ['childCounterpartyId']
+      });
+      
+      const allowedIds = subcontractors.map(s => s.childCounterpartyId);
+      
+      if (!allowedIds.includes(id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Можно назначать объекты только своим субподрядчикам'
+        });
+      }
+      
+      // Получаем объекты, назначенные родительскому контрагенту (самому user)
+      const parentCounterparty = await Counterparty.findByPk(req.user.counterpartyId);
+      const parentConstructionSites = await parentCounterparty.getConstructionSites({
+        attributes: ['id']
+      });
+      const parentSiteIds = parentConstructionSites.map(site => site.id);
+      
+      // Проверяем, что все выбранные объекты есть в списке родительских
+      if (constructionSiteIds && constructionSiteIds.length > 0) {
+        const invalidSiteIds = constructionSiteIds.filter(siteId => !parentSiteIds.includes(siteId));
+        
+        if (invalidSiteIds.length > 0) {
+          return res.status(403).json({
+            success: false,
+            message: 'Можно назначать только те объекты, которые назначены вашему контрагенту'
+          });
+        }
+      }
+    }
 
     const counterparty = await Counterparty.findByPk(id);
     

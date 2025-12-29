@@ -194,10 +194,24 @@ const CounterpartiesPage = () => {
   };
 
   const handleOpenObjectsModal = (counterpartyId) => {
-    if (user?.role !== 'admin') {
-      message.error('Только администратор может редактировать объекты');
+    // admin и user (не default) могут назначать объекты
+    if (user?.role !== 'admin' && !(user?.role === 'user' && user?.counterpartyId !== defaultCounterpartyId)) {
+      message.error('У вас нет прав для редактирования объектов');
       return;
     }
+    
+    // Для user (не default) проверяем, что это субподрядчик
+    if (user?.role === 'user' && user?.counterpartyId !== defaultCounterpartyId) {
+      // Найдем контрагента в данных
+      const counterparty = data.find(c => c.id === counterpartyId);
+      const isSubcontractor = counterparty?.parentCounterparty?.id === user?.counterpartyId;
+      
+      if (!isSubcontractor) {
+        message.error('Можно назначать объекты только своим субподрядчикам');
+        return;
+      }
+    }
+    
     setSelectedCounterpartyId(counterpartyId);
     setObjectsModalVisible(true);
   };
@@ -268,11 +282,16 @@ const CounterpartiesPage = () => {
       key: 'objects',
       render: (_, record) => {
         const objects = record.constructionSites || [];
+        // Проверяем права на редактирование объектов
+        const canEditObjects = 
+          user?.role === 'admin' || 
+          (user?.role === 'user' && user?.counterpartyId !== defaultCounterpartyId && record.parentCounterparty?.id === user?.counterpartyId);
+        
         return (
       <div
-        onClick={() => handleOpenObjectsModal(record.id)}
+        onClick={() => canEditObjects && handleOpenObjectsModal(record.id)}
         style={{ 
-          cursor: user?.role === 'admin' ? 'pointer' : 'default',
+          cursor: canEditObjects ? 'pointer' : 'default',
           padding: '4px',
           borderRadius: '4px',
           minHeight: '32px',
