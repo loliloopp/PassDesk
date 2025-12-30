@@ -22,6 +22,7 @@ import CounterpartyConstructionSiteMapping from './CounterpartyConstructionSiteM
 import ExcelColumnSet from './ExcelColumnSet.js';
 import CounterpartySubcounterpartyMapping from './CounterpartySubcounterpartyMapping.js';
 import CounterpartyTypeMapping from './CounterpartyTypeMapping.js';
+import AuditLog from './AuditLog.js';
 
 // Define associations
 
@@ -30,6 +31,10 @@ User.hasMany(Employee, { foreignKey: 'created_by', as: 'createdEmployees' });
 User.hasMany(Employee, { foreignKey: 'updated_by', as: 'updatedEmployees' });
 Employee.belongsTo(User, { foreignKey: 'created_by', as: 'creator' });
 Employee.belongsTo(User, { foreignKey: 'updated_by', as: 'updater' });
+
+// User -> AuditLog (пользователь -> логи действий)
+User.hasMany(AuditLog, { foreignKey: 'user_id', as: 'auditLogs' });
+AuditLog.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 // Citizenship -> Employee (гражданство -> сотрудники)
 Citizenship.hasMany(Employee, { foreignKey: 'citizenship_id', as: 'employees' });
@@ -324,7 +329,8 @@ export {
   CounterpartyConstructionSiteMapping,
   ExcelColumnSet,
   CounterpartySubcounterpartyMapping,
-  CounterpartyTypeMapping
+  CounterpartyTypeMapping,
+  AuditLog
 };
 
 

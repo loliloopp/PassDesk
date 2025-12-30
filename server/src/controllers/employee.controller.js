@@ -1,4 +1,4 @@
-import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position, Setting, Status, EmployeeStatusMapping } from '../models/index.js';
+import { Employee, Counterparty, User, Citizenship, File, UserEmployeeMapping, EmployeeCounterpartyMapping, Department, ConstructionSite, Position, Setting, Status, EmployeeStatusMapping, AuditLog } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/database.js';
 import storageProvider from '../config/storage.js';
@@ -2430,6 +2430,9 @@ export const validateEmployeesImport = async (req, res, next) => {
  * Шаг 2: Финальный импорт с разрешением конфликтов
  */
 export const importEmployees = async (req, res, next) => {
+  const startTime = Date.now();
+  let auditLogId = null;
+  
   try {
     const { employees, conflictResolutions } = req.body;
     const userId = req.user.id;
@@ -2439,8 +2442,50 @@ export const importEmployees = async (req, res, next) => {
       throw new AppError('У пользователя не указан контрагент', 403);
     }
 
+    // 📝 AUDIT LOG: Начало импорта
+    const auditLog = await AuditLog.create({
+      userId: userId,
+      action: 'EMPLOYEE_IMPORT_START',
+      entityType: 'employee',
+      details: {
+        recordsCount: employees?.length || 0,
+        counterpartyId: userCounterpartyId,
+        hasConflictResolutions: !!conflictResolutions && Object.keys(conflictResolutions).length > 0
+      },
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get('user-agent'),
+      status: 'success'
+    });
+    auditLogId = auditLog.id;
+
     const { importEmployees: executeImport } = await import('../services/employeeImportService.js');
     const results = await executeImport(employees, conflictResolutions, userId, userCounterpartyId);
+
+    const duration = Date.now() - startTime;
+
+    // 📝 AUDIT LOG: Завершение импорта
+    await AuditLog.create({
+      userId: userId,
+      action: 'EMPLOYEE_IMPORT_COMPLETE',
+      entityType: 'employee',
+      details: {
+        recordsCount: employees?.length || 0,
+        created: results.created || 0,
+        updated: results.updated || 0,
+        skipped: results.skipped || 0,
+        errors: results.errors?.length || 0,
+        duration: `${duration}ms`,
+        counterpartyId: userCounterpartyId
+      },
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get('user-agent'),
+      status: results.errors?.length > 0 ? 'partial' : 'success'
+    });
+
+    // 🚨 Отправка уведомления админам при больших импортах (>1000 записей)
+    if (employees?.length > 1000) {
+      console.log(`🚨 ВНИМАНИЕ: Массовый импорт! Пользователь ${userId} импортировал ${employees.length} записей. Результат: создано ${results.created}, обновлено ${results.updated}, ошибок ${results.errors?.length || 0}`);
+    }
 
     res.json({
       success: true,
@@ -2449,6 +2494,27 @@ export const importEmployees = async (req, res, next) => {
     });
   } catch (error) {
     console.error('❌ Error importing employees:', error);
+
+    // 📝 AUDIT LOG: Ошибка импорта
+    if (req.user?.id) {
+      await AuditLog.create({
+        userId: req.user.id,
+        action: 'EMPLOYEE_IMPORT_FAILED',
+        entityType: 'employee',
+        details: {
+          recordsCount: req.body.employees?.length || 0,
+          counterpartyId: req.user.counterpartyId,
+          duration: `${Date.now() - startTime}ms`
+        },
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('user-agent'),
+        status: 'failed',
+        errorMessage: error.message
+      }).catch(auditError => {
+        console.error('❌ Failed to create audit log:', auditError);
+      });
+    }
+
     next(error);
   }
 };

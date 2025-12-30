@@ -30,14 +30,19 @@ import { DEFAULT_FORM_CONFIG } from '../utils/employeeFieldsConfig.js';
  * Валидирует данные для импорта сотрудников (ОПТИМИЗИРОВАННАЯ ВЕРСИЯ 2.1)
  */
 export const validateEmployeesImport = async (employees, userId, userCounterpartyId) => {
-  console.log('📥 validateEmployeesImport - входные данные:', {
-    count: Array.isArray(employees) ? employees.length : 0,
-    sample: employees?.[0],
-    userCounterpartyId
-  });
+  console.log('📥 validateEmployeesImport - количество записей:', employees?.length || 0);
 
   if (!Array.isArray(employees) || employees.length === 0) {
     throw new AppError('Данные сотрудников не предоставлены', 400);
+  }
+
+  // 🔒 ЗАЩИТА ОТ DoS: Ограничение на количество записей
+  const MAX_RECORDS = 5000;
+  if (employees.length > MAX_RECORDS) {
+    throw new AppError(
+      `Превышен лимит записей. Максимум ${MAX_RECORDS} записей за один импорт. В файле: ${employees.length}`,
+      400
+    );
   }
 
   if (!userCounterpartyId) {
@@ -295,7 +300,7 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
   if (!userCounterparty) {
     throw new AppError('Контрагент пользователя не найден', 403);
   }
-  console.log(`🏢 Контрагент пользователя: ${userCounterparty.name} (ИНН: ${userCounterparty.inn})`);
+  console.log(`🏢 Контрагент пользователя: ${userCounterparty.name}`);
 
   // 🔒 Загружаем список разрешенных контрагентов (пользователь + его субподрядчики)
   const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
@@ -364,15 +369,16 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
         try {
           console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
           console.log(`📝 ИМПОРТ СОТРУДНИКА: ${emp.lastName} ${emp.firstName} ${emp.middleName || ''}`);
+          // ⚠️ ПДН не выводятся в логи (ИНН, СНИЛС, КИГ удалены для безопасности)
           console.log(`   📋 Данные из файла:`, {
-            inn: emp.inn,
-            snils: emp.snils,
-            kig: emp.kig,
+            hasInn: !!emp.inn,
+            hasSnils: !!emp.snils,
+            hasKig: !!emp.kig,
             birthDate: emp.birthDate,
             kigEndDate: emp.kigEndDate,
             citizenship: emp.citizenship?.name,
             position: emp.position?.name,
-            counterpartyInn: emp.counterparty?.inn
+            hasCounterparty: !!emp.counterparty
           });
 
           // Проверяем конфликт по ИНН
@@ -384,7 +390,7 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
 
           // ШАГ 1: Поиск по ИНН (если есть)
           if (emp.inn) {
-            console.log(`   🔍 Ищем по ИНН: ${emp.inn}`);
+            console.log(`   🔍 Ищем по ИНН`);
             existingEmployee = await Employee.findOne({
               where: { inn: emp.inn }
             });
@@ -435,11 +441,8 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
                   uuid: existingEmployee.id,
                   idAll: existingEmployee.idAll,
                   hasInn: !!existingEmployee.inn,
-                  currentInn: existingEmployee.inn || 'отсутствует',
                   hasSnils: !!existingEmployee.snils,
-                  currentSnils: existingEmployee.snils || 'отсутствует',
-                  hasCitizenship: !!existingEmployee.citizenshipId,
-                  citizenshipId: existingEmployee.citizenshipId || 'отсутствует'
+                  hasCitizenship: !!existingEmployee.citizenshipId
                 });
                 break;
               }
@@ -550,7 +553,7 @@ export const importEmployees = async (validatedEmployees, conflictResolutions, u
           const targetCounterpartyId = emp.counterparty?.id || userCounterpartyId;
           const targetCounterparty = emp.counterparty || userCounterparty;
           
-          console.log(`   🔗 Проверка маппинга с контрагентом ${targetCounterparty.name} (ИНН: ${targetCounterparty.inn})`);
+          console.log(`   🔗 Проверка маппинга с контрагентом ${targetCounterparty.name}`);
           const existingMapping = await EmployeeCounterpartyMapping.findOne({
             where: {
               employeeId: employee.id,

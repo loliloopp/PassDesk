@@ -3,10 +3,28 @@ import { body } from 'express-validator';
 import { validate } from '../middleware/validator.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import upload, { fixFilenameEncoding } from '../middleware/upload.js';
+import rateLimit from 'express-rate-limit';
 import * as employeeController from '../controllers/employee.controller.js';
 import * as employeeFileController from '../controllers/employeeFile.controller.js';
 
 const router = express.Router();
+
+// Rate limiter для импорта сотрудников (защита от DoS атак)
+const importRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 5, // Максимум 5 импортов за 15 минут на одного пользователя
+  message: 'Слишком много попыток импорта. Попробуйте через 15 минут.',
+  standardHeaders: true, // Возвращать информацию о лимите в заголовках `RateLimit-*`
+  legacyHeaders: false, // Отключить заголовки `X-RateLimit-*`
+  // Ключ по userId для индивидуального лимита на пользователя
+  keyGenerator: (req) => {
+    return req.user?.id || req.ip; // Используем userId если доступен, иначе IP
+  },
+  skip: (req) => {
+    // Админы не подпадают под rate limit
+    return req.user?.role === 'admin';
+  }
+});
 
 // Все маршруты требуют аутентификации
 router.use(authenticate);
@@ -79,8 +97,9 @@ router.get('/check-inn', employeeController.checkEmployeeByInn); // Провер
 router.get('/search', employeeController.searchEmployees); // Поиск
 
 // Импорт сотрудников из Excel (доступен всем авторизованным) - ДОЛЖНО быть перед /:id
-router.post('/import/validate', employeeController.validateEmployeesImport); // Валидация данных
-router.post('/import/execute', employeeController.importEmployees); // Финальный импорт
+// Защита от DoS: максимум 5 импортов за 15 минут на пользователя
+router.post('/import/validate', importRateLimiter, employeeController.validateEmployeesImport); // Валидация данных
+router.post('/import/execute', importRateLimiter, employeeController.importEmployees); // Финальный импорт
 
 // Общие маршруты
 // Если есть activeOnly=true, используем отдельный контроллер для выгрузки
