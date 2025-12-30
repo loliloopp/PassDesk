@@ -6,6 +6,7 @@ import {
   Employee,
   Counterparty,
   Citizenship,
+  CitizenshipSynonym,
   Position,
   Status,
   EmployeeCounterpartyMapping,
@@ -15,7 +16,9 @@ import {
 } from '../models/index.js';
 import {
   validateEmployeeForImport,
+  validateEmployeeForImportOptimized,
   checkEmployeeConflict,
+  checkEmployeeConflictFromCache,
   validateKppConsistency
 } from '../utils/importValidation.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -24,7 +27,7 @@ import { getImportStatuses, updateEmployeeStatusesByCompleteness } from '../util
 import { DEFAULT_FORM_CONFIG } from '../utils/employeeFieldsConfig.js';
 
 /**
- * Валидирует данные для импорта сотрудников
+ * Валидирует данные для импорта сотрудников (ОПТИМИЗИРОВАННАЯ ВЕРСИЯ 2.1)
  */
 export const validateEmployeesImport = async (employees, userId, userCounterpartyId) => {
   console.log('📥 validateEmployeesImport - входные данные:', {
@@ -41,14 +44,55 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
     throw new AppError('У пользователя не указан контрагент', 403);
   }
 
-  // Проверяем требуемые статусы
-  const requiredStatuses = ['status_draft', 'status_card_draft'];
-  const foundStatuses = await Status.findAll({
-    where: { name: requiredStatuses }
+  console.log('⚡ ОПТИМИЗАЦИЯ: Загружаем все справочники одним запросом...');
+  const startTime = Date.now();
+
+  // 🚀 ШАГ 1: Загружаем все справочники ОДИН РАЗ
+  const [
+    requiredStatuses,
+    subcontractors,
+    allCounterparties,
+    allCitizenships,
+    allCitizenshipSynonyms,
+    allPositions
+  ] = await Promise.all([
+    // Статусы
+    Status.findAll({
+      where: { name: ['status_draft', 'status_card_draft'] }
+    }),
+    // Субподрядчики
+    CounterpartySubcounterpartyMapping.findAll({
+      where: { parentCounterpartyId: userCounterpartyId },
+      attributes: ['childCounterpartyId']
+    }),
+    // ВСЕ контрагенты (300 записей)
+    Counterparty.findAll({
+      attributes: ['id', 'inn', 'kpp', 'name']
+    }),
+    // ВСЕ гражданства (~200 записей)
+    Citizenship.findAll({
+      attributes: ['id', 'name', 'requiresPatent']
+    }),
+    // ВСЕ синонимы гражданств
+    CitizenshipSynonym.findAll({
+      attributes: ['id', 'citizenshipId', 'synonym']
+    }),
+    // ВСЕ должности (~100 записей)
+    Position.findAll({
+      attributes: ['id', 'name']
+    })
+  ]);
+
+  console.log(`✅ Справочники загружены за ${Date.now() - startTime}ms:`, {
+    counterparties: allCounterparties.length,
+    citizenships: allCitizenships.length,
+    positions: allPositions.length,
+    synonyms: allCitizenshipSynonyms.length
   });
 
-  const foundStatusNames = foundStatuses.map(s => s.name);
-  const missingStatuses = requiredStatuses.filter(s => !foundStatusNames.includes(s));
+  // Проверяем требуемые статусы
+  const foundStatusNames = requiredStatuses.map(s => s.name);
+  const missingStatuses = ['status_draft', 'status_card_draft'].filter(s => !foundStatusNames.includes(s));
 
   if (missingStatuses.length > 0) {
     console.error('❌ Отсутствуют статусы:', missingStatuses);
@@ -58,18 +102,42 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
     );
   }
 
-  console.log('✅ Все требуемые статусы найдены');
-
-  // 🔒 Загружаем список разрешенных контрагентов (пользователь + его субподрядчики)
-  const subcontractors = await CounterpartySubcounterpartyMapping.findAll({
-    where: { parentCounterpartyId: userCounterpartyId },
-    attributes: ['childCounterpartyId']
-  });
+  // 🔒 Разрешенные контрагенты
   const allowedCounterpartyIds = [
     userCounterpartyId,
     ...subcontractors.map(s => s.childCounterpartyId)
   ];
   console.log(`🔒 Разрешенные контрагенты для импорта: ${allowedCounterpartyIds.length} (свой + ${subcontractors.length} субподрядчиков)`);
+
+  // 🚀 ШАГ 2: Загружаем существующих сотрудников ТОЛЬКО по ИНН из файла
+  const innsFromFile = employees
+    .map(emp => emp.inn)
+    .filter(inn => inn && String(inn).trim() !== '')
+    .map(inn => String(inn).replace(/[^\d]/g, ''));
+
+  const uniqueInns = [...new Set(innsFromFile)];
+  console.log(`⚡ ОПТИМИЗАЦИЯ: Загружаем существующих сотрудников по ${uniqueInns.length} уникальным ИНН из файла...`);
+
+  const existingEmployees = uniqueInns.length > 0
+    ? await Employee.findAll({
+        where: { inn: { [Op.in]: uniqueInns } },
+        attributes: ['id', 'firstName', 'lastName', 'middleName', 'inn', 'snils']
+      })
+    : [];
+
+  console.log(`✅ Найдено ${existingEmployees.length} существующих сотрудников за ${Date.now() - startTime}ms`);
+
+  // Создаем кэши для быстрого поиска
+  const caches = {
+    counterparties: allCounterparties.map(c => c.toJSON()),
+    citizenships: allCitizenships.map(c => c.toJSON()),
+    citizenshipSynonyms: allCitizenshipSynonyms.map(s => s.toJSON()),
+    positions: allPositions.map(p => p.toJSON()),
+    existingEmployees: existingEmployees.map(e => e.toJSON())
+  };
+
+  // Мапа для новых должностей, созданных во время валидации
+  const newPositionsMap = new Map();
 
   // Проверяем консистентность КПП для одного ИНН
   const kppErrors = validateKppConsistency(employees);
@@ -81,10 +149,12 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
     errors: [err.error]
   }));
 
-  // Валидируем каждого сотрудника
+  // 🚀 ШАГ 3: Валидируем каждого сотрудника используя кэши
   const validatedEmployees = [];
   const conflictingInns = [];
   const existingEmployeesMap = {};
+
+  console.log(`⚡ ОПТИМИЗАЦИЯ: Начинаем валидацию ${employees.length} сотрудников...`);
 
   for (let index = 0; index < employees.length; index++) {
     const emp = employees[index];
@@ -95,7 +165,8 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
     }
 
     try {
-      const validation = await validateEmployeeForImport(emp, userId);
+      // Используем оптимизированную функцию валидации
+      const validation = await validateEmployeeForImportOptimized(emp, userId, caches, newPositionsMap);
 
       if (!validation.valid) {
         validationErrors.push({
@@ -113,7 +184,6 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
 
       // 🔒 ПРОВЕРКА БЕЗОПАСНОСТИ: Контрагент должен быть разрешен для импорта
       if (validated.counterparty && !allowedCounterpartyIds.includes(validated.counterparty.id)) {
-        // Контрагент найден в БД, но не является субподрядчиком пользователя
         validationErrors.push({
           rowIndex: index + 1,
           lastName: emp.lastName || '',
@@ -125,7 +195,6 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
       }
 
       if (!validated.counterparty && (emp.counterpartyInn || emp.counterpartyKpp)) {
-        // Контрагент НЕ найден в БД (по ИНН/КПП)
         validationErrors.push({
           rowIndex: index + 1,
           lastName: emp.lastName || '',
@@ -136,15 +205,12 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
         continue;
       }
 
-      // Проверяем конфликты
-      const conflicts = await checkEmployeeConflict(validated);
+      // Проверяем конфликты используя кэш
+      const conflicts = checkEmployeeConflictFromCache(validated, caches.existingEmployees);
 
       if (conflicts.length > 0 && validated.inn) {
         // Есть конфликты по ИНН, СНИЛС или ФИО
-        const existingByInn = await Employee.findOne({
-          where: { inn: validated.inn },
-          attributes: ['id', 'firstName', 'lastName', 'middleName', 'inn', 'snils']
-        });
+        const existingByInn = caches.existingEmployees.find(e => e.inn === validated.inn);
 
         if (existingByInn && !existingEmployeesMap[validated.inn]) {
           conflictingInns.push({
@@ -189,10 +255,12 @@ export const validateEmployeesImport = async (employees, userId, userCounterpart
     }
   }
 
-  console.log(`📊 Результаты валидации:`, {
+  const totalTime = Date.now() - startTime;
+  console.log(`📊 Результаты валидации (за ${totalTime}ms):`, {
     validEmployeesCount: validatedEmployees.length,
     validationErrorsCount: validationErrors.length,
-    conflictingInnsCount: conflictingInns.length
+    conflictingInnsCount: conflictingInns.length,
+    newPositionsCreated: newPositionsMap.size
   });
 
   return {

@@ -172,6 +172,28 @@ export const findCitizenshipByName = async (citizenshipName) => {
 };
 
 /**
+ * Находит гражданство из загруженных справочников (оптимизированная версия)
+ */
+export const findCitizenshipByNameFromCache = (citizenshipName, citizenshipsCache, synonymsCache) => {
+  if (!citizenshipName) return null;
+  
+  const name = String(citizenshipName).trim().toLowerCase();
+  
+  // Ищем точное совпадение
+  let citizenship = citizenshipsCache.find(c => c.name.toLowerCase() === name);
+  
+  if (!citizenship) {
+    // Ищем через синонимы
+    const synonym = synonymsCache.find(s => s.synonym.toLowerCase() === name);
+    if (synonym) {
+      citizenship = citizenshipsCache.find(c => c.id === synonym.citizenshipId);
+    }
+  }
+  
+  return citizenship || null;
+};
+
+/**
  * Находит или создает должность
  */
 export const findOrCreatePosition = async (positionName, userId) => {
@@ -198,6 +220,18 @@ export const findOrCreatePosition = async (positionName, userId) => {
 };
 
 /**
+ * Находит должность из загруженных справочников (оптимизированная версия)
+ */
+export const findPositionFromCache = (positionName, positionsCache) => {
+  if (!positionName) return null;
+  
+  const name = String(positionName).trim();
+  const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  
+  return positionsCache.find(p => p.name.toLowerCase() === capitalizedName.toLowerCase()) || null;
+};
+
+/**
  * Проверяет контрагента и КПП
  */
 export const validateCounterpartyAndKpp = async (innOrganization, kppOrganization) => {
@@ -212,6 +246,40 @@ export const validateCounterpartyAndKpp = async (innOrganization, kppOrganizatio
   const counterparty = await Counterparty.findOne({
     where: { inn: innCleaned }
   });
+  
+  if (!counterparty) {
+    errors.push(`Контрагент с ИНН ${innOrganization} не найден`);
+    return { valid: false, errors };
+  }
+  
+  // Проверяем КПП
+  const kppCleaned = kppOrganization ? String(kppOrganization).replace(/[^\d]/g, '') : null;
+  
+  if (kppCleaned && counterparty.kpp && counterparty.kpp !== kppCleaned) {
+    errors.push(`КПП не совпадает. В базе: ${counterparty.kpp}, в файле: ${kppCleaned}`);
+    return { valid: false, errors };
+  }
+  
+  return {
+    valid: true,
+    counterparty,
+    kppToUpdate: kppCleaned && !counterparty.kpp ? kppCleaned : null
+  };
+};
+
+/**
+ * Проверяет контрагента из загруженных справочников (оптимизированная версия)
+ */
+export const validateCounterpartyAndKppFromCache = (innOrganization, kppOrganization, counterpartiesCache) => {
+  const errors = [];
+  
+  if (!innOrganization) {
+    errors.push('ИНН организации обязателен');
+    return { valid: false, errors };
+  }
+  
+  const innCleaned = String(innOrganization).replace(/[^\d]/g, '');
+  const counterparty = counterpartiesCache.find(c => c.inn === innCleaned);
   
   if (!counterparty) {
     errors.push(`Контрагент с ИНН ${innOrganization} не найден`);
@@ -368,6 +436,168 @@ export const validateEmployeeForImport = async (employeeData, rowIndex) => {
 };
 
 /**
+ * Валидирует все поля сотрудника для импорта (оптимизированная версия со справочниками)
+ */
+export const validateEmployeeForImportOptimized = async (employeeData, userId, caches, newPositionsMap) => {
+  const errors = [];
+  const warnings = [];
+  
+  // ФИО
+  const fioValidation = validateFio(
+    employeeData.firstName,
+    employeeData.lastName,
+    employeeData.middleName
+  );
+  
+  if (!fioValidation.valid) {
+    errors.push(...fioValidation.errors);
+  } else {
+    // Сохраняем валидированное ФИО
+    employeeData.firstName = fioValidation.firstName;
+    employeeData.lastName = fioValidation.lastName;
+    employeeData.middleName = fioValidation.middleName;
+  }
+  
+  // ИНН сотрудника
+  let innNormalized = null;
+  if (employeeData.inn) {
+    const innValidation = validateInn(employeeData.inn);
+    if (!innValidation.valid) {
+      errors.push(`ИНН сотрудника: ${innValidation.error}`);
+    } else {
+      innNormalized = innValidation.normalizedInn;
+    }
+  } else {
+    warnings.push('ИНН сотрудника не указан');
+  }
+  
+  // СНИЛС
+  let snilsNormalized = null;
+  if (employeeData.snils) {
+    const snilsValidation = validateSnils(employeeData.snils);
+    if (!snilsValidation.valid) {
+      errors.push(`СНИЛС: ${snilsValidation.error}`);
+    } else {
+      snilsNormalized = snilsValidation.normalizedSnils;
+    }
+  } else {
+    warnings.push('СНИЛС не указан');
+  }
+  
+  // КИГ и гражданство
+  let kigNormalized = null;
+  let citizenship = null;
+  
+  if (employeeData.citizenship) {
+    citizenship = findCitizenshipByNameFromCache(
+      employeeData.citizenship,
+      caches.citizenships,
+      caches.citizenshipSynonyms
+    );
+    
+    if (!citizenship) {
+      errors.push(`Гражданство "${employeeData.citizenship}" не найдено`);
+    } else if (citizenship.requiresPatent !== false) {
+      // Проверяем КИГ если требуется патент
+      if (!employeeData.kig) {
+        errors.push(`КИГ обязателен для граждан ${employeeData.citizenship}`);
+      } else {
+        const kigValidation = validateKig(employeeData.kig);
+        if (!kigValidation.valid) {
+          errors.push(`КИГ: ${kigValidation.error}`);
+        } else {
+          kigNormalized = kigValidation.normalizedKig;
+        }
+      }
+    }
+  }
+  
+  // Контрагент и КПП
+  const counterpartyValidation = validateCounterpartyAndKppFromCache(
+    employeeData.counterpartyInn,
+    employeeData.counterpartyKpp,
+    caches.counterparties
+  );
+  
+  if (!counterpartyValidation.valid) {
+    errors.push(...counterpartyValidation.errors);
+  }
+  
+  // Должность - сначала ищем в кэше, потом создаем если нужно
+  let position = null;
+  if (employeeData.position) {
+    const positionName = String(employeeData.position).trim();
+    const capitalizedName = positionName.charAt(0).toUpperCase() + positionName.slice(1).toLowerCase();
+    
+    // Ищем в загруженных должностях
+    position = findPositionFromCache(positionName, caches.positions);
+    
+    // Если не найдено - проверяем в мапе новых должностей
+    if (!position && newPositionsMap.has(capitalizedName)) {
+      position = newPositionsMap.get(capitalizedName);
+    }
+    
+    // Если все еще не найдено - создаем новую
+    if (!position) {
+      try {
+        position = await Position.create({
+          name: capitalizedName,
+          createdBy: userId
+        });
+        // Сохраняем в мапу для последующих записей
+        newPositionsMap.set(capitalizedName, position);
+        console.log(`   ✨ Создана новая должность: ${capitalizedName}`);
+      } catch (error) {
+        console.error(`   ❌ Ошибка при создании должности: ${error.message}`);
+        errors.push('Ошибка при создании должности');
+      }
+    }
+  }
+  
+  // Дата рождения
+  let birthDateNormalized = null;
+  if (employeeData.birthDate) {
+    const birthDateValidation = validateDate(employeeData.birthDate, 'Дата рождения');
+    if (!birthDateValidation.valid) {
+      errors.push(birthDateValidation.error);
+    } else {
+      birthDateNormalized = birthDateValidation.normalizedDate;
+    }
+  }
+  
+  // Срок окончания КИГ
+  let kigEndDateNormalized = null;
+  if (employeeData.kigEndDate) {
+    const kigEndDateValidation = validateDate(employeeData.kigEndDate, 'Срок окончания КИГ');
+    if (!kigEndDateValidation.valid) {
+      errors.push(kigEndDateValidation.error);
+    } else {
+      kigEndDateNormalized = kigEndDateValidation.normalizedDate;
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    validated: {
+      firstName: employeeData.firstName,
+      lastName: employeeData.lastName,
+      middleName: employeeData.middleName,
+      inn: innNormalized,
+      snils: snilsNormalized,
+      kig: kigNormalized,
+      birthDate: birthDateNormalized,
+      kigEndDate: kigEndDateNormalized,
+      citizenship,
+      counterparty: counterpartyValidation.counterparty,
+      kppToUpdate: counterpartyValidation.kppToUpdate,
+      position
+    }
+  };
+};
+
+/**
  * Проверяет конфликты для одного сотрудника (ФИО, ИНН, СНИЛС)
  */
 export const checkEmployeeConflict = async (validatedEmployee) => {
@@ -414,6 +644,54 @@ export const checkEmployeeConflict = async (validatedEmployee) => {
     },
     attributes: ['id', 'firstName', 'lastName', 'middleName', 'inn', 'snils']
   });
+  
+  if (existingByFio) {
+    conflicts.push({
+      type: 'fio',
+      existingEmployee: existingByFio,
+      newEmployee: validatedEmployee
+    });
+  }
+  
+  return conflicts;
+};
+
+/**
+ * Проверяет конфликты для сотрудника из загруженных данных (оптимизированная версия)
+ */
+export const checkEmployeeConflictFromCache = (validatedEmployee, existingEmployeesCache) => {
+  const conflicts = [];
+  
+  // Проверяем ИНН
+  if (validatedEmployee.inn) {
+    const existing = existingEmployeesCache.find(e => e.inn === validatedEmployee.inn);
+    if (existing) {
+      conflicts.push({
+        type: 'inn',
+        existingEmployee: existing,
+        newEmployee: validatedEmployee
+      });
+    }
+  }
+  
+  // Проверяем СНИЛС
+  if (validatedEmployee.snils) {
+    const existing = existingEmployeesCache.find(e => e.snils === validatedEmployee.snils);
+    if (existing) {
+      conflicts.push({
+        type: 'snils',
+        existingEmployee: existing,
+        newEmployee: validatedEmployee
+      });
+    }
+  }
+  
+  // Проверяем ФИО (точное совпадение)
+  const existingByFio = existingEmployeesCache.find(e => 
+    e.firstName === validatedEmployee.firstName &&
+    e.lastName === validatedEmployee.lastName &&
+    e.middleName === validatedEmployee.middleName
+  );
   
   if (existingByFio) {
     conflicts.push({

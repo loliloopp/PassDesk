@@ -124,7 +124,9 @@ export const employeeApi = {
 
   // Валидировать импорт сотрудников из Excel
   validateEmployeesImport: async (employees) => {
-    const response = await api.post('/employees/import/validate', { employees });
+    const response = await api.post('/employees/import/validate', { employees }, {
+      timeout: 2 * 60 * 1000 // 2 минуты для валидации больших объемов данных
+    });
     return response;
   },
 
